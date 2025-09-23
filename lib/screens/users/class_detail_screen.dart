@@ -4,6 +4,7 @@ import '../../widgets/swipe_instructions.dart';
 import '../../models/teaching_session.dart';
 import 'add_session_screen.dart';
 import 'edit_session_screen.dart';
+import 'session_detail_screen.dart';
 
 class ClassDetailScreen extends StatefulWidget {
   final String classCode;
@@ -129,10 +130,22 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
 
                     // Adjust index for sessions
                     final sessionIndex = index - 1;
-                    return SessionCard(
-                      session: sessions[sessionIndex],
-                      onEdit: _handleEditSession,
-                      onDelete: _handleDeleteSession,
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SessionDetailScreen(
+                              session: sessions[sessionIndex],
+                            ),
+                          ),
+                        );
+                      },
+                      child: SessionCard(
+                        session: sessions[sessionIndex],
+                        onEdit: _handleEditSession,
+                        onDelete: _handleDeleteSession,
+                      ),
                     );
                   },
                 ),
