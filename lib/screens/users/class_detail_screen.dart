@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
-import '../widgets/session_card.dart';
-import '../widgets/swipe_instructions.dart';
-import '../models/teaching_session.dart';
+import '../../widgets/session_card.dart';
+import '../../widgets/swipe_instructions.dart';
+import '../../models/teaching_session.dart';
 import 'add_session_screen.dart';
 import 'edit_session_screen.dart';
 
 class ClassDetailScreen extends StatefulWidget {
   final String classCode;
-  
-  const ClassDetailScreen({
-    Key? key, 
-    required this.classCode,
-  }) : super(key: key);
+
+  const ClassDetailScreen({Key? key, required this.classCode})
+    : super(key: key);
 
   @override
   State<ClassDetailScreen> createState() => _ClassDetailScreenState();
@@ -59,16 +57,12 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                 ],
               ),
             ),
-            
+
             // Class code display
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.code,
-                  color: Color(0xFF8E8E93),
-                  size: 24,
-                ),
+                const Icon(Icons.code, color: Color(0xFF8E8E93), size: 24),
                 const SizedBox(width: 4),
                 Text(
                   widget.classCode,
@@ -80,9 +74,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Session list header and add button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -117,9 +111,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Session list
             Expanded(
               child: Container(
@@ -132,7 +126,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                       // First item is the instructions
                       return const SwipeInstructions();
                     }
-                    
+
                     // Adjust index for sessions
                     final sessionIndex = index - 1;
                     return SessionCard(
@@ -180,7 +174,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       ),
     );
   }
-  
+
   void _showAddSessionDialog() {
     Navigator.push(
       context,
@@ -191,16 +185,14 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
               sessions.add(newSession);
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Đã thêm buổi học mới'),
-              ),
+              const SnackBar(content: Text('Đã thêm buổi học mới')),
             );
           },
         ),
       ),
     );
   }
-  
+
   void _handleEditSession(TeachingSession session) {
     Navigator.push(
       context,
@@ -210,29 +202,31 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
           onSessionUpdated: (TeachingSession updatedSession) {
             setState(() {
               // Find and replace the updated session
-              final index = sessions.indexWhere((s) => s.id == updatedSession.id);
+              final index = sessions.indexWhere(
+                (s) => s.id == updatedSession.id,
+              );
               if (index != -1) {
                 sessions[index] = updatedSession;
               }
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Đã cập nhật buổi học'),
-              ),
+              const SnackBar(content: Text('Đã cập nhật buổi học')),
             );
           },
         ),
       ),
     );
   }
-  
+
   void _handleDeleteSession(TeachingSession session) {
     // Show confirmation dialog
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Xác nhận xóa'),
-        content: Text('Bạn có chắc chắn muốn xóa buổi học này?\n${session.date} ${session.timeSlot}'),
+        content: Text(
+          'Bạn có chắc chắn muốn xóa buổi học này?\n${session.date} ${session.timeSlot}',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -245,7 +239,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                 sessions.removeWhere((s) => s.id == session.id);
               });
               Navigator.of(context).pop();
-              
+
               // Show a snackbar to confirm deletion
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/teaching_session.dart';
+import '../../models/teaching_session.dart';
 import 'session_form.dart';
 
 class EditSessionScreen extends StatelessWidget {
