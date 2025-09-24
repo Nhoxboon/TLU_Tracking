@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
-import 'package:android_app/widgets/dashboard_card.dart';
-import 'package:android_app/widgets/sidebar_item.dart';
+import 'package:android_app/widgets/web/dashboard_card.dart';
+import 'package:android_app/widgets/web/sidebar_item.dart';
+import 'package:android_app/widgets/web/admin_card.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -11,8 +12,7 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  final String adminName = "Moni Roy";
-  final String adminRole = "Admin";
+  final String adminName = "Admin";
 
   @override
   Widget build(BuildContext context) {
@@ -101,49 +101,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      // Admin profile section
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            adminName,
-                            style: const TextStyle(
-                              fontFamily: 'Nunito Sans',
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              color: Color(0xFF404040),
-                            ),
-                          ),
-                          Text(
-                            adminRole,
-                            style: const TextStyle(
-                              fontFamily: 'Nunito Sans',
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                              color: Color(0xFF565656),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 10),
-                      // Dropdown icon
-                      Container(
-                        width: 18,
-                        height: 18,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: const Color(0xFF5C5C5C),
-                            width: 0.2,
-                          ),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_drop_down,
-                          size: 14,
-                          color: Color(0xFF565656),
-                        ),
-                      ),
+                      // Admin card with dropdown
+                      AdminCard(adminName: adminName),
                     ],
                   ),
                 ),

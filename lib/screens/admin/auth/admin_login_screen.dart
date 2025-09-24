@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'package:android_app/utils/constants/text_styles.dart';
 import 'package:android_app/screens/admin/auth/forgot_password_screen.dart';
+import 'package:android_app/utils/admin_utils.dart';
+import 'package:android_app/utils/auth_manager.dart';
+import 'package:android_app/services/auth_service.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -13,8 +16,67 @@ class AdminLoginScreen extends StatefulWidget {
 class _AdminLoginScreenState extends State<AdminLoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
   bool _rememberPassword = false;
   bool _obscureText = true;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Reset auth state whenever this screen is shown
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Force reset the auth state in case we're coming back after logout
+      final authManager = AuthManager();
+      authManager.logout(); // Reset auth state
+
+      // Also reset AuthService
+      _authService.logout();
+
+      // Clear form fields to ensure clean start
+      _usernameController.clear();
+      _passwordController.clear();
+      setState(() {
+        _isLoading = false;
+        _rememberPassword = false;
+        _obscureText = true;
+      });
+
+      print("AdminLoginScreen initialized - auth state and UI reset");
+
+      // Clear any existing SnackBars
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+    });
+  }
+
+  // Phương thức đặc biệt để hiển thị thông báo lỗi đăng nhập
+  void _showLoginError(String message) {
+    if (!mounted) return; // Prevent showing errors if widget is disposed
+
+    print("Showing login error: $message"); // Debug log
+
+    // Đảm bảo không còn SnackBar nào đang hiển thị
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).clearSnackBars();
+
+    // Sử dụng Future.microtask để đảm bảo hiển thị sau khi build hoàn tất
+    Future.microtask(() {
+      // Hiển thị thông báo lỗi mới
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    });
+  }
 
   @override
   void dispose() {
@@ -225,18 +287,68 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                             width: 418,
                             height: 56,
                             child: ElevatedButton(
-                              onPressed: () {
-                                // Handle login
-                                print('Username: ${_usernameController.text}');
-                                print('Password: ${_passwordController.text}');
-                                print('Remember password: $_rememberPassword');
+                              onPressed: _isLoading
+                                  ? null
+                                  : () async {
+                                      // Get input values
+                                      final username = _usernameController.text
+                                          .trim();
+                                      final password = _passwordController.text;
 
-                                // Navigate to dashboard
-                                Navigator.pushReplacementNamed(
-                                  context,
-                                  '/admin/dashboard',
-                                );
-                              },
+                                      print(
+                                        "Login attempt with: $username",
+                                      ); // Debug log
+
+                                      setState(() {
+                                        _isLoading = true;
+                                      });
+
+                                      try {
+                                        // Use AuthService for authentication
+                                        final result = await _authService.login(
+                                          username,
+                                          password,
+                                        );
+
+                                        print(
+                                          "Authentication result: ${result['success']}",
+                                        ); // Debug log
+
+                                        if (result['success'] == true) {
+                                          // Also update old systems for compatibility
+                                          AdminUtils.updateAdminLastLogin();
+
+                                          // Navigate to dashboard
+                                          if (mounted) {
+                                            Navigator.pushReplacementNamed(
+                                              context,
+                                              '/admin/dashboard',
+                                            );
+                                          }
+                                        } else {
+                                          // Show error message from AuthService
+                                          if (mounted) {
+                                            _showLoginError(
+                                              result['message'] ??
+                                                  'Đăng nhập thất bại',
+                                            );
+                                          }
+                                        }
+                                      } catch (e) {
+                                        print('Lỗi khi đăng nhập: $e');
+                                        if (mounted) {
+                                          _showLoginError(
+                                            'Có lỗi xảy ra khi đăng nhập',
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) {
+                                          setState(() {
+                                            _isLoading = false;
+                                          });
+                                        }
+                                      }
+                                    },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 shape: RoundedRectangleBorder(
@@ -244,10 +356,19 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                                 ),
                                 elevation: 0,
                               ),
-                              child: Text(
-                                'Đăng nhập',
-                                style: AppTextStyles.buttonText,
-                              ),
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(
+                                      'Đăng nhập',
+                                      style: AppTextStyles.buttonText,
+                                    ),
                             ),
                           ),
                         ],

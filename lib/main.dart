@@ -5,6 +5,8 @@ import 'package:android_app/screens/admin/auth/admin_login_screen.dart';
 import 'package:android_app/screens/admin/dashboard/admin_dashboard_screen.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 
+// Không cần global key nữa vì chúng ta sẽ sử dụng local context cho ScaffoldMessenger
+
 void main() {
   runApp(const MyApp());
 }
@@ -22,11 +24,12 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
-      // Use AdminLoginScreen for web platforms and ClassDetailScreen for mobile platforms
-      home: kIsWeb
-          ? const AdminLoginScreen()
-          : const ClassDetailScreen(classCode: 'CSE'),
+      initialRoute: '/',
       routes: {
+        '/': (context) => kIsWeb
+            ? const AdminLoginScreen()
+            : const ClassDetailScreen(classCode: 'CSE'),
+        '/admin/login': (context) => const AdminLoginScreen(),
         '/admin/dashboard': (context) => const AdminDashboardScreen(),
         '/class-detail': (context) => const ClassDetailScreen(classCode: 'CSE'),
       },
