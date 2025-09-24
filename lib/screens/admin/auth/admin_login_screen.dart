@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'package:android_app/utils/constants/text_styles.dart';
 import 'package:android_app/screens/admin/auth/forgot_password_screen.dart';
+import 'package:android_app/utils/admin_utils.dart';
+import 'package:android_app/utils/auth_manager.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -15,6 +17,49 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _rememberPassword = false;
   bool _obscureText = true;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Reset AuthManager state whenever this screen is shown
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Force reset the auth state in case we're coming back after logout
+      final authManager = AuthManager();
+      if (authManager.isLoggedIn) {
+        print("Detected logged in state after navigation - forcing logout");
+        authManager.logout();
+      }
+
+      // Clear any existing SnackBars
+      ScaffoldMessenger.of(context).clearSnackBars();
+    });
+  }
+
+  // Phương thức đặc biệt để hiển thị thông báo lỗi đăng nhập
+  void _showLoginError(String message) {
+    if (!mounted) return; // Prevent showing errors if widget is disposed
+
+    print("Showing login error: $message"); // Debug log
+
+    // Đảm bảo không còn SnackBar nào đang hiển thị
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).clearSnackBars();
+
+    // Sử dụng Future.microtask để đảm bảo hiển thị sau khi build hoàn tất
+    Future.microtask(() {
+      // Hiển thị thông báo lỗi mới
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(10),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    });
+  }
 
   @override
   void dispose() {
@@ -226,16 +271,48 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                             height: 56,
                             child: ElevatedButton(
                               onPressed: () {
-                                // Handle login
-                                print('Username: ${_usernameController.text}');
-                                print('Password: ${_passwordController.text}');
-                                print('Remember password: $_rememberPassword');
+                                // Get input values
+                                final username = _usernameController.text
+                                    .trim();
+                                final password = _passwordController.text;
 
-                                // Navigate to dashboard
-                                Navigator.pushReplacementNamed(
-                                  context,
-                                  '/admin/dashboard',
-                                );
+                                print(
+                                  "Login attempt with: $username",
+                                ); // Debug log
+
+                                try {
+                                  // Authenticate using AdminUtils
+                                  bool isAuthenticated =
+                                      AdminUtils.authenticateAdmin(
+                                        username,
+                                        password,
+                                      );
+                                  print(
+                                    "Authentication result: $isAuthenticated",
+                                  ); // Debug log
+
+                                  if (isAuthenticated) {
+                                    // Update last login time
+                                    AdminUtils.updateAdminLastLogin();
+
+                                    // Navigate to dashboard
+                                    Navigator.pushReplacementNamed(
+                                      context,
+                                      '/admin/dashboard',
+                                    );
+                                  } else {
+                                    // Đảm bảo hiển thị thông báo lỗi
+                                    _showLoginError(
+                                      'Tên đăng nhập hoặc mật khẩu không đúng',
+                                    );
+                                  }
+                                } catch (e) {
+                                  print('Lỗi khi đăng nhập: $e');
+                                  // Sử dụng phương thức đặc biệt để hiển thị thông báo lỗi
+                                  _showLoginError(
+                                    'Có lỗi xảy ra khi đăng nhập',
+                                  );
+                                }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
