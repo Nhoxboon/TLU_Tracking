@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:android_app/utils/admin_utils.dart';
+import 'package:android_app/services/auth_service.dart';
+import 'dart:html' as html show window;
 
 class AdminCard extends StatefulWidget {
   final String adminName;
@@ -13,6 +16,7 @@ class AdminCard extends StatefulWidget {
 class _AdminCardState extends State<AdminCard> {
   bool _isDropdownVisible = false;
   OverlayEntry? _overlayEntry;
+  final AuthService _authService = AuthService();
 
   @override
   void dispose() {
@@ -42,6 +46,63 @@ class _AdminCardState extends State<AdminCard> {
     setState(() {
       _isDropdownVisible = true;
     });
+  }
+
+  // Safe logout method that handles context issues
+  Future<void> _performSafeLogout() async {
+    try {
+      // Store the root navigator context before any async operations
+      final navigator = Navigator.of(context, rootNavigator: true);
+      final rootContext = navigator.context;
+
+      // Remove overlay first
+      _removeOverlay();
+
+      // Perform logout
+      AdminUtils.logoutAdmin();
+      _authService.logout();
+
+      // Show success message using root context
+      if (mounted) {
+        ScaffoldMessenger.of(rootContext).hideCurrentSnackBar();
+        ScaffoldMessenger.of(rootContext).showSnackBar(
+          const SnackBar(
+            content: Text('Đã đăng xuất thành công'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+
+      // Navigate after short delay
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      if (mounted) {
+        navigator.pushNamedAndRemoveUntil('/admin/login', (route) => false);
+      }
+    } catch (e) {
+      print('Safe logout error: $e');
+      // Final fallback - try different navigation approaches
+      if (mounted) {
+        try {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/admin/login',
+            (route) => false,
+          );
+        } catch (navError) {
+          print('Final navigation error: $navError');
+          // Web-specific fallback
+          if (kIsWeb) {
+            try {
+              html.window.location.href = '/#/admin/login';
+            } catch (webError) {
+              print('Web navigation error: $webError');
+            }
+          }
+        }
+      }
+    }
   }
 
   OverlayEntry _createOverlayEntry() {
@@ -126,29 +187,8 @@ class _AdminCardState extends State<AdminCard> {
 
                           // Logout option
                           InkWell(
-                            onTap: () {
-                              _removeOverlay();
-
-                              // Log out the admin user
-                              AdminUtils.logoutAdmin();
-
-                              // Hiển thị thông báo đã đăng xuất
-                              ScaffoldMessenger.of(
-                                context,
-                              ).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Đã đăng xuất thành công'),
-                                  backgroundColor: Colors.green,
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-
-                              // Chuyển hướng ngay lập tức tới admin login screen
-                              Navigator.of(context).pushNamedAndRemoveUntil(
-                                '/admin/login',
-                                (route) => false, // Xóa tất cả các route cũ
-                              );
+                            onTap: () async {
+                              await _performSafeLogout();
                             },
                             child: SizedBox(
                               width: 205,

@@ -4,6 +4,7 @@ import 'package:android_app/utils/constants/text_styles.dart';
 import 'package:android_app/screens/admin/auth/forgot_password_screen.dart';
 import 'package:android_app/utils/admin_utils.dart';
 import 'package:android_app/utils/auth_manager.dart';
+import 'package:android_app/services/auth_service.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -15,24 +16,40 @@ class AdminLoginScreen extends StatefulWidget {
 class _AdminLoginScreenState extends State<AdminLoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
   bool _rememberPassword = false;
   bool _obscureText = true;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
 
-    // Reset AuthManager state whenever this screen is shown
+    // Reset auth state whenever this screen is shown
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Force reset the auth state in case we're coming back after logout
       final authManager = AuthManager();
-      if (authManager.isLoggedIn) {
-        print("Detected logged in state after navigation - forcing logout");
-        authManager.logout();
-      }
+      authManager.logout(); // Reset auth state
+
+      // Also reset AuthService
+      _authService.logout();
+
+      // Clear form fields to ensure clean start
+      _usernameController.clear();
+      _passwordController.clear();
+      setState(() {
+        _isLoading = false;
+        _rememberPassword = false;
+        _obscureText = true;
+      });
+
+      print("AdminLoginScreen initialized - auth state and UI reset");
 
       // Clear any existing SnackBars
-      ScaffoldMessenger.of(context).clearSnackBars();
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
     });
   }
 
@@ -270,50 +287,68 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                             width: 418,
                             height: 56,
                             child: ElevatedButton(
-                              onPressed: () {
-                                // Get input values
-                                final username = _usernameController.text
-                                    .trim();
-                                final password = _passwordController.text;
+                              onPressed: _isLoading
+                                  ? null
+                                  : () async {
+                                      // Get input values
+                                      final username = _usernameController.text
+                                          .trim();
+                                      final password = _passwordController.text;
 
-                                print(
-                                  "Login attempt with: $username",
-                                ); // Debug log
+                                      print(
+                                        "Login attempt with: $username",
+                                      ); // Debug log
 
-                                try {
-                                  // Authenticate using AdminUtils
-                                  bool isAuthenticated =
-                                      AdminUtils.authenticateAdmin(
-                                        username,
-                                        password,
-                                      );
-                                  print(
-                                    "Authentication result: $isAuthenticated",
-                                  ); // Debug log
+                                      setState(() {
+                                        _isLoading = true;
+                                      });
 
-                                  if (isAuthenticated) {
-                                    // Update last login time
-                                    AdminUtils.updateAdminLastLogin();
+                                      try {
+                                        // Use AuthService for authentication
+                                        final result = await _authService.login(
+                                          username,
+                                          password,
+                                        );
 
-                                    // Navigate to dashboard
-                                    Navigator.pushReplacementNamed(
-                                      context,
-                                      '/admin/dashboard',
-                                    );
-                                  } else {
-                                    // Đảm bảo hiển thị thông báo lỗi
-                                    _showLoginError(
-                                      'Tên đăng nhập hoặc mật khẩu không đúng',
-                                    );
-                                  }
-                                } catch (e) {
-                                  print('Lỗi khi đăng nhập: $e');
-                                  // Sử dụng phương thức đặc biệt để hiển thị thông báo lỗi
-                                  _showLoginError(
-                                    'Có lỗi xảy ra khi đăng nhập',
-                                  );
-                                }
-                              },
+                                        print(
+                                          "Authentication result: ${result['success']}",
+                                        ); // Debug log
+
+                                        if (result['success'] == true) {
+                                          // Also update old systems for compatibility
+                                          AdminUtils.updateAdminLastLogin();
+
+                                          // Navigate to dashboard
+                                          if (mounted) {
+                                            Navigator.pushReplacementNamed(
+                                              context,
+                                              '/admin/dashboard',
+                                            );
+                                          }
+                                        } else {
+                                          // Show error message from AuthService
+                                          if (mounted) {
+                                            _showLoginError(
+                                              result['message'] ??
+                                                  'Đăng nhập thất bại',
+                                            );
+                                          }
+                                        }
+                                      } catch (e) {
+                                        print('Lỗi khi đăng nhập: $e');
+                                        if (mounted) {
+                                          _showLoginError(
+                                            'Có lỗi xảy ra khi đăng nhập',
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) {
+                                          setState(() {
+                                            _isLoading = false;
+                                          });
+                                        }
+                                      }
+                                    },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 shape: RoundedRectangleBorder(
@@ -321,10 +356,19 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                                 ),
                                 elevation: 0,
                               ),
-                              child: Text(
-                                'Đăng nhập',
-                                style: AppTextStyles.buttonText,
-                              ),
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(
+                                      'Đăng nhập',
+                                      style: AppTextStyles.buttonText,
+                                    ),
                             ),
                           ),
                         ],

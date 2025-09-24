@@ -4,18 +4,11 @@ import '../utils/id_generator.dart';
 class Admin extends User {
   // Private constructor for singleton pattern
   Admin._({
-    required String username,
-    required String password,
-    required String email,
-    required String fullName,
-  }) : super(
-         id: IdGenerator.generateId('admin'),
-         username: username,
-         password: password,
-         email: email,
-         fullName: fullName,
-         role: UserRole.admin,
-       );
+    required super.username,
+    required super.password,
+    required super.email,
+    required super.fullName,
+  }) : super(id: IdGenerator.generateId('admin'), role: UserRole.admin);
 
   // Singleton instance
   static final Admin _instance = Admin._(
