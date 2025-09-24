@@ -230,6 +230,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                                 print('Username: ${_usernameController.text}');
                                 print('Password: ${_passwordController.text}');
                                 print('Remember password: $_rememberPassword');
+
+                                // Navigate to dashboard
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/admin/dashboard',
+                                );
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,

@@ -10,6 +10,11 @@ class AppColors {
   static const Color inputBackground = Color(0xFFF1F4F9);
   static const Color inputBorder = Color(0xFFD8D8D8);
   static const Color checkboxBorder = Color(0xFFA3A3A3);
+  static const Color purple = Color(0xFF8280FF);
+  static const Color yellow = Color(0xFFFEC53D);
+  static const Color red = Color(0xFFFF8082);
+  static const Color lightGray = Color(0xFFF5F6FA);
+  static const Color borderColor = Color(0xFFE0E0E0);
 }
 
 class AppTextStyles {
@@ -51,5 +56,57 @@ class AppTextStyles {
     fontSize: 18,
     letterSpacing: -0.06,
     color: Color(0xFFA6A6A6),
+  );
+
+  static const TextStyle logo = TextStyle(
+    fontFamily: 'Nunito Sans',
+    fontWeight: FontWeight.w800,
+    fontSize: 20,
+    height: 1.36,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle dashboardTitle = TextStyle(
+    fontFamily: 'Nunito Sans',
+    fontWeight: FontWeight.w700,
+    fontSize: 32,
+    letterSpacing: -0.11,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle cardTitle = TextStyle(
+    fontFamily: 'Nunito Sans',
+    fontWeight: FontWeight.w600,
+    fontSize: 16,
+    height: 1.36,
+    color: AppColors.textPrimary,
+    letterSpacing: 0.34,
+  );
+
+  static const TextStyle cardValue = TextStyle(
+    fontFamily: 'Nunito Sans',
+    fontWeight: FontWeight.w700,
+    fontSize: 28,
+    height: 1.36,
+    letterSpacing: 1,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle menuItem = TextStyle(
+    fontFamily: 'Nunito Sans',
+    fontWeight: FontWeight.w600,
+    fontSize: 14,
+    height: 1.36,
+    letterSpacing: 0.3,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle activeMenuItem = TextStyle(
+    fontFamily: 'Nunito Sans',
+    fontWeight: FontWeight.w600,
+    fontSize: 14,
+    height: 1.36,
+    letterSpacing: 0.3,
+    color: Colors.white,
   );
 }

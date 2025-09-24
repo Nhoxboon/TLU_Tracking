@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/screens/admin/auth/admin_login_screen.dart';
+import 'package:android_app/screens/admin/dashboard/admin_dashboard_screen.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 
 void main() {
@@ -19,6 +20,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const AdminLoginScreen(),
+      routes: {'/admin/dashboard': (context) => const AdminDashboardScreen()},
     );
   }
 }
