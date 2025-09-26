@@ -9,18 +9,15 @@ class Student extends User {
 
   Student({
     required this.studentId, // Mã sinh viên (khác với id của hệ thống)
-    required String email, // Email is also the username for students
-    required String password,
-    required String fullName,
+    required super.email, // Email is also the username for students
+    required super.password,
+    required super.fullName,
     required this.hometown,
     required this.phoneNumber,
     required this.dateOfBirth,
   }) : super(
          id: IdGenerator.generateId('student'),
-         username: email, // Email is used as username
-         password: password,
-         email: email,
-         fullName: fullName,
+         username: email,
          role: UserRole.student,
        );
 

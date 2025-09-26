@@ -17,6 +17,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _rememberPassword = false;
   bool _obscureText = true;
   bool _isLoading = false;
@@ -53,29 +54,77 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     });
   }
 
-  // Phương thức đặc biệt để hiển thị thông báo lỗi đăng nhập
   void _showLoginError(String message) {
-    if (!mounted) return; // Prevent showing errors if widget is disposed
+    if (!mounted) return;
 
-    print("Showing login error: $message"); // Debug log
+    print("Showing login error: $message");
 
-    // Đảm bảo không còn SnackBar nào đang hiển thị
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).clearSnackBars();
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.clearSnackBars();
 
-    // Sử dụng Future.microtask để đảm bảo hiển thị sau khi build hoàn tất
-    Future.microtask(() {
-      // Hiển thị thông báo lỗi mới
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(10),
-          duration: const Duration(seconds: 3),
-        ),
-      );
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(10),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  // Phương thức xử lý đăng nhập
+  Future<void> _handleLogin() async {
+    if (_isLoading) return;
+
+    // Get input values
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text;
+
+    if (username.isEmpty || password.isEmpty) {
+      _showLoginError('Vui lòng nhập đầy đủ tài khoản và mật khẩu');
+      return;
+    }
+
+    print("Login attempt with: $username"); // Debug log
+
+    setState(() {
+      _isLoading = true;
     });
+
+    try {
+      // Use AuthService for authentication
+      final result = await _authService.login(username, password);
+
+      print("Authentication result: ${result['success']}"); // Debug log
+
+      if (result['success'] == true) {
+        // Also update old systems for compatibility
+        AdminUtils.updateAdminLastLogin();
+
+        // Navigate to dashboard
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/admin/dashboard');
+        }
+      } else {
+        // Show error message from AuthService
+        if (mounted) {
+          _showLoginError(result['message'] ?? 'Đăng nhập thất bại');
+        }
+      }
+    } catch (e) {
+      print('Lỗi khi đăng nhập: $e');
+      if (mounted) {
+        _showLoginError('Có lỗi xảy ra khi đăng nhập');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -157,221 +206,173 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                         horizontal: 48.0,
                         vertical: 127.0,
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Đăng nhập', style: AppTextStyles.title),
-                          const SizedBox(height: 40),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Đăng nhập', style: AppTextStyles.title),
+                            const SizedBox(height: 40),
 
-                          // Username field
-                          Text('Tài khoản', style: AppTextStyles.bodyText),
-                          const SizedBox(height: 15),
-                          Container(
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: AppColors.inputBackground,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.inputBorder),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: TextField(
-                              controller: _usernameController,
-                              style: AppTextStyles.bodyText,
-                              decoration: InputDecoration(
-                                border: InputBorder.none,
-                                hintText: 'esteban_schiller@gmail.com',
-                                hintStyle: AppTextStyles.bodyTextLight,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 40),
-
-                          // Password field
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Mật khẩu', style: AppTextStyles.bodyText),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const ForgotPasswordScreen(),
-                                    ),
-                                  );
-                                },
-                                child: const Text(
-                                  'Quên mật khẩu?',
-                                  style: AdditionalTextStyles.subtleText,
+                            // Username field
+                            Text('Tài khoản', style: AppTextStyles.bodyText),
+                            const SizedBox(height: 15),
+                            Container(
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: AppColors.inputBackground,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppColors.inputBorder,
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 15),
-                          Container(
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: AppColors.inputBackground,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.inputBorder),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              child: TextField(
+                                controller: _usernameController,
+                                style: AppTextStyles.bodyText,
+                                onSubmitted: (_) => _handleLogin(),
+                                decoration: InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: 'esteban_schiller@gmail.com',
+                                  hintStyle: AppTextStyles.bodyTextLight,
+                                ),
+                              ),
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Row(
+                            const SizedBox(height: 40),
+
+                            // Password field
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _passwordController,
-                                    obscureText: _obscureText,
-                                    style: AppTextStyles.bodyText,
-                                    decoration: InputDecoration(
-                                      border: InputBorder.none,
-                                      hintText: '••••••',
-                                      hintStyle: AppTextStyles.bodyTextLight,
-                                    ),
-                                  ),
-                                ),
-                                // Toggle password visibility button
-                                IconButton(
-                                  icon: Icon(
-                                    _obscureText
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    color: AppColors.textPrimary,
-                                  ),
+                                Text('Mật khẩu', style: AppTextStyles.bodyText),
+                                TextButton(
                                   onPressed: () {
-                                    setState(() {
-                                      _obscureText = !_obscureText;
-                                    });
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const ForgotPasswordScreen(),
+                                      ),
+                                    );
                                   },
+                                  child: const Text(
+                                    'Quên mật khẩu?',
+                                    style: AdditionalTextStyles.subtleText,
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Remember password checkbox
-                          Row(
-                            children: [
-                              SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: Checkbox(
-                                  value: _rememberPassword,
-                                  activeColor: AppColors.primary,
-                                  side: const BorderSide(
-                                    color: AppColors.checkboxBorder,
-                                    width: 0.6,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  onChanged: (bool? value) {
-                                    setState(() {
-                                      _rememberPassword = value ?? false;
-                                    });
-                                  },
+                            const SizedBox(height: 15),
+                            Container(
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: AppColors.inputBackground,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppColors.inputBorder,
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              const Text(
-                                'Nhớ mật khẩu',
-                                style: AdditionalTextStyles.subtleText,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 40),
-
-                          // Login button
-                          SizedBox(
-                            width: 418,
-                            height: 56,
-                            child: ElevatedButton(
-                              onPressed: _isLoading
-                                  ? null
-                                  : () async {
-                                      // Get input values
-                                      final username = _usernameController.text
-                                          .trim();
-                                      final password = _passwordController.text;
-
-                                      print(
-                                        "Login attempt with: $username",
-                                      ); // Debug log
-
-                                      setState(() {
-                                        _isLoading = true;
-                                      });
-
-                                      try {
-                                        // Use AuthService for authentication
-                                        final result = await _authService.login(
-                                          username,
-                                          password,
-                                        );
-
-                                        print(
-                                          "Authentication result: ${result['success']}",
-                                        ); // Debug log
-
-                                        if (result['success'] == true) {
-                                          // Also update old systems for compatibility
-                                          AdminUtils.updateAdminLastLogin();
-
-                                          // Navigate to dashboard
-                                          if (mounted) {
-                                            Navigator.pushReplacementNamed(
-                                              context,
-                                              '/admin/dashboard',
-                                            );
-                                          }
-                                        } else {
-                                          // Show error message from AuthService
-                                          if (mounted) {
-                                            _showLoginError(
-                                              result['message'] ??
-                                                  'Đăng nhập thất bại',
-                                            );
-                                          }
-                                        }
-                                      } catch (e) {
-                                        print('Lỗi khi đăng nhập: $e');
-                                        if (mounted) {
-                                          _showLoginError(
-                                            'Có lỗi xảy ra khi đăng nhập',
-                                          );
-                                        }
-                                      } finally {
-                                        if (mounted) {
-                                          setState(() {
-                                            _isLoading = false;
-                                          });
-                                        }
-                                      }
-                                    },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                elevation: 0,
-                              ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _passwordController,
+                                      obscureText: _obscureText,
+                                      style: AppTextStyles.bodyText,
+                                      onSubmitted: (_) => _handleLogin(),
+                                      decoration: InputDecoration(
+                                        border: InputBorder.none,
+                                        hintText: '••••••',
+                                        hintStyle: AppTextStyles.bodyTextLight,
                                       ),
-                                    )
-                                  : Text(
-                                      'Đăng nhập',
-                                      style: AppTextStyles.buttonText,
                                     ),
+                                  ),
+                                  // Toggle password visibility button
+                                  IconButton(
+                                    icon: Icon(
+                                      _obscureText
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureText = !_obscureText;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 20),
+
+                            // Remember password checkbox
+                            Row(
+                              children: [
+                                SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: Checkbox(
+                                    value: _rememberPassword,
+                                    activeColor: AppColors.primary,
+                                    side: const BorderSide(
+                                      color: AppColors.checkboxBorder,
+                                      width: 0.6,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    onChanged: (bool? value) {
+                                      setState(() {
+                                        _rememberPassword = value ?? false;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'Nhớ mật khẩu',
+                                  style: AdditionalTextStyles.subtleText,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 40),
+
+                            // Login button
+                            SizedBox(
+                              width: 418,
+                              height: 56,
+                              child: ElevatedButton(
+                                onPressed: _isLoading ? null : _handleLogin,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Text(
+                                        'Đăng nhập',
+                                        style: AppTextStyles.buttonText,
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

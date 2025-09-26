@@ -18,6 +18,7 @@ class UserService {
   // Mock users for testing - in a real app, these would be fetched from a database
   final List<Teacher> _teachers = [
     Teacher(
+      teacherId: 'TCH12345', // Mã giảng viên
       email: 'teacher@thuyloi.edu.vn',
       password: 'password123',
       fullName: 'Nguyễn Văn A',
