@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
+import 'package:android_app/widgets/web/dashboard_icon.dart';
 
 class DashboardCard extends StatelessWidget {
   final String title;
   final String value;
   final Color iconColor;
-  final IconData icon;
+  final DashboardIconType iconType;
 
   const DashboardCard({
     super.key,
     required this.title,
     required this.value,
     required this.iconColor,
-    required this.icon,
+    required this.iconType,
   });
 
   @override
@@ -61,9 +62,9 @@ class DashboardCard extends StatelessWidget {
               height: 60,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: iconColor.withOpacity(0.21),
+                color: iconColor.withValues(alpha: .21),
               ),
-              child: Icon(icon, color: iconColor, size: 30),
+              child: DashboardIcon(type: iconType, color: iconColor, size: 30),
             ),
           ),
         ],

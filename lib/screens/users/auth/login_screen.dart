@@ -57,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         // Navigate to the class detail screen on successful login
         Navigator.pushReplacementNamed(context, '/class-detail');
-        
+
         // Reset loading state
         setState(() {
           _isLoading = false;
@@ -93,16 +93,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       TextSpan(
                         text: 'TLU',
-                        style: TextStyle(
-                          color: Color(0xFF2196F3),
-                        ),
+                        style: TextStyle(color: Color(0xFF2196F3)),
                       ),
                       TextSpan(text: ' Tracking'),
                     ],
                   ),
                 ),
                 const SizedBox(height: 55),
-                
+
                 // Login Label
                 const Align(
                   alignment: Alignment.centerLeft,
@@ -122,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                
+
                 // Username field
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,14 +182,19 @@ class _LoginScreenState extends State<LoginScreen> {
                           height: 1.235,
                         ),
                         decoration: InputDecoration(
-                          hintText: _isEmailFocused ? '' : '2251172312@e.tlu.edu.vn',
+                          hintText: _isEmailFocused
+                              ? ''
+                              : '2251172312@e.tlu.edu.vn',
                           hintStyle: const TextStyle(
                             fontFamily: 'Roboto',
                             fontSize: 12,
                             color: Color(0x99333333),
                             letterSpacing: -0.24,
                           ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 15,
+                            vertical: 14,
+                          ),
                           isDense: true,
                           border: InputBorder.none,
                         ),
@@ -200,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 26),
-                
+
                 // Password field
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,15 +269,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           hintStyle: const TextStyle(
                             fontFamily: 'Roboto',
                             fontSize: 12,
-                            color: Color(0x99333333), 
+                            color: Color(0x99333333),
                             letterSpacing: -0.24,
                           ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 15,
+                            vertical: 14,
+                          ),
                           isDense: true,
                           border: InputBorder.none,
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              _obscureText
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
                               size: 18,
                               color: const Color(0xFF333333),
                             ),
@@ -292,7 +300,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 32),
-                
+
                 // Forgot Password
                 Align(
                   alignment: Alignment.center,
@@ -314,7 +322,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                
+
                 // Login Button
                 SizedBox(
                   width: 349,
@@ -324,7 +332,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2196F3),
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: const Color(0xFF2196F3).withOpacity(0.7),
+                      disabledBackgroundColor: const Color(
+                        0xFF2196F3,
+                      ).withOpacity(0.7),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(50),
