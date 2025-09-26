@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:android_app/utils/admin_utils.dart';
 import 'package:android_app/services/auth_service.dart';
-import 'dart:html' as html show window;
+import 'platform/admin_card_platform.dart' as platform;
 
 class AdminCard extends StatefulWidget {
   final String adminName;
@@ -95,7 +95,7 @@ class _AdminCardState extends State<AdminCard> {
           // Web-specific fallback
           if (kIsWeb) {
             try {
-              html.window.location.href = '/#/admin/login';
+              platform.redirectToLogin();
             } catch (webError) {
               print('Web navigation error: $webError');
             }
