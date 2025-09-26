@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
+import 'package:android_app/utils/constants/dashboard_tabs.dart';
 import 'package:android_app/widgets/web/dashboard_card.dart';
 import 'package:android_app/widgets/web/sidebar_item.dart';
 import 'package:android_app/widgets/web/admin_card.dart';
+import 'package:android_app/widgets/web/dashboard_icon.dart';
+import 'package:android_app/screens/admin/dashboard/teachers_management_view.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -13,6 +16,156 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final String adminName = "Admin";
+  DashboardTab _currentTab = DashboardTab.dashboard;
+
+  Widget _buildMainContent() {
+    switch (_currentTab) {
+      case DashboardTab.dashboard:
+        return _buildDashboardContent();
+      case DashboardTab.teachers:
+        return const TeachersManagementView();
+      case DashboardTab.students:
+        return _buildComingSoonContent('Quản lý sinh viên');
+      case DashboardTab.classes:
+        return _buildComingSoonContent('Quản lý lớp học');
+      case DashboardTab.subjects:
+        return _buildComingSoonContent('Quản lý môn học');
+      case DashboardTab.majors:
+        return _buildComingSoonContent('Quản lý ngành');
+      case DashboardTab.courses:
+        return _buildComingSoonContent('Quản lý khóa');
+    }
+  }
+
+  Widget _buildDashboardContent() {
+    return Container(
+      color: const Color(0xFFF5F6FA),
+      padding: const EdgeInsets.all(30.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Dashboard title
+          const Text(
+            'Dashboard',
+            style: TextStyle(
+              fontFamily: 'Nunito Sans',
+              fontWeight: FontWeight.w700,
+              fontSize: 32,
+              letterSpacing: -0.11,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 27),
+
+          // Dashboard cards - Row 1
+          Row(
+            children: [
+              // Card for total teachers
+              DashboardCard(
+                title: 'Tổng giảng viên',
+                value: '40',
+                iconColor: AppColors.purple,
+                iconType: DashboardIconType.user,
+              ),
+              const SizedBox(width: 47),
+
+              // Card for total students
+              DashboardCard(
+                title: 'Tổng sinh viên',
+                value: '40',
+                iconColor: const Color(0xFFFF8082),
+                iconType: DashboardIconType.users,
+              ),
+              const SizedBox(width: 47),
+
+              // Card for total classes
+              DashboardCard(
+                title: 'Tổng lớp học',
+                value: '100',
+                iconColor: const Color(0xFFFEC53D),
+                iconType: DashboardIconType.server,
+              ),
+            ],
+          ),
+          const SizedBox(height: 31),
+
+          // Dashboard cards - Row 2
+          Row(
+            children: [
+              // Card for total subjects
+              DashboardCard(
+                title: 'Tổng môn học',
+                value: '40',
+                iconColor: const Color(0xFF8B0507),
+                iconType: DashboardIconType.book,
+              ),
+              const SizedBox(width: 47),
+
+              // Card for total majors
+              DashboardCard(
+                title: 'Tổng ngành',
+                value: '40',
+                iconColor: const Color(0xFF80A4FF),
+                iconType: DashboardIconType.briefcase,
+              ),
+              const SizedBox(width: 47),
+
+              // Card for total courses/years
+              DashboardCard(
+                title: 'Tổng khóa',
+                value: '40',
+                iconColor: const Color(0xFFFFC280),
+                iconType: DashboardIconType.award,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComingSoonContent(String title) {
+    return Container(
+      color: const Color(0xFFF5F6FA),
+      padding: const EdgeInsets.all(30.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontFamily: 'Nunito Sans',
+              fontWeight: FontWeight.w700,
+              fontSize: 32,
+              letterSpacing: -0.11,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 50),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.construction, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Tính năng đang được phát triển',
+                    style: TextStyle(
+                      fontFamily: 'Nunito Sans',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,27 +207,65 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 // Menu Items
                 SidebarItem(
                   title: 'Dashboard',
-                  isActive: true,
+                  isActive: _currentTab == DashboardTab.dashboard,
                   onTap: () {
-                    // Already on dashboard
-                  },
-                ),
-                SidebarItem(
-                  title: 'Lớp học',
-                  onTap: () {
-                    // Navigate to classes screen
+                    setState(() {
+                      _currentTab = DashboardTab.dashboard;
+                    });
                   },
                 ),
                 SidebarItem(
                   title: 'Giảng viên',
+                  isActive: _currentTab == DashboardTab.teachers,
                   onTap: () {
-                    // Navigate to teachers screen
+                    setState(() {
+                      _currentTab = DashboardTab.teachers;
+                    });
                   },
                 ),
                 SidebarItem(
                   title: 'Sinh viên',
+                  isActive: _currentTab == DashboardTab.students,
                   onTap: () {
-                    // Navigate to students screen
+                    setState(() {
+                      _currentTab = DashboardTab.students;
+                    });
+                  },
+                ),
+                SidebarItem(
+                  title: 'Lớp học',
+                  isActive: _currentTab == DashboardTab.classes,
+                  onTap: () {
+                    setState(() {
+                      _currentTab = DashboardTab.classes;
+                    });
+                  },
+                ),
+                SidebarItem(
+                  title: 'Môn học',
+                  isActive: _currentTab == DashboardTab.subjects,
+                  onTap: () {
+                    setState(() {
+                      _currentTab = DashboardTab.subjects;
+                    });
+                  },
+                ),
+                SidebarItem(
+                  title: 'Ngành',
+                  isActive: _currentTab == DashboardTab.majors,
+                  onTap: () {
+                    setState(() {
+                      _currentTab = DashboardTab.majors;
+                    });
+                  },
+                ),
+                SidebarItem(
+                  title: 'Khóa',
+                  isActive: _currentTab == DashboardTab.courses,
+                  onTap: () {
+                    setState(() {
+                      _currentTab = DashboardTab.courses;
+                    });
                   },
                 ),
               ],
@@ -108,60 +299,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
 
                 // Dashboard content
-                Expanded(
-                  child: Container(
-                    color: const Color(0xFFF5F6FA),
-                    padding: const EdgeInsets.all(30.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Dashboard title
-                        const Text(
-                          'Dashboard',
-                          style: TextStyle(
-                            fontFamily: 'Nunito Sans',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 32,
-                            letterSpacing: -0.11,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 27),
-
-                        // Dashboard cards
-                        Row(
-                          children: [
-                            // Card for total teachers
-                            DashboardCard(
-                              title: 'Tổng giảng viên',
-                              value: '40',
-                              iconColor: AppColors.purple,
-                              icon: Icons.person,
-                            ),
-                            const SizedBox(width: 47),
-
-                            // Card for total students
-                            DashboardCard(
-                              title: 'Tổng sinh viên',
-                              value: '40',
-                              iconColor: Colors.redAccent,
-                              icon: Icons.groups,
-                            ),
-                            const SizedBox(width: 47),
-
-                            // Card for total classes
-                            DashboardCard(
-                              title: 'Tổng lớp học',
-                              value: '100',
-                              iconColor: const Color(0xFFFEC53D),
-                              icon: Icons.school,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                Expanded(child: _buildMainContent()),
               ],
             ),
           ),
