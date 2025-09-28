@@ -6,6 +6,8 @@ import 'package:android_app/widgets/web/sidebar_item.dart';
 import 'package:android_app/widgets/web/admin_card.dart';
 import 'package:android_app/widgets/web/dashboard_icon.dart';
 import 'package:android_app/screens/admin/dashboard/teachers_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/students_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/change_password_view.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -25,7 +27,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case DashboardTab.teachers:
         return const TeachersManagementView();
       case DashboardTab.students:
-        return _buildComingSoonContent('Quản lý sinh viên');
+        return const StudentsManagementView();
       case DashboardTab.classes:
         return _buildComingSoonContent('Quản lý lớp học');
       case DashboardTab.subjects:
@@ -34,6 +36,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return _buildComingSoonContent('Quản lý ngành');
       case DashboardTab.courses:
         return _buildComingSoonContent('Quản lý khóa');
+      case DashboardTab.changePassword:
+        return const ChangePasswordView();
     }
   }
 
@@ -293,7 +297,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       // Admin card with dropdown
-                      AdminCard(adminName: adminName),
+                      AdminCard(
+                        adminName: adminName,
+                        onTabChange: (tab) {
+                          setState(() {
+                            _currentTab = tab;
+                          });
+                        },
+                      ),
                     ],
                   ),
                 ),

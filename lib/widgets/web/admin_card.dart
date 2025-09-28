@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:android_app/utils/admin_utils.dart';
 import 'package:android_app/services/auth_service.dart';
+import 'package:android_app/utils/constants/dashboard_tabs.dart';
 import 'platform/admin_card_platform.dart' as platform;
 
 class AdminCard extends StatefulWidget {
   final String adminName;
+  final Function(DashboardTab)? onTabChange;
 
-  const AdminCard({super.key, required this.adminName});
+  const AdminCard({super.key, required this.adminName, this.onTabChange});
 
   @override
   State<AdminCard> createState() => _AdminCardState();
@@ -135,7 +137,7 @@ class _AdminCardState extends State<AdminCard> {
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 40,
                             offset: const Offset(0, 9),
                           ),
@@ -147,7 +149,10 @@ class _AdminCardState extends State<AdminCard> {
                           InkWell(
                             onTap: () {
                               _removeOverlay();
-                              // Navigate to change password screen
+                              // Navigate to change password tab
+                              widget.onTabChange?.call(
+                                DashboardTab.changePassword,
+                              );
                             },
                             child: SizedBox(
                               width: 205,
@@ -158,7 +163,7 @@ class _AdminCardState extends State<AdminCard> {
                                   Icon(
                                     Icons.lock_outline,
                                     size: 14,
-                                    color: Colors.pink.withOpacity(0.7),
+                                    color: Colors.pink.withValues(alpha: .7),
                                   ),
                                   const SizedBox(width: 14),
                                   const Text(
@@ -199,7 +204,7 @@ class _AdminCardState extends State<AdminCard> {
                                   Icon(
                                     Icons.logout,
                                     size: 14,
-                                    color: Colors.red.withOpacity(0.7),
+                                    color: Colors.red.withValues(alpha: .7),
                                   ),
                                   const SizedBox(width: 8),
                                   const Text(
