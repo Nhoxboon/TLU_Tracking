@@ -5,7 +5,8 @@ enum DashboardTab {
   classes('Lớp học'),
   subjects('Môn học'),
   majors('Ngành'),
-  courses('Khóa');
+  courses('Khóa'),
+  changePassword('Đổi mật khẩu');
 
   const DashboardTab(this.displayName);
   final String displayName;

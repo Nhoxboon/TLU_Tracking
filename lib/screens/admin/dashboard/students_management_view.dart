@@ -3,124 +3,136 @@ import 'package:android_app/utils/constants/app_theme.dart';
 import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
 
-class TeachersManagementView extends StatefulWidget {
-  const TeachersManagementView({super.key});
+class StudentsManagementView extends StatefulWidget {
+  const StudentsManagementView({super.key});
 
   @override
-  State<TeachersManagementView> createState() => _TeachersManagementViewState();
+  State<StudentsManagementView> createState() => _StudentsManagementViewState();
 }
 
-class _TeachersManagementViewState extends State<TeachersManagementView> {
+class _StudentsManagementViewState extends State<StudentsManagementView> {
   final TextEditingController _searchController = TextEditingController();
 
   // Pagination variables
   int _currentPage = 1;
   final int _itemsPerPage = 10;
 
-  // Sample data for teachers
-  final List<TeacherData> _teachers = [
-    TeacherData(
+  // Sample data for students
+  final List<StudentData> _students = [
+    StudentData(
       id: 1,
       code: '0000',
       name: 'Ann Culhane',
+      major: 'Lorem ipsum',
       phone: '11111111111',
       email: 'Lorem ipsum',
       birthDate: '12/05/2004',
     ),
-    TeacherData(
+    StudentData(
       id: 2,
       code: '0000',
-      name: 'Ann Culhane',
+      name: 'Tatiana Mango',
+      major: 'Lorem ipsum',
       phone: '11111111111',
       email: 'Lorem ipsum',
       birthDate: '12/05/2004',
     ),
-    TeacherData(
+    StudentData(
       id: 3,
       code: '0000',
-      name: 'Ann Culhane',
+      name: 'Ahmad Rosser',
+      major: 'Lorem ipsum',
       phone: '11111111111',
       email: 'Lorem ipsum',
       birthDate: '12/05/2004',
     ),
-    TeacherData(
+    StudentData(
       id: 4,
       code: '0000',
-      name: 'Ann Culhane',
+      name: 'Phillip Stanton',
+      major: 'Lorem ipsum',
       phone: '11111111111',
       email: 'Lorem ipsum',
       birthDate: '12/05/2004',
     ),
-    TeacherData(
+    StudentData(
       id: 5,
       code: '0000',
-      name: 'Ann Culhane',
+      name: 'Zain Calzoni',
+      major: 'Lorem ipsum',
       phone: '11111111111',
       email: 'Lorem ipsum',
       birthDate: '12/05/2004',
     ),
-    TeacherData(
+    StudentData(
       id: 6,
       code: '0000',
-      name: 'Ann Culhane',
+      name: 'Leo Stanton',
+      major: 'Lorem ipsum',
       phone: '11111111111',
       email: 'Lorem ipsum',
       birthDate: '12/05/2004',
     ),
-    TeacherData(
+    StudentData(
       id: 7,
       code: '0000',
-      name: 'Ann Culhane',
+      name: 'Kaiya Vetrovs',
+      major: 'Lorem ipsum',
       phone: '11111111111',
       email: 'Lorem ipsum',
       birthDate: '12/05/2004',
     ),
-    TeacherData(
+    StudentData(
       id: 8,
       code: '0000',
-      name: 'Ann Culhane',
+      name: 'Ryan Westervelt',
+      major: 'Lorem ipsum',
       phone: '11111111111',
       email: 'Lorem ipsum',
       birthDate: '12/05/2004',
     ),
-    TeacherData(
+    StudentData(
       id: 9,
       code: '0000',
-      name: 'Ann Culhane',
+      name: 'Corey Stanton',
+      major: 'Lorem ipsum',
       phone: '11111111111',
       email: 'Lorem ipsum',
       birthDate: '12/05/2004',
     ),
-    TeacherData(
+    StudentData(
       id: 10,
       code: '0000',
-      name: 'Ann Culhane',
+      name: 'Adison Aminoff',
+      major: 'Lorem ipsum',
       phone: '11111111111',
       email: 'Lorem ipsum',
       birthDate: '12/05/2004',
     ),
-    TeacherData(
+    StudentData(
       id: 11,
       code: '0000',
-      name: 'Ann Culhane',
+      name: 'Alfredo Aminoff',
+      major: 'Lorem ipsum',
       phone: '11111111111',
       email: 'Lorem ipsum',
       birthDate: '12/05/2004',
     ),
-    TeacherData(
+    StudentData(
       id: 12,
       code: '0000',
-      name: 'Ann Culhane',
+      name: 'Allison Botosh',
+      major: 'Lorem ipsum',
       phone: '11111111111',
       email: 'Lorem ipsum',
       birthDate: '12/05/2004',
     ),
   ];
 
-  final Set<int> _selectedTeachers = <int>{};
+  final Set<int> _selectedStudents = <int>{};
 
-  // Column configuration for teachers table
-  static const List<TableColumn> _teacherColumns = [
+  // Column configuration for students table
+  static const List<TableColumn> _studentColumns = [
     TableColumn(
       type: TableColumnType.id,
       flex: 1,
@@ -137,8 +149,14 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
       styleType: TableColumnStyleType.secondary,
     ),
     TableColumn(
+      type: TableColumnType.major,
+      flex: 2,
+      styleType: TableColumnStyleType.normal,
+    ),
+    TableColumn(
       type: TableColumnType.phone,
       flex: 2,
+      textAlign: TextAlign.right,
       styleType: TableColumnStyleType.normal,
     ),
     TableColumn(
@@ -161,14 +179,14 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
   ];
 
   // Pagination getters and methods
-  int get totalPages => (_teachers.length / _itemsPerPage).ceil();
+  int get totalPages => (_students.length / _itemsPerPage).ceil();
 
-  List<TeacherData> get currentPageTeachers {
+  List<StudentData> get currentPageStudents {
     final startIndex = (_currentPage - 1) * _itemsPerPage;
     final endIndex = startIndex + _itemsPerPage;
-    return _teachers.sublist(
+    return _students.sublist(
       startIndex,
-      endIndex > _teachers.length ? _teachers.length : endIndex,
+      endIndex > _students.length ? _students.length : endIndex,
     );
   }
 
@@ -198,7 +216,7 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
         children: [
           // Title
           const Text(
-            'Quản lý giảng viên',
+            'Quản lý sinh viên',
             style: TextStyle(
               fontFamily: 'Nunito Sans',
               fontWeight: FontWeight.w700,
@@ -260,17 +278,58 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                             });
                           },
                         ),
+                        const SizedBox(width: 20),
+                        // Major filter dropdown
+                        Container(
+                          height: 38,
+                          width: 226,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: const Color(
+                                0xFF687182,
+                              ).withValues(alpha: 0.16),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Text(
+                                  'Lọc theo ngành',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 14,
+                                    color: Color(0xFFA1A9B8),
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                width: 20,
+                                height: 20,
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  Icons.keyboard_arrow_down,
+                                  size: 16,
+                                  color: const Color(0xFF717680),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                            ],
+                          ),
+                        ),
                         const Spacer(),
-                        // Add teacher button
+                        // Add student button
                         SizedBox(
                           height: 38,
                           child: ElevatedButton.icon(
                             onPressed: () {
-                              // Handle add teacher
+                              // Handle add student
                             },
                             icon: const Icon(Icons.add, size: 16),
                             label: const Text(
-                              'Thêm giảng viên',
+                              'Thêm sinh viên',
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 14,
@@ -316,10 +375,10 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                               children: [
                                 // Table rows
                                 ...List.generate(_itemsPerPage, (index) {
-                                  if (index < currentPageTeachers.length) {
-                                    final teacher = currentPageTeachers[index];
+                                  if (index < currentPageStudents.length) {
+                                    final student = currentPageStudents[index];
                                     final isEven = index % 2 == 0;
-                                    return _buildTableRow(teacher, isEven);
+                                    return _buildTableRow(student, isEven);
                                   } else {
                                     // Empty row to maintain consistent height
                                     return Container(
@@ -352,7 +411,7 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                       children: [
                         // Left side: Items count
                         Text(
-                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageTeachers.length} of ${_teachers.length}',
+                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageStudents.length} of ${_students.length}',
                           style: const TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
@@ -427,23 +486,21 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                                           BoxShadow(
                                             color: const Color(
                                               0xFF596078,
-                                            ).withValues(alpha: .1),
+                                            ).withValues(alpha: 0.1),
                                             blurRadius: 5,
                                             offset: const Offset(0, 2),
                                           ),
                                           BoxShadow(
                                             color: const Color(
                                               0xFF464F60,
-                                            ).withValues(alpha: .16),
+                                            ).withValues(alpha: 0.16),
                                             offset: const Offset(0, 0),
-                                            spreadRadius: 1,
                                           ),
-                                          BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: .1,
-                                            ),
+                                          const BoxShadow(
+                                            color: Color(0xFF000000),
                                             blurRadius: 1,
-                                            offset: const Offset(0, 1),
+                                            offset: Offset(0, 1),
+                                            spreadRadius: 0.1,
                                           ),
                                         ]
                                       : [],
@@ -483,18 +540,18 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
               SizedBox(
                 width: 32,
                 child: Checkbox(
-                  value: currentPageTeachers.every(
-                    (teacher) => _selectedTeachers.contains(teacher.id),
+                  value: currentPageStudents.every(
+                    (student) => _selectedStudents.contains(student.id),
                   ),
                   onChanged: (bool? value) {
                     setState(() {
                       if (value == true) {
-                        _selectedTeachers.addAll(
-                          currentPageTeachers.map((t) => t.id),
+                        _selectedStudents.addAll(
+                          currentPageStudents.map((t) => t.id),
                         );
                       } else {
-                        for (final teacher in currentPageTeachers) {
-                          _selectedTeachers.remove(teacher.id);
+                        for (final student in currentPageStudents) {
+                          _selectedStudents.remove(student.id);
                         }
                       }
                     });
@@ -502,89 +559,166 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                 ),
               ),
 
-              // ID (#) chiếm 1 phần
+              // # chiếm 1 phần
               Expanded(
                 flex: 1,
-                child: Text(
-                  '#',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
+                child: Row(
+                  children: [
+                    const Text(
+                      '#',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        letterSpacing: 0.44,
+                        color: Color(0xFF171C26),
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    // Sort icons
+                    Column(
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 5,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF171C26),
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(0.5),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.keyboard_arrow_up,
+                            size: 4,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Container(
+                          width: 7,
+                          height: 5,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFBCC2CE),
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(0.5),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 4,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
 
-              // Mã GV chiếm 2 phần
-              Expanded(
+              // Mã SV chiếm 2 phần
+              const Expanded(
                 flex: 2,
                 child: Text(
-                  'MÃ GV',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                  'MÃ SV',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
                   ),
                 ),
               ),
 
               // Tên chiếm 2 phần
-              Expanded(
+              const Expanded(
                 flex: 2,
                 child: Text(
                   'TÊN',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
+                  ),
+                ),
+              ),
+
+              // Ngành chiếm 2 phần
+              const Expanded(
+                flex: 2,
+                child: Text(
+                  'NGÀNH',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
                   ),
                 ),
               ),
 
               // Số điện thoại chiếm 2 phần
-              Expanded(
+              const Expanded(
                 flex: 2,
                 child: Text(
                   'SỐ ĐIỆN THOẠI',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
                   ),
                 ),
               ),
 
               // Email chiếm 2 phần
-              Expanded(
+              const Expanded(
                 flex: 2,
                 child: Text(
                   'EMAIL',
                   textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
                   ),
                 ),
               ),
 
               // Ngày sinh chiếm 2 phần
-              Expanded(
+              const Expanded(
                 flex: 2,
                 child: Text(
                   'NGÀY SINH',
                   textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
                   ),
                 ),
               ),
 
               // Hành động chiếm 2 phần
-              Expanded(
+              const Expanded(
                 flex: 2,
                 child: Text(
                   'HÀNH ĐỘNG',
                   textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
                   ),
                 ),
               ),
@@ -595,20 +729,20 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
     );
   }
 
-  Widget _buildTableRow(TeacherData teacher, bool isEven) {
-    final isSelected = _selectedTeachers.contains(teacher.id);
+  Widget _buildTableRow(StudentData student, bool isEven) {
+    final isSelected = _selectedStudents.contains(student.id);
 
-    return DataTableRow<TeacherData>(
-      data: teacher,
+    return DataTableRow<StudentData>(
+      data: student,
       isEven: isEven,
       isSelected: isSelected,
-      columns: _teacherColumns,
+      columns: _studentColumns,
       onSelectionChanged: () {
         setState(() {
           if (isSelected) {
-            _selectedTeachers.remove(teacher.id);
+            _selectedStudents.remove(student.id);
           } else {
-            _selectedTeachers.add(teacher.id);
+            _selectedStudents.add(student.id);
           }
         });
       },
@@ -622,7 +756,7 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
   }
 }
 
-class TeacherData implements TableRowData {
+class StudentData implements StudentTableRowData {
   @override
   final int id;
   @override
@@ -630,16 +764,19 @@ class TeacherData implements TableRowData {
   @override
   final String name;
   @override
+  final String major;
+  @override
   final String phone;
   @override
   final String email;
   @override
   final String birthDate;
 
-  TeacherData({
+  StudentData({
     required this.id,
     required this.code,
     required this.name,
+    required this.major,
     required this.phone,
     required this.email,
     required this.birthDate,
