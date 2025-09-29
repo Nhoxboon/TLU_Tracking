@@ -7,6 +7,7 @@ import 'package:android_app/widgets/web/admin_card.dart';
 import 'package:android_app/widgets/web/dashboard_icon.dart';
 import 'package:android_app/screens/admin/dashboard/teachers_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/students_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/classes_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/change_password_view.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -29,7 +30,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case DashboardTab.students:
         return const StudentsManagementView();
       case DashboardTab.classes:
-        return _buildComingSoonContent('Quản lý lớp học');
+        return const ClassesManagementView();
       case DashboardTab.subjects:
         return _buildComingSoonContent('Quản lý môn học');
       case DashboardTab.majors:
