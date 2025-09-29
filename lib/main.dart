@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'screens/users/class_detail_screen.dart';
 import 'package:android_app/screens/admin/auth/admin_login_screen.dart';
 import 'package:android_app/screens/admin/dashboard/admin_dashboard_screen.dart';
+import 'package:android_app/screens/admin/dashboard/class_students_view.dart';
 import 'package:android_app/screens/onboarding/onboarding_screen.dart';
 import 'package:android_app/screens/users/auth/login_screen.dart';
 import 'package:android_app/screens/users/auth/forgot_password_screen.dart';
@@ -32,6 +33,15 @@ class MyApp extends StatelessWidget {
             kIsWeb ? const AdminLoginScreen() : const OnboardingScreen(),
         '/admin/login': (context) => const AdminLoginScreen(),
         '/admin/dashboard': (context) => const AdminDashboardScreen(),
+        '/class-students': (context) {
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
+          return ClassStudentsView(
+            classCode: args['classCode'] as String,
+            className: args['className'] as String,
+          );
+        },
         '/class-detail': (context) => const ClassDetailScreen(classCode: 'CSE'),
         '/onboarding': (context) => const OnboardingScreen(),
         '/student/login': (context) => const LoginScreen(),
