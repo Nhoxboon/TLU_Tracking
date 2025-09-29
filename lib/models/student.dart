@@ -27,3 +27,48 @@ class Student extends User {
     return username == email && this.password == password;
   }
 }
+
+// Simple student data class for table display
+class StudentTableData {
+  final int id;
+  final String studentCode;
+  final String name;
+  final String major;
+  final String phone;
+  final String email;
+  final String birthDate;
+
+  StudentTableData({
+    required this.id,
+    required this.studentCode,
+    required this.name,
+    required this.major,
+    required this.phone,
+    required this.email,
+    required this.birthDate,
+  });
+
+  factory StudentTableData.fromJson(Map<String, dynamic> json) {
+    return StudentTableData(
+      id: json['id'] ?? 0,
+      studentCode: json['studentCode'] ?? '',
+      name: json['name'] ?? '',
+      major: json['major'] ?? '',
+      phone: json['phone'] ?? '',
+      email: json['email'] ?? '',
+      birthDate: json['birthDate'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'studentCode': studentCode,
+      'name': name,
+      'major': major,
+      'phone': phone,
+      'email': email,
+      'birthDate': birthDate,
+    };
+  }
+}

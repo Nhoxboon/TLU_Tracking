@@ -16,6 +16,13 @@ abstract class StudentTableRowData extends TableRowData {
   String get major;
 }
 
+// Extended interface for class data with teacher and subject
+abstract class ClassTableRowData extends TableRowData {
+  String get teacher;
+  String get subject;
+  String get creationDate;
+}
+
 // Generic reusable table row widget
 class DataTableRow<T extends TableRowData> extends StatelessWidget {
   final T data;
@@ -131,6 +138,39 @@ class DataTableRow<T extends TableRowData> extends StatelessWidget {
             style: _getTextStyle(column.styleType),
           ),
         );
+      case TableColumnType.teacher:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            (data is ClassTableRowData)
+                ? (data as ClassTableRowData).teacher
+                : '',
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
+      case TableColumnType.subject:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            (data is ClassTableRowData)
+                ? (data as ClassTableRowData).subject
+                : '',
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
+      case TableColumnType.creationDate:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            (data is ClassTableRowData)
+                ? (data as ClassTableRowData).creationDate
+                : data.birthDate,
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
       case TableColumnType.custom:
         return Expanded(
           flex: column.flex,
@@ -146,19 +186,22 @@ class DataTableRow<T extends TableRowData> extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              CustomActionButton(
-                icon: Icons.edit_outlined,
-                iconColor: const Color(0xFF000000).withValues(alpha: 0.6),
-                onTap: onEdit ?? () {},
-                tooltip: "Chỉnh sửa",
-              ),
-              const SizedBox(width: 8),
-              CustomActionButton(
-                icon: Icons.delete_outline,
-                iconColor: const Color(0xFFEF3826),
-                onTap: onDelete ?? () {},
-                tooltip: "Xoá",
-              ),
+              if (onEdit != null) ...[
+                CustomActionButton(
+                  icon: Icons.edit_outlined,
+                  iconColor: const Color(0xFF000000).withValues(alpha: 0.6),
+                  onTap: onEdit!,
+                  tooltip: "Chỉnh sửa",
+                ),
+                const SizedBox(width: 8),
+              ],
+              if (onDelete != null)
+                CustomActionButton(
+                  icon: Icons.delete_outline,
+                  iconColor: const Color(0xFFEF3826),
+                  onTap: onDelete!,
+                  tooltip: "Xoá",
+                ),
             ],
           ),
         );
@@ -218,6 +261,9 @@ enum TableColumnType {
   phone,
   email,
   birthDate,
+  teacher,
+  subject,
+  creationDate,
   custom,
   actions,
 }
