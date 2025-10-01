@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:android_app/widgets/common/confirmation_dialog.dart';
 
 /// A reusable action button widget with hover and press effects
 class CustomActionButton extends StatelessWidget {
@@ -10,6 +11,9 @@ class CustomActionButton extends StatelessWidget {
   final Color? borderColor;
   final double borderRadius;
   final String? tooltip;
+  final bool requiresConfirmation;
+  final String? confirmationTitle;
+  final String? confirmationMessage;
 
   const CustomActionButton({
     super.key,
@@ -21,14 +25,35 @@ class CustomActionButton extends StatelessWidget {
     this.borderColor,
     this.borderRadius = 8,
     this.tooltip,
+    this.requiresConfirmation = false,
+    this.confirmationTitle,
+    this.confirmationMessage,
   });
+
+  void _handleTap(BuildContext context) async {
+    if (requiresConfirmation) {
+      final confirmed = await ConfirmationDialog.show(
+        context,
+        title: confirmationTitle ?? 'Xác nhận xóa',
+        message:
+            confirmationMessage ??
+            'Bạn có chắc chắn muốn xóa? Hành động này không thể hoàn tác.',
+      );
+
+      if (confirmed == true) {
+        onTap();
+      }
+    } else {
+      onTap();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final widget = Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: () => _handleTap(context),
         borderRadius: BorderRadius.circular(borderRadius),
         hoverColor: iconColor.withValues(alpha: 0.1),
         splashColor: iconColor.withValues(alpha: 0.2),

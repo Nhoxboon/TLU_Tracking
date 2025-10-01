@@ -14,6 +14,7 @@ abstract class TableRowData {
 // Extended interface for student data with major
 abstract class StudentTableRowData extends TableRowData {
   String get major;
+  String get course;
 }
 
 // Extended interface for class data with teacher and subject
@@ -21,6 +22,11 @@ abstract class ClassTableRowData extends TableRowData {
   String get teacher;
   String get subject;
   String get creationDate;
+}
+
+// Extended interface for major data (simple, no additional fields)
+abstract class MajorTableRowData extends TableRowData {
+  // Majors only need id, code, and name - other fields are inherited but empty
 }
 
 // Generic reusable table row widget
@@ -138,6 +144,26 @@ class DataTableRow<T extends TableRowData> extends StatelessWidget {
             style: _getTextStyle(column.styleType),
           ),
         );
+      case TableColumnType.majorName:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            data.name, // For majors, we use the name field to show major name
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
+      case TableColumnType.course:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            (data is StudentTableRowData)
+                ? (data as StudentTableRowData).course
+                : '',
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
       case TableColumnType.teacher:
         return Expanded(
           flex: column.flex,
@@ -200,7 +226,11 @@ class DataTableRow<T extends TableRowData> extends StatelessWidget {
                   icon: Icons.delete_outline,
                   iconColor: const Color(0xFFEF3826),
                   onTap: onDelete!,
-                  tooltip: "Xoá",
+                  tooltip: "Xóa",
+                  requiresConfirmation: true,
+                  confirmationTitle: 'Xác nhận xóa',
+                  confirmationMessage:
+                      'Bạn có chắc chắn muốn xóa? Hành động này không thể hoàn tác.',
                 ),
             ],
           ),
@@ -258,9 +288,11 @@ enum TableColumnType {
   code,
   name,
   major,
+  majorName,
   phone,
   email,
   birthDate,
+  course,
   teacher,
   subject,
   creationDate,

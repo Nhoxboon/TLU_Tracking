@@ -8,6 +8,9 @@ import 'package:android_app/widgets/web/dashboard_icon.dart';
 import 'package:android_app/screens/admin/dashboard/teachers_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/students_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/classes_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/subjects_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/majors_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/courses_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/change_password_view.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -32,11 +35,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case DashboardTab.classes:
         return const ClassesManagementView();
       case DashboardTab.subjects:
-        return _buildComingSoonContent('Quản lý môn học');
+        return const SubjectsManagementView();
       case DashboardTab.majors:
-        return _buildComingSoonContent('Quản lý ngành');
+        return const MajorsManagementView();
       case DashboardTab.courses:
-        return _buildComingSoonContent('Quản lý khóa');
+        return const CoursesManagementView();
       case DashboardTab.changePassword:
         return const ChangePasswordView();
     }
@@ -123,49 +126,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 iconType: DashboardIconType.award,
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildComingSoonContent(String title) {
-    return Container(
-      color: const Color(0xFFF5F6FA),
-      padding: const EdgeInsets.all(30.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontFamily: 'Nunito Sans',
-              fontWeight: FontWeight.w700,
-              fontSize: 32,
-              letterSpacing: -0.11,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 50),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.construction, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Tính năng đang được phát triển',
-                    style: TextStyle(
-                      fontFamily: 'Nunito Sans',
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ],
       ),
