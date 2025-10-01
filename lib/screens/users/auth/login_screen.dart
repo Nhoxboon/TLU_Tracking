@@ -55,9 +55,20 @@ class _LoginScreenState extends State<LoginScreen> {
     // Simulate network delay for login
     Future.delayed(const Duration(milliseconds: 1500), () {
       if (mounted) {
-        // Navigate to the class detail screen on successful login
-        Navigator.pushReplacementNamed(context, '/class-detail');
-
+        // Simulate different user types based on email
+        final email = _emailController.text.toLowerCase().trim();
+        
+        if (email.contains('teacher') || email.contains('gv')) {
+          // Navigate to teacher dashboard for teachers
+          Navigator.pushReplacementNamed(context, '/teacher/dashboard');
+        } else if (email.contains('admin')) {
+          // Navigate to admin dashboard for admins
+          Navigator.pushReplacementNamed(context, '/admin/dashboard');
+        } else {
+          // Default to student view (class detail)
+          Navigator.pushReplacementNamed(context, '/class-detail');
+        }
+        
         // Reset loading state
         setState(() {
           _isLoading = false;
@@ -101,6 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 55),
 
+
                 // Login Label
                 const Align(
                   alignment: Alignment.centerLeft,
@@ -120,6 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
+
 
                 // Username field
                 Column(
@@ -204,6 +217,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 26),
 
+
                 // Password field
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,6 +290,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             horizontal: 15,
                             vertical: 14,
                           ),
+                          
                           isDense: true,
                           border: InputBorder.none,
                           suffixIcon: IconButton(
@@ -301,6 +316,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 32),
 
+
                 // Forgot Password
                 Align(
                   alignment: Alignment.center,
@@ -322,6 +338,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
+
 
                 // Login Button
                 SizedBox(
