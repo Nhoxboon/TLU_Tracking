@@ -55,8 +55,19 @@ class _LoginScreenState extends State<LoginScreen> {
     // Simulate network delay for login
     Future.delayed(const Duration(milliseconds: 1500), () {
       if (mounted) {
-        // Navigate to the class detail screen on successful login
-        Navigator.pushReplacementNamed(context, '/class-detail');
+        // Simulate different user types based on email
+        final email = _emailController.text.toLowerCase().trim();
+        
+        if (email.contains('teacher') || email.contains('gv')) {
+          // Navigate to teacher dashboard for teachers
+          Navigator.pushReplacementNamed(context, '/teacher/dashboard');
+        } else if (email.contains('admin')) {
+          // Navigate to admin dashboard for admins
+          Navigator.pushReplacementNamed(context, '/admin/dashboard');
+        } else {
+          // Default to student view (class detail)
+          Navigator.pushReplacementNamed(context, '/class-detail');
+        }
         
         // Reset loading state
         setState(() {
