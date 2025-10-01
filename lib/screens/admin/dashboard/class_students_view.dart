@@ -34,6 +34,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
       phone: '11111111111',
       email: 'ann.culhane@example.com',
       birthDate: '12/05/2004',
+      course: 'K65',
     ),
     StudentData(
       id: 2,
@@ -43,6 +44,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
       phone: '11111111111',
       email: 'tatiana.mango@example.com',
       birthDate: '12/05/2004',
+      course: 'K65',
     ),
     StudentData(
       id: 3,
@@ -52,6 +54,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
       phone: '11111111111',
       email: 'ahmad.rosser@example.com',
       birthDate: '12/05/2004',
+      course: 'K65',
     ),
     StudentData(
       id: 4,
@@ -61,6 +64,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
       phone: '11111111111',
       email: 'phillip.stanton@example.com',
       birthDate: '12/05/2004',
+      course: 'K65',
     ),
     StudentData(
       id: 5,
@@ -70,6 +74,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
       phone: '11111111111',
       email: 'zain.calzoni@example.com',
       birthDate: '12/05/2004',
+      course: 'K65',
     ),
     StudentData(
       id: 6,
@@ -79,6 +84,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
       phone: '11111111111',
       email: 'leo.stanton@example.com',
       birthDate: '12/05/2004',
+      course: 'K65',
     ),
     StudentData(
       id: 7,
@@ -88,6 +94,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
       phone: '11111111111',
       email: 'kaiya.vetrovs@example.com',
       birthDate: '12/05/2004',
+      course: 'K65',
     ),
     StudentData(
       id: 8,
@@ -97,6 +104,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
       phone: '11111111111',
       email: 'ryan.westervelt@example.com',
       birthDate: '12/05/2004',
+      course: 'K65',
     ),
     StudentData(
       id: 9,
@@ -106,6 +114,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
       phone: '11111111111',
       email: 'corey.stanton@example.com',
       birthDate: '12/05/2004',
+      course: 'K65',
     ),
     StudentData(
       id: 10,
@@ -115,6 +124,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
       phone: '11111111111',
       email: 'adison.aminoff@example.com',
       birthDate: '12/05/2004',
+      course: 'K65',
     ),
     StudentData(
       id: 11,
@@ -124,6 +134,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
       phone: '11111111111',
       email: 'alfredo.aminoff@example.com',
       birthDate: '12/05/2004',
+      course: 'K65',
     ),
     StudentData(
       id: 12,
@@ -133,6 +144,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
       phone: '11111111111',
       email: 'allison.botosh@example.com',
       birthDate: '12/05/2004',
+      course: 'K65',
     ),
     StudentData(
       id: 13,
@@ -142,6 +154,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
       phone: '11111111111',
       email: 'allison.botosh@example.com',
       birthDate: '12/05/2004',
+      course: 'K65',
     ),
     StudentData(
       id: 14,
@@ -151,6 +164,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
       phone: '11111111111',
       email: 'allison.botosh@example.com',
       birthDate: '12/05/2004',
+      course: 'K65',
     ),
   ];
 
@@ -181,15 +195,23 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
     TableColumn(
       type: TableColumnType.phone,
       flex: 2,
+      textAlign: TextAlign.right,
       styleType: TableColumnStyleType.normal,
     ),
     TableColumn(
       type: TableColumnType.email,
       flex: 3,
+      textAlign: TextAlign.right,
       styleType: TableColumnStyleType.normal,
     ),
     TableColumn(
       type: TableColumnType.birthDate,
+      flex: 2,
+      textAlign: TextAlign.right,
+      styleType: TableColumnStyleType.normal,
+    ),
+    TableColumn(
+      type: TableColumnType.course,
       flex: 2,
       textAlign: TextAlign.right,
       styleType: TableColumnStyleType.normal,
@@ -314,10 +336,88 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
                               });
                             },
                           ),
-                          const SizedBox(width: 16),
-
-                          // Filter button
-                          _buildFilterButton('Lọc theo ngành'),
+                          const SizedBox(width: 20),
+                          // Major filter dropdown
+                          Container(
+                            height: 38,
+                            width: 226,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFF687182,
+                                ).withValues(alpha: 0.16),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Text(
+                                    'Lọc theo ngành',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
+                                      color: Color(0xFFA1A9B8),
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  width: 20,
+                                  height: 20,
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    Icons.keyboard_arrow_down,
+                                    size: 16,
+                                    color: const Color(0xFF717680),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          // Course filter dropdown
+                          Container(
+                            height: 38,
+                            width: 226,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFF687182,
+                                ).withValues(alpha: 0.16),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Text(
+                                    'Lọc theo khóa',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
+                                      color: Color(0xFFA1A9B8),
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  width: 20,
+                                  height: 20,
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    Icons.keyboard_arrow_down,
+                                    size: 16,
+                                    color: const Color(0xFF717680),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                            ),
+                          ),
 
                           const Spacer(),
 
@@ -569,47 +669,6 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
     );
   }
 
-  Widget _buildFilterButton(String text) {
-    return Container(
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: const Color(0xFF687182).withValues(alpha: 0.16),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 2,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            text,
-            style: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              color: Color(0xFFA1A9B8),
-            ),
-          ),
-          const SizedBox(width: 8),
-          const Icon(
-            Icons.keyboard_arrow_down,
-            size: 16,
-            color: Color(0xFF717680),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTableHeader() {
     return Container(
       color: const Color(0xFFF9FAFC),
@@ -705,6 +764,16 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
             ),
           ),
 
+          // Khóa chiếm 2 phần
+          Expanded(
+            flex: 2,
+            child: Text(
+              'KHÓA',
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            ),
+          ),
+
           // Hành động chiếm 2 phần
           Expanded(
             flex: 2,
@@ -758,6 +827,8 @@ class StudentData implements StudentTableRowData {
   final String email;
   @override
   final String birthDate;
+  @override
+  final String course;
 
   StudentData({
     required this.id,
@@ -767,5 +838,6 @@ class StudentData implements StudentTableRowData {
     required this.phone,
     required this.email,
     required this.birthDate,
+    required this.course,
   }) : code = studentCode;
 }
