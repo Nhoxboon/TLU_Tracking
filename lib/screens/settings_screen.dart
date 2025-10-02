@@ -3,8 +3,8 @@ import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
 
+  const SettingsScreen({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return Scaffold(
