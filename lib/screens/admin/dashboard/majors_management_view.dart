@@ -581,15 +581,35 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                     // Sort icons
                     Column(
                       children: [
-                        Icon(
-                          Icons.keyboard_arrow_up,
-                          size: 12,
-                          color: const Color(0xFF171C26),
+                        Container(
+                          width: 7,
+                          height: 5,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF171C26),
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(0.5),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.keyboard_arrow_up,
+                            size: 4,
+                            color: Colors.white,
+                          ),
                         ),
-                        Icon(
-                          Icons.keyboard_arrow_down,
-                          size: 12,
-                          color: const Color(0xFFBCC2CE),
+                        Container(
+                          width: 7,
+                          height: 5,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFBCC2CE),
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(0.5),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 4,
+                            color: Colors.white,
+                          ),
                         ),
                       ],
                     ),

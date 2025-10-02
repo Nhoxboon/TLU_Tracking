@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
+import 'package:android_app/widgets/common/add_teacher_modal.dart';
 
 class TeachersManagementView extends StatefulWidget {
   const TeachersManagementView({super.key});
@@ -343,7 +344,12 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                                 height: 38,
                                 child: ElevatedButton.icon(
                                   onPressed: () {
-                                    // Handle add teacher
+                                    showDialog(
+                                      context: context,
+                                      builder: (BuildContext context) {
+                                        return const AddTeacherModal();
+                                      },
+                                    );
                                   },
                                   icon: const Icon(Icons.add, size: 16),
                                   label: const Text(
@@ -631,12 +637,55 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
               // ID (#) chiếm 1 phần
               Expanded(
                 flex: 1,
-                child: Text(
-                  '#',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
+                child: Row(
+                  children: [
+                    const Text(
+                      '#',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        letterSpacing: 0.44,
+                        color: Color(0xFF171C26),
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    // Sort icons
+                    Column(
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 5,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF171C26),
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(0.5),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.keyboard_arrow_up,
+                            size: 4,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Container(
+                          width: 7,
+                          height: 5,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFBCC2CE),
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(0.5),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 4,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
 

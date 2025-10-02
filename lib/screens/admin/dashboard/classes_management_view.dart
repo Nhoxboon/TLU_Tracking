@@ -681,12 +681,55 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
               // ID (#) chiếm 1 phần
               Expanded(
                 flex: 1,
-                child: Text(
-                  '#',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
+                child: Row(
+                  children: [
+                    const Text(
+                      '#',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        letterSpacing: 0.44,
+                        color: Color(0xFF171C26),
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    // Sort icons
+                    Column(
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 5,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF171C26),
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(0.5),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.keyboard_arrow_up,
+                            size: 4,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Container(
+                          width: 7,
+                          height: 5,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFBCC2CE),
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(0.5),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 4,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
 

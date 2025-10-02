@@ -29,6 +29,11 @@ abstract class MajorTableRowData extends TableRowData {
   // Majors only need id, code, and name - other fields are inherited but empty
 }
 
+// Extended interface for course data with admission year
+abstract class CourseTableRowData extends TableRowData {
+  String get admissionYear;
+}
+
 // Generic reusable table row widget
 class DataTableRow<T extends TableRowData> extends StatelessWidget {
   final T data;
@@ -198,10 +203,35 @@ class DataTableRow<T extends TableRowData> extends StatelessWidget {
           ),
         );
       case TableColumnType.custom:
+        String customText = '';
+        if (column.customValue == 'admissionYear' &&
+            data is CourseTableRowData) {
+          customText = (data as CourseTableRowData).admissionYear;
+        } else if (column.customGetter != null) {
+          customText = column.customGetter!(data);
+        } else {
+          customText = column.customValue ?? '';
+        }
+
+        // Special handling for admissionYear - add left padding to shift text left
+        if (column.customValue == 'admissionYear') {
+          return Expanded(
+            flex: column.flex,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 55.0),
+              child: Text(
+                customText,
+                textAlign: column.textAlign,
+                style: _getTextStyle(column.styleType),
+              ),
+            ),
+          );
+        }
+
         return Expanded(
           flex: column.flex,
           child: Text(
-            column.customValue ?? '',
+            customText,
             textAlign: column.textAlign,
             style: _getTextStyle(column.styleType),
           ),
@@ -273,6 +303,8 @@ class TableColumn {
   final TextAlign textAlign;
   final TableColumnStyleType styleType;
   final String? customValue; // for custom columns
+  final String Function(TableRowData)?
+  customGetter; // for dynamic custom values
 
   const TableColumn({
     required this.type,
@@ -280,6 +312,7 @@ class TableColumn {
     this.textAlign = TextAlign.left,
     this.styleType = TableColumnStyleType.normal,
     this.customValue,
+    this.customGetter,
   });
 }
 
