@@ -6,6 +6,7 @@ import '../settings_screen.dart';
 import 'add_session_screen.dart';
 import 'edit_session_screen.dart';
 import 'session_detail_screen.dart';
+import 'settings_screen.dart';
 
 class ClassDetailScreen extends StatefulWidget {
   final String classCode;
