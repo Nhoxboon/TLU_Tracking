@@ -86,6 +86,82 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
     }
   }
 
+  void _showDeleteConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          title: const Text(
+            'Xác nhận xóa',
+            style: TextStyle(
+              fontFamily: 'Nunito Sans',
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          content: Text(
+            'Bạn có chắc chắn muốn xóa ${_selectedMajors.length} ngành đã chọn? Hành động này không thể hoàn tác.',
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'Hủy',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Handle delete action
+                setState(() {
+                  _majors.removeWhere(
+                    (major) => _selectedMajors.contains(major.id),
+                  );
+                  _selectedMajors.clear();
+                  // Reset to first page if current page is empty
+                  if (currentPageMajors.isEmpty && _currentPage > 1) {
+                    _currentPage = 1;
+                  }
+                });
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: const Text(
+                'Xóa',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -139,93 +215,144 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                       horizontal: 24,
                       vertical: 16,
                     ),
-                    child: Row(
-                      children: [
-                        // Search field
-                        Expanded(
-                          child: SizedBox(
-                            height: 32,
-                            child: TextField(
-                              controller: _searchController,
-                              decoration: InputDecoration(
-                                hintText: 'Tìm kiếm...',
-                                hintStyle: const TextStyle(
+                    child: _selectedMajors.isEmpty
+                        ? Row(
+                            children: [
+                              // Search field
+                              Expanded(
+                                child: SizedBox(
+                                  height: 32,
+                                  child: TextField(
+                                    controller: _searchController,
+                                    decoration: InputDecoration(
+                                      hintText: 'Tìm kiếm...',
+                                      hintStyle: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w400,
+                                        color: Color(0xFFA1A9B8),
+                                      ),
+                                      prefixIcon: const Icon(
+                                        Icons.search,
+                                        size: 16,
+                                        color: Color(0xFF868FA0),
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFF687182),
+                                          width: 0.16,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFF687182),
+                                          width: 0.16,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFF2264E5),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+
+                              // Add major button
+                              SizedBox(
+                                height: 32,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    // TODO: Add major functionality
+                                  },
+                                  icon: const Icon(Icons.add, size: 12),
+                                  label: const Text(
+                                    'Thêm ngành',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.28,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2264E5),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              // Selected items count
+                              Text(
+                                '${_selectedMajors.length} ngành đã chọn',
+                                style: const TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFFA1A9B8),
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF1F2937),
                                 ),
-                                prefixIcon: const Icon(
-                                  Icons.search,
-                                  size: 16,
-                                  color: Color(0xFF868FA0),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF687182),
-                                    width: 0.16,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF687182),
-                                    width: 0.16,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF2264E5),
-                                    width: 1,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                filled: true,
-                                fillColor: Colors.white,
                               ),
-                            ),
+                              const Spacer(),
+                              // Delete button
+                              SizedBox(
+                                height: 32,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    _showDeleteConfirmationDialog();
+                                  },
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    size: 12,
+                                  ),
+                                  label: const Text(
+                                    'Xóa',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.28,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFEF4444),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 16),
-
-                        // Add major button
-                        SizedBox(
-                          height: 32,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              // TODO: Add major functionality
-                            },
-                            icon: const Icon(Icons.add, size: 12),
-                            label: const Text(
-                              'Thêm ngành',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.28,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2264E5),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
 
                   // Divider
