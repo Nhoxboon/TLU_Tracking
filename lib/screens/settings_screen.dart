@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'edit_profile_screen.dart';
-import 'change_password_screen.dart';
+import 'users/change_password_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -43,7 +43,7 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Profile info section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -51,44 +51,29 @@ class SettingsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Name
-                  _buildInfoItem(
-                    title: 'Tên',
-                    value: 'Vishal Khadok',
-                  ),
+                  _buildInfoItem(title: 'Tên', value: 'Vishal Khadok'),
                   const SizedBox(height: 16),
-                  
+
                   // Email
-                  _buildInfoItem(
-                    title: 'Email',
-                    value: 'hello@halallab.co',
-                  ),
+                  _buildInfoItem(title: 'Email', value: 'hello@halallab.co'),
                   const SizedBox(height: 16),
-                  
+
                   // Birthday
-                  _buildInfoItem(
-                    title: 'Ngày sinh',
-                    value: '15/02/1984',
-                  ),
+                  _buildInfoItem(title: 'Ngày sinh', value: '15/02/1984'),
                   const SizedBox(height: 16),
-                  
+
                   // Hometown
-                  _buildInfoItem(
-                    title: 'Quê quán',
-                    value: 'Hải Dương',
-                  ),
+                  _buildInfoItem(title: 'Quê quán', value: 'Hải Dương'),
                   const SizedBox(height: 16),
-                  
+
                   // Phone
-                  _buildInfoItem(
-                    title: 'Số điện thoại',
-                    value: '408-841-0926',
-                  ),
+                  _buildInfoItem(title: 'Số điện thoại', value: '408-841-0926'),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Action buttons
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -103,12 +88,14 @@ class SettingsScreen extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfileScreen(),
+                        ),
                       );
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Change Password button
                   _buildActionButton(
                     context,
@@ -117,12 +104,14 @@ class SettingsScreen extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const ChangePasswordScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const ChangePasswordScreen(),
+                        ),
                       );
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Logout button
                   _buildActionButton(
                     context,
@@ -136,7 +125,9 @@ class SettingsScreen extends StatelessWidget {
                         builder: (BuildContext context) {
                           return AlertDialog(
                             title: const Text('Đăng xuất'),
-                            content: const Text('Bạn có chắc chắn muốn đăng xuất?'),
+                            content: const Text(
+                              'Bạn có chắc chắn muốn đăng xuất?',
+                            ),
                             actions: <Widget>[
                               TextButton(
                                 child: const Text('Hủy'),

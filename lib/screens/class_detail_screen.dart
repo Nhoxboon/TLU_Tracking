@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../widgets/session_card.dart';
-import '../../widgets/swipe_instructions.dart';
-import '../../models/teaching_session.dart';
-import '../settings_screen.dart';
-import 'add_session_screen.dart';
-import 'edit_session_screen.dart';
-import 'session_detail_screen.dart';
+import '../widgets/session_card.dart';
+import '../widgets/swipe_instructions.dart';
+import '../models/teaching_session.dart';
 import 'settings_screen.dart';
+import 'users/add_session_screen.dart';
+import 'users/edit_session_screen.dart';
+import 'users/session_detail_screen.dart';
 
 class ClassDetailScreen extends StatefulWidget {
   final String classCode;
@@ -184,8 +183,10 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
               color: Colors.black.withOpacity(0.7),
               onPressed: () {
                 Navigator.push(
-                  context, 
-                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
+                  ),
                 );
               },
             ),
