@@ -251,6 +251,82 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
     }
   }
 
+  void _showRemoveFromClassDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          title: const Text(
+            'Xác nhận xóa khỏi lớp',
+            style: TextStyle(
+              fontFamily: 'Nunito Sans',
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          content: Text(
+            'Bạn có chắc chắn muốn xóa ${_selectedStudents.length} sinh viên đã chọn khỏi lớp ${widget.className}? Hành động này không thể hoàn tác.',
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'Hủy',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Handle remove from class action
+                setState(() {
+                  _students.removeWhere(
+                    (student) => _selectedStudents.contains(student.id),
+                  );
+                  _selectedStudents.clear();
+                  // Reset to first page if current page is empty
+                  if (currentPageStudents.isEmpty && _currentPage > 1) {
+                    _currentPage = 1;
+                  }
+                });
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: const Text(
+                'Xóa khỏi lớp',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -317,176 +393,229 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
                         horizontal: 24,
                         vertical: 16,
                       ),
-                      child: Row(
-                        children: [
-                          // Search field
-                          CustomSearchBar(
-                            controller: _searchController,
-                            hintText: 'Tìm kiếm...',
-                            onChanged: (value) {
-                              // Handle search logic here
-                              setState(() {
-                                // Reset to first page when searching
-                                _currentPage = 1;
-                              });
-                            },
-                            onClear: () {
-                              setState(() {
-                                _currentPage = 1;
-                              });
-                            },
-                          ),
-                          const SizedBox(width: 20),
-                          // Major filter dropdown
-                          Container(
-                            height: 38,
-                            width: 226,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: const Color(
-                                  0xFF687182,
-                                ).withValues(alpha: 0.16),
-                              ),
-                            ),
-                            child: Row(
+                      child: _selectedStudents.isEmpty
+                          ? Row(
                               children: [
-                                const SizedBox(width: 12),
-                                const Expanded(
-                                  child: Text(
-                                    'Lọc theo ngành',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 14,
-                                      color: Color(0xFFA1A9B8),
+                                // Search field
+                                CustomSearchBar(
+                                  controller: _searchController,
+                                  hintText: 'Tìm kiếm...',
+                                  onChanged: (value) {
+                                    // Handle search logic here
+                                    setState(() {
+                                      // Reset to first page when searching
+                                      _currentPage = 1;
+                                    });
+                                  },
+                                  onClear: () {
+                                    setState(() {
+                                      _currentPage = 1;
+                                    });
+                                  },
+                                ),
+                                const SizedBox(width: 20),
+                                // Major filter dropdown
+                                Container(
+                                  height: 38,
+                                  width: 226,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFF687182,
+                                      ).withValues(alpha: 0.16),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const SizedBox(width: 12),
+                                      const Expanded(
+                                        child: Text(
+                                          'Lọc theo ngành',
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 14,
+                                            color: Color(0xFFA1A9B8),
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 20,
+                                        height: 20,
+                                        alignment: Alignment.center,
+                                        child: Icon(
+                                          Icons.keyboard_arrow_down,
+                                          size: 16,
+                                          color: const Color(0xFF717680),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 20),
+                                // Course filter dropdown
+                                Container(
+                                  height: 38,
+                                  width: 226,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFF687182,
+                                      ).withValues(alpha: 0.16),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const SizedBox(width: 12),
+                                      const Expanded(
+                                        child: Text(
+                                          'Lọc theo khóa',
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 14,
+                                            color: Color(0xFFA1A9B8),
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 20,
+                                        height: 20,
+                                        alignment: Alignment.center,
+                                        child: Icon(
+                                          Icons.keyboard_arrow_down,
+                                          size: 16,
+                                          color: const Color(0xFF717680),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                    ],
+                                  ),
+                                ),
+
+                                const Spacer(),
+
+                                // Import excel button
+                                SizedBox(
+                                  height: 38,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      // Handle import excel
+                                    },
+                                    icon: const Icon(
+                                      Icons.upload_file,
+                                      size: 16,
+                                    ),
+                                    label: const Text(
+                                      'Nhập excel',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: 0.28,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF46E522),
+                                      foregroundColor: Colors.black,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
                                     ),
                                   ),
                                 ),
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  alignment: Alignment.center,
-                                  child: Icon(
-                                    Icons.keyboard_arrow_down,
-                                    size: 16,
-                                    color: const Color(0xFF717680),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 20),
-                          // Course filter dropdown
-                          Container(
-                            height: 38,
-                            width: 226,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: const Color(
-                                  0xFF687182,
-                                ).withValues(alpha: 0.16),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                const SizedBox(width: 12),
-                                const Expanded(
-                                  child: Text(
-                                    'Lọc theo khóa',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 14,
-                                      color: Color(0xFFA1A9B8),
+                                const SizedBox(width: 16),
+
+                                // Add student button
+                                SizedBox(
+                                  height: 38,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      // Handle add student
+                                    },
+                                    icon: const Icon(Icons.add, size: 16),
+                                    label: const Text(
+                                      'Thêm sinh viên vào lớp',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: 0.28,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF2264E5),
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
                                     ),
                                   ),
                                 ),
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  alignment: Alignment.center,
-                                  child: Icon(
-                                    Icons.keyboard_arrow_down,
-                                    size: 16,
-                                    color: const Color(0xFF717680),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                // Selected items count
+                                Text(
+                                  '${_selectedStudents.length} sinh viên đã chọn',
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF1F2937),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                const Spacer(),
+                                // Remove from class button
+                                SizedBox(
+                                  height: 38,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      _showRemoveFromClassDialog();
+                                    },
+                                    icon: const Icon(
+                                      Icons.remove_circle_outline,
+                                      size: 16,
+                                    ),
+                                    label: const Text(
+                                      'Xóa khỏi lớp',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: 0.28,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFEF4444),
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
-                          ),
-
-                          const Spacer(),
-
-                          // Import excel button
-                          SizedBox(
-                            height: 38,
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                // Handle import excel
-                              },
-                              icon: const Icon(Icons.upload_file, size: 16),
-                              label: const Text(
-                                'Nhập excel',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  letterSpacing: 0.28,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF46E522),
-                                foregroundColor: Colors.black,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-
-                          // Add student button
-                          SizedBox(
-                            height: 38,
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                // Handle add student
-                              },
-                              icon: const Icon(Icons.add, size: 16),
-                              label: const Text(
-                                'Thêm sinh viên vào lớp',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  letterSpacing: 0.28,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2264E5),
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
 
                     // Divider

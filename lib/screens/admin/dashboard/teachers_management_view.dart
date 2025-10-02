@@ -188,6 +188,82 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
     }
   }
 
+  void _showDeleteConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          title: const Text(
+            'Xác nhận xóa',
+            style: TextStyle(
+              fontFamily: 'Nunito Sans',
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          content: Text(
+            'Bạn có chắc chắn muốn xóa ${_selectedTeachers.length} giảng viên đã chọn? Hành động này không thể hoàn tác.',
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'Hủy',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Handle delete action
+                setState(() {
+                  _teachers.removeWhere(
+                    (teacher) => _selectedTeachers.contains(teacher.id),
+                  );
+                  _selectedTeachers.clear();
+                  // Reset to first page if current page is empty
+                  if (currentPageTeachers.isEmpty && _currentPage > 1) {
+                    _currentPage = 1;
+                  }
+                });
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: const Text(
+                'Xóa',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -241,59 +317,109 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                       horizontal: 24,
                       vertical: 16,
                     ),
-                    child: Row(
-                      children: [
-                        // Search field
-                        CustomSearchBar(
-                          controller: _searchController,
-                          hintText: 'Tìm kiếm...',
-                          onChanged: (value) {
-                            // Handle search logic here
-                            setState(() {
-                              // Reset to first page when searching
-                              _currentPage = 1;
-                            });
-                          },
-                          onClear: () {
-                            setState(() {
-                              _currentPage = 1;
-                            });
-                          },
-                        ),
-                        const Spacer(),
-                        // Add teacher button
-                        SizedBox(
-                          height: 38,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              // Handle add teacher
-                            },
-                            icon: const Icon(Icons.add, size: 16),
-                            label: const Text(
-                              'Thêm giảng viên',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.28,
+                    child: _selectedTeachers.isEmpty
+                        ? Row(
+                            children: [
+                              // Search field
+                              CustomSearchBar(
+                                controller: _searchController,
+                                hintText: 'Tìm kiếm...',
+                                onChanged: (value) {
+                                  // Handle search logic here
+                                  setState(() {
+                                    // Reset to first page when searching
+                                    _currentPage = 1;
+                                  });
+                                },
+                                onClear: () {
+                                  setState(() {
+                                    _currentPage = 1;
+                                  });
+                                },
                               ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2264E5),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
+                              const Spacer(),
+                              // Add teacher button
+                              SizedBox(
+                                height: 38,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    // Handle add teacher
+                                  },
+                                  icon: const Icon(Icons.add, size: 16),
+                                  label: const Text(
+                                    'Thêm giảng viên',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.28,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2264E5),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              // Selected items count
+                              Text(
+                                '${_selectedTeachers.length} giảng viên đã chọn',
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF1F2937),
+                                ),
                               ),
-                            ),
+                              const Spacer(),
+                              // Delete button
+                              SizedBox(
+                                height: 38,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    _showDeleteConfirmationDialog();
+                                  },
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    size: 16,
+                                  ),
+                                  label: const Text(
+                                    'Xóa',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.28,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFEF4444),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                   ),
 
                   // Divider

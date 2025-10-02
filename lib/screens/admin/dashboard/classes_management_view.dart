@@ -187,6 +187,82 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
     }
   }
 
+  void _showDeleteConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          title: const Text(
+            'Xác nhận xóa',
+            style: TextStyle(
+              fontFamily: 'Nunito Sans',
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          content: Text(
+            'Bạn có chắc chắn muốn xóa ${_selectedClasses.length} lớp học đã chọn? Hành động này không thể hoàn tác.',
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'Hủy',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Handle delete action
+                setState(() {
+                  _classes.removeWhere(
+                    (classItem) => _selectedClasses.contains(classItem.id),
+                  );
+                  _selectedClasses.clear();
+                  // Reset to first page if current page is empty
+                  if (currentPageClasses.isEmpty && _currentPage > 1) {
+                    _currentPage = 1;
+                  }
+                });
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: const Text(
+                'Xóa',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -240,69 +316,119 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
                       horizontal: 24,
                       vertical: 16,
                     ),
-                    child: Row(
-                      children: [
-                        // Search field
-                        CustomSearchBar(
-                          controller: _searchController,
-                          hintText: 'Tìm kiếm...',
-                          onChanged: (value) {
-                            // Handle search logic here
-                            setState(() {
-                              // Reset to first page when searching
-                              _currentPage = 1;
-                            });
-                          },
-                          onClear: () {
-                            setState(() {
-                              _currentPage = 1;
-                            });
-                          },
-                        ),
-                        const SizedBox(width: 16),
-
-                        // Filter buttons
-                        _buildFilterButton('Lọc theo mã lớp'),
-                        const SizedBox(width: 16),
-                        _buildFilterButton('Lọc theo giảng viên'),
-                        const SizedBox(width: 16),
-                        _buildFilterButton('Lọc theo môn học'),
-
-                        const Spacer(),
-
-                        // Add class button
-                        SizedBox(
-                          height: 38,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              // Handle add class
-                            },
-                            icon: const Icon(Icons.add, size: 16),
-                            label: const Text(
-                              'Thêm lớp học',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.28,
+                    child: _selectedClasses.isEmpty
+                        ? Row(
+                            children: [
+                              // Search field
+                              CustomSearchBar(
+                                controller: _searchController,
+                                hintText: 'Tìm kiếm...',
+                                onChanged: (value) {
+                                  // Handle search logic here
+                                  setState(() {
+                                    // Reset to first page when searching
+                                    _currentPage = 1;
+                                  });
+                                },
+                                onClear: () {
+                                  setState(() {
+                                    _currentPage = 1;
+                                  });
+                                },
                               ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2264E5),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
+                              const SizedBox(width: 16),
+
+                              // Filter buttons
+                              _buildFilterButton('Lọc theo mã lớp'),
+                              const SizedBox(width: 16),
+                              _buildFilterButton('Lọc theo giảng viên'),
+                              const SizedBox(width: 16),
+                              _buildFilterButton('Lọc theo môn học'),
+
+                              const Spacer(),
+
+                              // Add class button
+                              SizedBox(
+                                height: 38,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    // Handle add class
+                                  },
+                                  icon: const Icon(Icons.add, size: 16),
+                                  label: const Text(
+                                    'Thêm lớp học',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.28,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2264E5),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              // Selected items count
+                              Text(
+                                '${_selectedClasses.length} lớp học đã chọn',
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF1F2937),
+                                ),
                               ),
-                            ),
+                              const Spacer(),
+                              // Delete button
+                              SizedBox(
+                                height: 38,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    _showDeleteConfirmationDialog();
+                                  },
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    size: 16,
+                                  ),
+                                  label: const Text(
+                                    'Xóa',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.28,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFEF4444),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                   ),
 
                   // Divider
