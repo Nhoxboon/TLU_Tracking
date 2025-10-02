@@ -10,6 +10,9 @@ import 'package:android_app/screens/users/auth/forgot_password_screen.dart';
 import 'package:android_app/screens/users/auth/reset_password_screen.dart';
 import 'package:android_app/screens/teacher/teacher_dashboard_screen.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
+import 'screens/student_home_screen.dart';
+
+// Không cần global key nữa vì chúng ta sẽ sử dụng local context cho ScaffoldMessenger
 
 void main() {
   runApp(const MyApp());
@@ -49,6 +52,9 @@ class MyApp extends StatelessWidget {
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/reset-password': (context) => const ResetPasswordScreen(),
         '/teacher/dashboard': (context) => const TeacherDashboardScreen(),
+        // Student routes
+        '/student/home': (context) => const StudentHomeScreen(),
+        '/student/login': (context) => const ClassDetailScreen(classCode: 'CSE'), // Temporary redirect to ClassDetailScreen
       },
     );
   }
