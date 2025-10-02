@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
-import 'package:android_app/widgets/common/custom_action_button.dart';
 
 class CoursesManagementView extends StatefulWidget {
   const CoursesManagementView({super.key});
@@ -653,7 +652,7 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
   Widget _buildTableRow(CourseData course, bool isEven) {
     final isSelected = _selectedCourses.contains(course.id);
 
-    return CustomDataTableRow<CourseData>(
+    return DataTableRow<CourseData>(
       data: course,
       isEven: isEven,
       isSelected: isSelected,
@@ -675,164 +674,6 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
       },
     );
   }
-}
-
-// Custom data table row for courses since we need to handle the custom admission year field
-class CustomDataTableRow<T extends CourseTableRowData> extends StatelessWidget {
-  final T data;
-  final bool isEven;
-  final bool isSelected;
-  final List<TableColumn> columns;
-  final VoidCallback? onSelectionChanged;
-  final VoidCallback? onEdit;
-  final VoidCallback? onDelete;
-
-  const CustomDataTableRow({
-    super.key,
-    required this.data,
-    required this.isEven,
-    required this.isSelected,
-    required this.columns,
-    this.onSelectionChanged,
-    this.onEdit,
-    this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: isSelected
-          ? const Color(0xFFCFDDFA) // màu highlight khi select
-          : (isEven ? Colors.white : const Color(0xFFF9FAFC)), // màu thường
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          // Checkbox
-          SizedBox(
-            width: 32,
-            child: Checkbox(
-              value: isSelected,
-              onChanged: (bool? value) {
-                onSelectionChanged?.call();
-              },
-            ),
-          ),
-
-          // Dynamic columns
-          ...columns.map((column) => _buildColumn(column)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildColumn(TableColumn column) {
-    switch (column.type) {
-      case TableColumnType.id:
-        return Expanded(
-          flex: column.flex,
-          child: Text(
-            data.id.toString(),
-            textAlign: column.textAlign,
-            style: _getTextStyle(column.styleType),
-          ),
-        );
-      case TableColumnType.name:
-        return Expanded(
-          flex: column.flex,
-          child: Text(
-            data.name,
-            textAlign: column.textAlign,
-            style: _getTextStyle(column.styleType),
-          ),
-        );
-      case TableColumnType.custom:
-        // Handle custom admission year field
-        if (column.customValue == 'admissionYear') {
-          return Expanded(
-            flex: column.flex,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 50.0),
-              child: Text(
-                data.admissionYear,
-                textAlign: column.textAlign,
-                style: _getTextStyle(column.styleType),
-              ),
-            ),
-          );
-        }
-        return Expanded(
-          flex: column.flex,
-          child: Text(
-            column.customValue ?? '',
-            textAlign: column.textAlign,
-            style: _getTextStyle(column.styleType),
-          ),
-        );
-      case TableColumnType.actions:
-        return Expanded(
-          flex: column.flex,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (onEdit != null) ...[
-                CustomActionButton(
-                  icon: Icons.edit_outlined,
-                  iconColor: const Color(0xFF000000).withValues(alpha: 0.6),
-                  onTap: onEdit!,
-                  tooltip: "Chỉnh sửa",
-                ),
-                const SizedBox(width: 8),
-              ],
-              if (onDelete != null)
-                CustomActionButton(
-                  icon: Icons.delete_outline,
-                  iconColor: const Color(0xFFEF3826),
-                  onTap: onDelete!,
-                  tooltip: "Xóa",
-                  requiresConfirmation: true,
-                  confirmationTitle: 'Xác nhận xóa',
-                  confirmationMessage:
-                      'Bạn có chắc chắn muốn xóa? Hành động này không thể hoàn tác.',
-                ),
-            ],
-          ),
-        );
-      default:
-        return const SizedBox.shrink();
-    }
-  }
-
-  TextStyle _getTextStyle(TableColumnStyleType styleType) {
-    switch (styleType) {
-      case TableColumnStyleType.primary:
-        return const TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.28,
-          color: Color(0xFF171C26),
-        );
-      case TableColumnStyleType.secondary:
-        return const TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.28,
-          color: Color(0xFF464F60),
-        );
-      case TableColumnStyleType.normal:
-        return const TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 14,
-          color: Color(0xFF464F60),
-        );
-    }
-  }
-}
-
-// Course data interface
-abstract class CourseTableRowData extends TableRowData {
-  String get admissionYear;
 }
 
 // Course data class
