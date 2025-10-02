@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'screens/users/class_detail_screen.dart';
+import 'screens/class_detail_screen.dart';
 import 'package:android_app/screens/admin/auth/admin_login_screen.dart';
 import 'package:android_app/screens/admin/dashboard/admin_dashboard_screen.dart';
 import 'package:android_app/screens/admin/dashboard/class_students_view.dart';
@@ -54,7 +54,7 @@ class MyApp extends StatelessWidget {
         '/teacher/dashboard': (context) => const TeacherDashboardScreen(),
         // Student routes
         '/student/home': (context) => const StudentHomeScreen(),
-        '/student/login': (context) => const ClassDetailScreen(classCode: 'CSE'), // Temporary redirect to ClassDetailScreen
+        // '/student/login': (context) => const ClassDetailScreen(classCode: 'CSE'), // Temporary redirect to ClassDetailScreen
       },
     );
   }
