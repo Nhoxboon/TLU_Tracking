@@ -1,72 +1,77 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
+import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
+import 'package:android_app/screens/admin/dashboard/course_management/add_course_modal.dart';
+import 'package:android_app/screens/admin/dashboard/course_management/edit_course_modal.dart';
 
-class MajorsManagementView extends StatefulWidget {
-  const MajorsManagementView({super.key});
+class CoursesManagementView extends StatefulWidget {
+  const CoursesManagementView({super.key});
 
   @override
-  State<MajorsManagementView> createState() => _MajorsManagementViewState();
+  State<CoursesManagementView> createState() => _CoursesManagementViewState();
 }
 
-class _MajorsManagementViewState extends State<MajorsManagementView> {
+class _CoursesManagementViewState extends State<CoursesManagementView> {
   final TextEditingController _searchController = TextEditingController();
 
   // Pagination variables
   int _currentPage = 1;
   final int _itemsPerPage = 10;
 
-  // Sample data for majors
-  final List<MajorData> _majors = [
-    MajorData(id: 1, code: 'CNTT', name: 'Công nghệ thông tin'),
-    MajorData(id: 2, code: 'KHMT', name: 'Khoa học máy tính'),
-    MajorData(id: 3, code: 'HTTT', name: 'Hệ thống thông tin'),
-    MajorData(id: 4, code: 'KTPM', name: 'Kỹ thuật phần mềm'),
-    MajorData(id: 5, code: 'ATTT', name: 'An toàn thông tin'),
-    MajorData(id: 6, code: 'KTDK', name: 'Kỹ thuật điện tử'),
-    MajorData(id: 7, code: 'KTDT', name: 'Kỹ thuật điện tử viễn thông'),
-    MajorData(id: 8, code: 'CNXD', name: 'Công nghệ xây dựng'),
-    MajorData(id: 9, code: 'KTCK', name: 'Kỹ thuật cơ khí'),
-    MajorData(id: 10, code: 'QTKD', name: 'Quản trị kinh doanh'),
-    MajorData(id: 11, code: 'TCNH', name: 'Tài chính ngân hàng'),
-    MajorData(id: 12, code: 'KTKT', name: 'Kế toán kiểm toán'),
+  // Sample data for courses
+  final List<CourseData> _courses = [
+    CourseData(id: 1, name: 'K65', admissionYear: '2019'),
+    CourseData(id: 2, name: 'K66', admissionYear: '2020'),
+    CourseData(id: 3, name: 'K67', admissionYear: '2021'),
+    CourseData(id: 4, name: 'K68', admissionYear: '2022'),
+    CourseData(id: 5, name: 'K69', admissionYear: '2023'),
+    CourseData(id: 6, name: 'K70', admissionYear: '2024'),
+    CourseData(id: 7, name: 'K71', admissionYear: '2025'),
+    CourseData(id: 8, name: 'K72', admissionYear: '2026'),
+    CourseData(id: 9, name: 'K73', admissionYear: '2027'),
+    CourseData(id: 10, name: 'K74', admissionYear: '2028'),
+    CourseData(id: 11, name: 'K75', admissionYear: '2029'),
+    CourseData(id: 12, name: 'K76', admissionYear: '2030'),
   ];
 
-  final Set<int> _selectedMajors = <int>{};
+  final Set<int> _selectedCourses = <int>{};
 
-  // Column configuration for majors table - simplified structure
-  static const List<TableColumn> _majorColumns = [
+  // Column configuration for courses table
+  static const List<TableColumn> _courseColumns = [
     TableColumn(
       type: TableColumnType.id,
       flex: 1,
       styleType: TableColumnStyleType.primary,
     ),
     TableColumn(
-      type: TableColumnType.code,
-      flex: 2,
-      styleType: TableColumnStyleType.primary,
-    ),
-    TableColumn(
-      type: TableColumnType.majorName,
-      flex: 2,
+      type: TableColumnType.name,
+      flex: 3,
       styleType: TableColumnStyleType.secondary,
     ),
     TableColumn(
+      type: TableColumnType.custom,
+      flex: 3,
+      textAlign: TextAlign.right,
+      styleType: TableColumnStyleType.normal,
+      customValue: 'admissionYear',
+    ),
+    TableColumn(
       type: TableColumnType.actions,
-      flex: 1,
+      flex: 3,
       textAlign: TextAlign.right,
     ),
   ];
 
   // Pagination getters and methods
-  int get totalPages => (_majors.length / _itemsPerPage).ceil();
+  int get totalPages => (_courses.length / _itemsPerPage).ceil();
 
-  List<MajorData> get currentPageMajors {
+  List<CourseData> get currentPageCourses {
     final startIndex = (_currentPage - 1) * _itemsPerPage;
     final endIndex = startIndex + _itemsPerPage;
-    return _majors.sublist(
+    return _courses.sublist(
       startIndex,
-      endIndex > _majors.length ? _majors.length : endIndex,
+      endIndex > _courses.length ? _courses.length : endIndex,
     );
   }
 
@@ -102,7 +107,7 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
             ),
           ),
           content: Text(
-            'Bạn có chắc chắn muốn xóa ${_selectedMajors.length} ngành đã chọn? Hành động này không thể hoàn tác.',
+            'Bạn có chắc chắn muốn xóa ${_selectedCourses.length} khóa học đã chọn? Hành động này không thể hoàn tác.',
             style: const TextStyle(
               fontFamily: 'Inter',
               fontSize: 14,
@@ -128,12 +133,12 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
               onPressed: () {
                 // Handle delete action
                 setState(() {
-                  _majors.removeWhere(
-                    (major) => _selectedMajors.contains(major.id),
+                  _courses.removeWhere(
+                    (course) => _selectedCourses.contains(course.id),
                   );
-                  _selectedMajors.clear();
+                  _selectedCourses.clear();
                   // Reset to first page if current page is empty
-                  if (currentPageMajors.isEmpty && _currentPage > 1) {
+                  if (currentPageCourses.isEmpty && _currentPage > 1) {
                     _currentPage = 1;
                   }
                 });
@@ -172,7 +177,7 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
         children: [
           // Title
           const Text(
-            'Quản lý ngành',
+            'Quản lý khóa học',
             style: TextStyle(
               fontFamily: 'Nunito Sans',
               fontWeight: FontWeight.w700,
@@ -215,72 +220,40 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                       horizontal: 24,
                       vertical: 16,
                     ),
-                    child: _selectedMajors.isEmpty
+                    child: _selectedCourses.isEmpty
                         ? Row(
                             children: [
                               // Search field
-                              Expanded(
-                                child: SizedBox(
-                                  height: 32,
-                                  child: TextField(
-                                    controller: _searchController,
-                                    decoration: InputDecoration(
-                                      hintText: 'Tìm kiếm...',
-                                      hintStyle: const TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w400,
-                                        color: Color(0xFFA1A9B8),
-                                      ),
-                                      prefixIcon: const Icon(
-                                        Icons.search,
-                                        size: 16,
-                                        color: Color(0xFF868FA0),
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: const BorderSide(
-                                          color: Color(0xFF687182),
-                                          width: 0.16,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: const BorderSide(
-                                          color: Color(0xFF687182),
-                                          width: 0.16,
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: const BorderSide(
-                                          color: Color(0xFF2264E5),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
-                                          ),
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                    ),
-                                  ),
-                                ),
+                              CustomSearchBar(
+                                controller: _searchController,
+                                hintText: 'Tìm kiếm...',
+                                onChanged: (value) {
+                                  // Handle search logic here
+                                  setState(() {
+                                    _currentPage = 1;
+                                  });
+                                },
+                                onClear: () {
+                                  setState(() {
+                                    _currentPage = 1;
+                                  });
+                                },
                               ),
-                              const SizedBox(width: 16),
-
-                              // Add major button
+                              const Spacer(),
+                              // Add course button
                               SizedBox(
-                                height: 32,
+                                height: 38,
                                 child: ElevatedButton.icon(
                                   onPressed: () {
-                                    // TODO: Add major functionality
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) =>
+                                          const AddCourseModal(),
+                                    );
                                   },
-                                  icon: const Icon(Icons.add, size: 12),
+                                  icon: const Icon(Icons.add, size: 16),
                                   label: const Text(
-                                    'Thêm ngành',
+                                    'Thêm khóa học',
                                     style: TextStyle(
                                       fontFamily: 'Inter',
                                       fontSize: 14,
@@ -308,7 +281,7 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                             children: [
                               // Selected items count
                               Text(
-                                '${_selectedMajors.length} ngành đã chọn',
+                                '${_selectedCourses.length} khóa học đã chọn',
                                 style: const TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 14,
@@ -319,14 +292,14 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                               const Spacer(),
                               // Delete button
                               SizedBox(
-                                height: 32,
+                                height: 38,
                                 child: ElevatedButton.icon(
                                   onPressed: () {
                                     _showDeleteConfirmationDialog();
                                   },
                                   icon: const Icon(
                                     Icons.delete_outline,
-                                    size: 12,
+                                    size: 16,
                                   ),
                                   label: const Text(
                                     'Xóa',
@@ -375,10 +348,10 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                               children: [
                                 // Table rows
                                 ...List.generate(_itemsPerPage, (index) {
-                                  if (index < currentPageMajors.length) {
-                                    final major = currentPageMajors[index];
+                                  if (index < currentPageCourses.length) {
+                                    final course = currentPageCourses[index];
                                     final isEven = index % 2 == 0;
-                                    return _buildTableRow(major, isEven);
+                                    return _buildTableRow(course, isEven);
                                   } else {
                                     // Empty row to maintain consistent height
                                     return Container(
@@ -409,40 +382,59 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Show results info
+                        // Left side: Items count
                         Text(
-                          '${(_currentPage - 1) * _itemsPerPage + 1}-${_currentPage * _itemsPerPage > _majors.length ? _majors.length : _currentPage * _itemsPerPage} of ${_majors.length}',
+                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageCourses.length} of ${_courses.length}',
                           style: const TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 12,
                             fontWeight: FontWeight.w500,
+                            fontSize: 12,
                             letterSpacing: 0.36,
                             color: Color(0xFF687182),
                           ),
                         ),
 
-                        // Pagination controls
+                        // Right side: Navigation controls
                         Row(
                           children: [
                             // Previous button
                             GestureDetector(
-                              onTap: _currentPage > 1
-                                  ? _goToPreviousPage
-                                  : null,
+                              onTap: () {
+                                if (_currentPage > 1) {
+                                  _goToPreviousPage();
+                                }
+                              },
                               child: Container(
                                 width: 20,
                                 height: 20,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF7F9FC),
+                                  color: _currentPage > 1
+                                      ? Colors.white
+                                      : const Color(0xFFF7F9FC),
                                   borderRadius: BorderRadius.circular(6),
                                   boxShadow: _currentPage > 1
                                       ? [
                                           BoxShadow(
                                             color: const Color(
+                                              0xFF596078,
+                                            ).withValues(alpha: 0.1),
+                                            blurRadius: 5,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                          BoxShadow(
+                                            color: const Color(
                                               0xFF464F60,
-                                            ).withValues(alpha: 0.24),
+                                            ).withValues(alpha: 0.16),
+                                            blurRadius: 0,
                                             offset: const Offset(0, 0),
                                             spreadRadius: 1,
+                                          ),
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: .1,
+                                            ),
+                                            blurRadius: 1,
+                                            offset: const Offset(0, 1),
                                           ),
                                         ]
                                       : [],
@@ -456,37 +448,41 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 16),
 
                             // Page info
                             Text(
                               '$_currentPage/$totalPages',
                               style: const TextStyle(
                                 fontFamily: 'Inter',
-                                fontSize: 12,
                                 fontWeight: FontWeight.w500,
+                                fontSize: 12,
                                 letterSpacing: 0.36,
                                 color: Color(0xFF687182),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 16),
 
                             // Next button
                             GestureDetector(
-                              onTap: _currentPage < totalPages
-                                  ? _goToNextPage
-                                  : null,
+                              onTap: () {
+                                if (_currentPage < totalPages) {
+                                  _goToNextPage();
+                                }
+                              },
                               child: Container(
                                 width: 20,
                                 height: 20,
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: _currentPage < totalPages
+                                      ? Colors.white
+                                      : const Color(0xFFF7F9FC),
                                   borderRadius: BorderRadius.circular(6),
                                   boxShadow: _currentPage < totalPages
                                       ? [
                                           BoxShadow(
                                             color: const Color(
-                                              0xFF595E78,
+                                              0xFF596078,
                                             ).withValues(alpha: 0.1),
                                             blurRadius: 5,
                                             offset: const Offset(0, 2),
@@ -495,6 +491,7 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                                             color: const Color(
                                               0xFF464F60,
                                             ).withValues(alpha: 0.16),
+                                            blurRadius: 0,
                                             offset: const Offset(0, 0),
                                             spreadRadius: 1,
                                           ),
@@ -543,19 +540,19 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
               SizedBox(
                 width: 32,
                 child: Checkbox(
-                  value: currentPageMajors.every(
-                    (major) => _selectedMajors.contains(major.id),
+                  value: currentPageCourses.every(
+                    (course) => _selectedCourses.contains(course.id),
                   ),
                   onChanged: (bool? value) {
                     setState(() {
                       if (value == true) {
-                        _selectedMajors.addAll(
-                          currentPageMajors.map((m) => m.id),
+                        _selectedCourses.addAll(
+                          currentPageCourses.map((c) => c.id),
                         );
                       } else {
-                        _selectedMajors.removeAll(
-                          currentPageMajors.map((m) => m.id),
-                        );
+                        for (final course in currentPageCourses) {
+                          _selectedCourses.remove(course.id);
+                        }
                       }
                     });
                   },
@@ -617,11 +614,11 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                 ),
               ),
 
-              // Mã ngành chiếm 2 phần
+              // Tên khóa chiếm 3 phần
               const Expanded(
-                flex: 2,
+                flex: 3,
                 child: Text(
-                  'MÃ NGÀNH',
+                  'TÊN KHÓA',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,
@@ -632,11 +629,12 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                 ),
               ),
 
-              // Tên ngành chiếm 2 phần
+              // Năm nhập học chiếm 3 phần
               const Expanded(
-                flex: 2,
+                flex: 3,
                 child: Text(
-                  'TÊN NGÀNH',
+                  'NĂM NHẬP HỌC',
+                  textAlign: TextAlign.right,
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,
@@ -647,9 +645,9 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                 ),
               ),
 
-              // Hành động chiếm 1 phần
+              // Hành động chiếm 3 phần
               const Expanded(
-                flex: 1,
+                flex: 3,
                 child: Text(
                   'HÀNH ĐỘNG',
                   textAlign: TextAlign.right,
@@ -669,25 +667,28 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
     );
   }
 
-  Widget _buildTableRow(MajorData major, bool isEven) {
-    final isSelected = _selectedMajors.contains(major.id);
+  Widget _buildTableRow(CourseData course, bool isEven) {
+    final isSelected = _selectedCourses.contains(course.id);
 
-    return DataTableRow<MajorData>(
-      data: major,
+    return DataTableRow<CourseData>(
+      data: course,
       isEven: isEven,
       isSelected: isSelected,
-      columns: _majorColumns,
+      columns: _courseColumns,
       onSelectionChanged: () {
         setState(() {
           if (isSelected) {
-            _selectedMajors.remove(major.id);
+            _selectedCourses.remove(course.id);
           } else {
-            _selectedMajors.add(major.id);
+            _selectedCourses.add(course.id);
           }
         });
       },
       onEdit: () {
-        // TODO: handle edit
+        showDialog(
+          context: context,
+          builder: (context) => EditCourseModal(course: course),
+        );
       },
       onDelete: () {
         // TODO: handle delete
@@ -696,15 +697,18 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
   }
 }
 
-class MajorData implements MajorTableRowData {
+// Course data class
+class CourseData implements CourseTableRowData {
   @override
   final int id;
   @override
-  final String code;
-  @override
   final String name;
+  @override
+  final String admissionYear;
 
-  // Required fields from TableRowData interface (not used for majors)
+  // Required fields from TableRowData interface (courses don't have these)
+  @override
+  String get code => '';
   @override
   String get phone => '';
   @override
@@ -712,10 +716,9 @@ class MajorData implements MajorTableRowData {
   @override
   String get birthDate => '';
 
-  MajorData({required this.id, required this.code, required this.name});
-}
-
-// Interface for major table row data
-abstract class MajorTableRowData extends TableRowData {
-  // Majors only need id, code, and name - other fields are inherited but empty
+  CourseData({
+    required this.id,
+    required this.name,
+    required this.admissionYear,
+  });
 }

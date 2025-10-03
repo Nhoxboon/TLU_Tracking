@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'screens/class_detail_screen.dart';
 import 'package:android_app/screens/admin/auth/admin_login_screen.dart';
 import 'package:android_app/screens/admin/dashboard/admin_dashboard_screen.dart';
-import 'package:android_app/screens/admin/dashboard/class_students_view.dart';
+import 'package:android_app/screens/admin/dashboard/class_management/class_students_view.dart';
 import 'package:android_app/screens/onboarding/onboarding_screen.dart';
 import 'package:android_app/screens/users/auth/login_screen.dart';
 import 'package:android_app/screens/users/auth/forgot_password_screen.dart';
@@ -11,8 +11,6 @@ import 'package:android_app/screens/users/auth/reset_password_screen.dart';
 import 'package:android_app/screens/teacher/teacher_dashboard_screen.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'screens/student_home_screen.dart';
-
-// Không cần global key nữa vì chúng ta sẽ sử dụng local context cho ScaffoldMessenger
 
 void main() {
   runApp(const MyApp());

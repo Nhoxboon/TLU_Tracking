@@ -2,74 +2,75 @@ import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
+import 'package:android_app/models/subject.dart';
+import 'package:android_app/screens/admin/dashboard/subject_management/add_subject_modal.dart';
+import 'package:android_app/screens/admin/dashboard/subject_management/edit_subject_modal.dart';
 
-class CoursesManagementView extends StatefulWidget {
-  const CoursesManagementView({super.key});
+class SubjectsManagementView extends StatefulWidget {
+  const SubjectsManagementView({super.key});
 
   @override
-  State<CoursesManagementView> createState() => _CoursesManagementViewState();
+  State<SubjectsManagementView> createState() => _SubjectsManagementViewState();
 }
 
-class _CoursesManagementViewState extends State<CoursesManagementView> {
+class _SubjectsManagementViewState extends State<SubjectsManagementView> {
   final TextEditingController _searchController = TextEditingController();
 
   // Pagination variables
   int _currentPage = 1;
   final int _itemsPerPage = 10;
 
-  // Sample data for courses
-  final List<CourseData> _courses = [
-    CourseData(id: 1, name: 'K65', admissionYear: '2019'),
-    CourseData(id: 2, name: 'K66', admissionYear: '2020'),
-    CourseData(id: 3, name: 'K67', admissionYear: '2021'),
-    CourseData(id: 4, name: 'K68', admissionYear: '2022'),
-    CourseData(id: 5, name: 'K69', admissionYear: '2023'),
-    CourseData(id: 6, name: 'K70', admissionYear: '2024'),
-    CourseData(id: 7, name: 'K71', admissionYear: '2025'),
-    CourseData(id: 8, name: 'K72', admissionYear: '2026'),
-    CourseData(id: 9, name: 'K73', admissionYear: '2027'),
-    CourseData(id: 10, name: 'K74', admissionYear: '2028'),
-    CourseData(id: 11, name: 'K75', admissionYear: '2029'),
-    CourseData(id: 12, name: 'K76', admissionYear: '2030'),
+  // Sample data for subjects
+  final List<SubjectData> _subjects = [
+    SubjectData(id: 1, code: 'CS101', name: 'Lập trình cơ bản'),
+    SubjectData(id: 2, code: 'CS102', name: 'Cấu trúc dữ liệu'),
+    SubjectData(id: 3, code: 'CS103', name: 'Cơ sở dữ liệu'),
+    SubjectData(id: 4, code: 'CS104', name: 'Mạng máy tính'),
+    SubjectData(id: 5, code: 'CS105', name: 'Hệ điều hành'),
+    SubjectData(id: 6, code: 'CS106', name: 'Phát triển web'),
+    SubjectData(id: 7, code: 'CS107', name: 'Thuật toán'),
+    SubjectData(id: 8, code: 'CS108', name: 'Trí tuệ nhân tạo'),
+    SubjectData(id: 9, code: 'CS109', name: 'Bảo mật thông tin'),
+    SubjectData(id: 10, code: 'CS110', name: 'Kỹ thuật phần mềm'),
+    SubjectData(id: 11, code: 'CS111', name: 'Học máy'),
+    SubjectData(id: 12, code: 'CS112', name: 'Phân tích dữ liệu'),
   ];
 
-  final Set<int> _selectedCourses = <int>{};
+  final Set<int> _selectedSubjects = <int>{};
 
-  // Column configuration for courses table
-  static const List<TableColumn> _courseColumns = [
+  // Column configuration for subjects table
+  static const List<TableColumn> _subjectColumns = [
     TableColumn(
       type: TableColumnType.id,
       flex: 1,
       styleType: TableColumnStyleType.primary,
     ),
     TableColumn(
+      type: TableColumnType.code,
+      flex: 2,
+      styleType: TableColumnStyleType.primary,
+    ),
+    TableColumn(
       type: TableColumnType.name,
-      flex: 3,
+      flex: 2,
       styleType: TableColumnStyleType.secondary,
     ),
     TableColumn(
-      type: TableColumnType.custom,
-      flex: 3,
-      textAlign: TextAlign.right,
-      styleType: TableColumnStyleType.normal,
-      customValue: 'admissionYear',
-    ),
-    TableColumn(
       type: TableColumnType.actions,
-      flex: 3,
+      flex: 2,
       textAlign: TextAlign.right,
     ),
   ];
 
   // Pagination getters and methods
-  int get totalPages => (_courses.length / _itemsPerPage).ceil();
+  int get totalPages => (_subjects.length / _itemsPerPage).ceil();
 
-  List<CourseData> get currentPageCourses {
+  List<SubjectData> get currentPageSubjects {
     final startIndex = (_currentPage - 1) * _itemsPerPage;
     final endIndex = startIndex + _itemsPerPage;
-    return _courses.sublist(
+    return _subjects.sublist(
       startIndex,
-      endIndex > _courses.length ? _courses.length : endIndex,
+      endIndex > _subjects.length ? _subjects.length : endIndex,
     );
   }
 
@@ -105,7 +106,7 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
             ),
           ),
           content: Text(
-            'Bạn có chắc chắn muốn xóa ${_selectedCourses.length} khóa học đã chọn? Hành động này không thể hoàn tác.',
+            'Bạn có chắc chắn muốn xóa ${_selectedSubjects.length} môn học đã chọn? Hành động này không thể hoàn tác.',
             style: const TextStyle(
               fontFamily: 'Inter',
               fontSize: 14,
@@ -131,12 +132,12 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
               onPressed: () {
                 // Handle delete action
                 setState(() {
-                  _courses.removeWhere(
-                    (course) => _selectedCourses.contains(course.id),
+                  _subjects.removeWhere(
+                    (subject) => _selectedSubjects.contains(subject.id),
                   );
-                  _selectedCourses.clear();
+                  _selectedSubjects.clear();
                   // Reset to first page if current page is empty
-                  if (currentPageCourses.isEmpty && _currentPage > 1) {
+                  if (currentPageSubjects.isEmpty && _currentPage > 1) {
                     _currentPage = 1;
                   }
                 });
@@ -175,7 +176,7 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
         children: [
           // Title
           const Text(
-            'Quản lý khóa học',
+            'Quản lý môn học',
             style: TextStyle(
               fontFamily: 'Nunito Sans',
               fontWeight: FontWeight.w700,
@@ -218,7 +219,7 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                       horizontal: 24,
                       vertical: 16,
                     ),
-                    child: _selectedCourses.isEmpty
+                    child: _selectedSubjects.isEmpty
                         ? Row(
                             children: [
                               // Search field
@@ -228,6 +229,7 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                                 onChanged: (value) {
                                   // Handle search logic here
                                   setState(() {
+                                    // Reset to first page when searching
                                     _currentPage = 1;
                                   });
                                 },
@@ -238,18 +240,34 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                                 },
                               ),
                               const Spacer(),
-                              // Add course button
+                              // Add subject button
                               SizedBox(
                                 height: 38,
                                 child: ElevatedButton.icon(
                                   onPressed: () {
-                                    // TODO: implement add course functionality
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) =>
+                                          const AddSubjectModal(),
+                                    );
                                   },
                                   icon: const Icon(Icons.add, size: 16),
-                                  label: const Text('Thêm khóa học'),
+                                  label: const Text(
+                                    'Thêm môn học',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.28,
+                                    ),
+                                  ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
+                                    backgroundColor: const Color(0xFF2264E5),
                                     foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 12,
                                       vertical: 6,
@@ -263,7 +281,7 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                             children: [
                               // Selected items count
                               Text(
-                                '${_selectedCourses.length} khóa học đã chọn',
+                                '${_selectedSubjects.length} môn học đã chọn',
                                 style: const TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 14,
@@ -330,10 +348,10 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                               children: [
                                 // Table rows
                                 ...List.generate(_itemsPerPage, (index) {
-                                  if (index < currentPageCourses.length) {
-                                    final course = currentPageCourses[index];
+                                  if (index < currentPageSubjects.length) {
+                                    final subject = currentPageSubjects[index];
                                     final isEven = index % 2 == 0;
-                                    return _buildTableRow(course, isEven);
+                                    return _buildTableRow(subject, isEven);
                                   } else {
                                     // Empty row to maintain consistent height
                                     return Container(
@@ -366,11 +384,11 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                       children: [
                         // Left side: Items count
                         Text(
-                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageCourses.length} of ${_courses.length}',
+                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageSubjects.length} of ${_subjects.length}',
                           style: const TextStyle(
                             fontFamily: 'Inter',
-                            fontWeight: FontWeight.w500,
                             fontSize: 12,
+                            fontWeight: FontWeight.w500,
                             letterSpacing: 0.36,
                             color: Color(0xFF687182),
                           ),
@@ -380,46 +398,26 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                         Row(
                           children: [
                             // Previous button
-                            GestureDetector(
-                              onTap: () {
-                                if (_currentPage > 1) {
-                                  _goToPreviousPage();
-                                }
-                              },
+                            InkWell(
+                              onTap: _currentPage > 1
+                                  ? _goToPreviousPage
+                                  : null,
+                              borderRadius: BorderRadius.circular(6),
                               child: Container(
-                                width: 20,
+                                width: 24,
                                 height: 20,
                                 decoration: BoxDecoration(
                                   color: _currentPage > 1
-                                      ? Colors.white
-                                      : const Color(0xFFF7F9FC),
+                                      ? const Color(0xFFF7F9FC)
+                                      : const Color(
+                                          0xFFF7F9FC,
+                                        ).withValues(alpha: 0.5),
                                   borderRadius: BorderRadius.circular(6),
-                                  boxShadow: _currentPage > 1
-                                      ? [
-                                          BoxShadow(
-                                            color: const Color(
-                                              0xFF596078,
-                                            ).withValues(alpha: 0.1),
-                                            blurRadius: 5,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                          BoxShadow(
-                                            color: const Color(
-                                              0xFF464F60,
-                                            ).withValues(alpha: 0.16),
-                                            blurRadius: 0,
-                                            offset: const Offset(0, 0),
-                                            spreadRadius: 1,
-                                          ),
-                                          BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: .1,
-                                            ),
-                                            blurRadius: 1,
-                                            offset: const Offset(0, 1),
-                                          ),
-                                        ]
-                                      : [],
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFF464F60,
+                                    ).withValues(alpha: .24),
+                                  ),
                                 ),
                                 child: Icon(
                                   Icons.chevron_left,
@@ -430,35 +428,31 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 16),
-
-                            // Page info
+                            const SizedBox(width: 10),
                             Text(
                               '$_currentPage/$totalPages',
                               style: const TextStyle(
                                 fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
                                 fontSize: 12,
+                                fontWeight: FontWeight.w500,
                                 letterSpacing: 0.36,
                                 color: Color(0xFF687182),
                               ),
                             ),
-                            const SizedBox(width: 16),
-
+                            const SizedBox(width: 10),
                             // Next button
-                            GestureDetector(
-                              onTap: () {
-                                if (_currentPage < totalPages) {
-                                  _goToNextPage();
-                                }
-                              },
+                            InkWell(
+                              onTap: _currentPage < totalPages
+                                  ? _goToNextPage
+                                  : null,
+                              borderRadius: BorderRadius.circular(6),
                               child: Container(
-                                width: 20,
+                                width: 24,
                                 height: 20,
                                 decoration: BoxDecoration(
                                   color: _currentPage < totalPages
                                       ? Colors.white
-                                      : const Color(0xFFF7F9FC),
+                                      : Colors.white.withValues(alpha: 0.5),
                                   borderRadius: BorderRadius.circular(6),
                                   boxShadow: _currentPage < totalPages
                                       ? [
@@ -473,16 +467,13 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                                             color: const Color(
                                               0xFF464F60,
                                             ).withValues(alpha: 0.16),
-                                            blurRadius: 0,
                                             offset: const Offset(0, 0),
-                                            spreadRadius: 1,
                                           ),
-                                          BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: .1,
-                                            ),
+                                          const BoxShadow(
+                                            color: Color(0xFF000000),
                                             blurRadius: 1,
-                                            offset: const Offset(0, 1),
+                                            offset: Offset(0, 1),
+                                            spreadRadius: 0.1,
                                           ),
                                         ]
                                       : [],
@@ -522,18 +513,18 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
               SizedBox(
                 width: 32,
                 child: Checkbox(
-                  value: currentPageCourses.every(
-                    (course) => _selectedCourses.contains(course.id),
+                  value: currentPageSubjects.every(
+                    (subject) => _selectedSubjects.contains(subject.id),
                   ),
                   onChanged: (bool? value) {
                     setState(() {
                       if (value == true) {
-                        _selectedCourses.addAll(
-                          currentPageCourses.map((c) => c.id),
+                        _selectedSubjects.addAll(
+                          currentPageSubjects.map((t) => t.id),
                         );
                       } else {
-                        for (final course in currentPageCourses) {
-                          _selectedCourses.remove(course.id);
+                        for (final subject in currentPageSubjects) {
+                          _selectedSubjects.remove(subject.id);
                         }
                       }
                     });
@@ -596,11 +587,11 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                 ),
               ),
 
-              // Tên khóa chiếm 3 phần
+              // Mã môn học chiếm 2 phần
               const Expanded(
-                flex: 3,
+                flex: 2,
                 child: Text(
-                  'TÊN KHÓA',
+                  'MÃ MÔN HỌC',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,
@@ -611,12 +602,11 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                 ),
               ),
 
-              // Năm nhập học chiếm 3 phần
+              // Tên môn học chiếm 2 phần
               const Expanded(
-                flex: 3,
+                flex: 2,
                 child: Text(
-                  'NĂM NHẬP HỌC',
-                  textAlign: TextAlign.right,
+                  'TÊN MÔN HỌC',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,
@@ -627,9 +617,9 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                 ),
               ),
 
-              // Hành động chiếm 3 phần
+              // Hành động chiếm 2 phần
               const Expanded(
-                flex: 3,
+                flex: 2,
                 child: Text(
                   'HÀNH ĐỘNG',
                   textAlign: TextAlign.right,
@@ -649,55 +639,32 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
     );
   }
 
-  Widget _buildTableRow(CourseData course, bool isEven) {
-    final isSelected = _selectedCourses.contains(course.id);
+  Widget _buildTableRow(SubjectData subject, bool isEven) {
+    final isSelected = _selectedSubjects.contains(subject.id);
 
-    return DataTableRow<CourseData>(
-      data: course,
+    return DataTableRow<SubjectData>(
+      data: subject,
       isEven: isEven,
       isSelected: isSelected,
-      columns: _courseColumns,
+      columns: _subjectColumns,
       onSelectionChanged: () {
         setState(() {
           if (isSelected) {
-            _selectedCourses.remove(course.id);
+            _selectedSubjects.remove(subject.id);
           } else {
-            _selectedCourses.add(course.id);
+            _selectedSubjects.add(subject.id);
           }
         });
       },
       onEdit: () {
-        // TODO: handle edit
+        showDialog(
+          context: context,
+          builder: (context) => EditSubjectModal(subject: subject),
+        );
       },
       onDelete: () {
         // TODO: handle delete
       },
     );
   }
-}
-
-// Course data class
-class CourseData implements CourseTableRowData {
-  @override
-  final int id;
-  @override
-  final String name;
-  @override
-  final String admissionYear;
-
-  // Required fields from TableRowData interface (courses don't have these)
-  @override
-  String get code => '';
-  @override
-  String get phone => '';
-  @override
-  String get email => '';
-  @override
-  String get birthDate => '';
-
-  CourseData({
-    required this.id,
-    required this.name,
-    required this.admissionYear,
-  });
 }
