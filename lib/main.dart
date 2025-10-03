@@ -10,7 +10,8 @@ import 'package:android_app/screens/users/auth/forgot_password_screen.dart';
 import 'package:android_app/screens/users/auth/reset_password_screen.dart';
 import 'package:android_app/screens/teacher/teacher_dashboard_screen.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
-import 'screens/student_home_screen.dart';
+import 'screens/student/student_home_screen.dart';
+import 'screens/session_detail_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -52,6 +53,7 @@ class MyApp extends StatelessWidget {
         '/teacher/dashboard': (context) => const TeacherDashboardScreen(),
         // Student routes
         '/student/home': (context) => const StudentHomeScreen(),
+        '/session/detail': (context) => const SessionDetailScreen(),
         // '/student/login': (context) => const ClassDetailScreen(classCode: 'CSE'), // Temporary redirect to ClassDetailScreen
       },
     );

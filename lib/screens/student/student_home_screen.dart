@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'settings_screen.dart';
-import 'class_detail_screen.dart';
+import '../settings_screen.dart';
+import '../class_detail_screen.dart';
 
 class StudentHomeScreen extends StatefulWidget {
   const StudentHomeScreen({Key? key}) : super(key: key);
