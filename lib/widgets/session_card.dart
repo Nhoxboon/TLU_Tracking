@@ -48,101 +48,116 @@ class _SessionCardState extends State<SessionCard> {
   }
 
   Widget _buildCardContent() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEAECF0),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFEAECF0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // Date and time row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  widget.session.date,
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF344054),
-                  ),
-                ),
-                Text(
-                  widget.session.timeSlot,
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF344054),
-                  ),
-                ),
-              ],
+    return GestureDetector(
+      onTap: () {
+        // Navigate to session detail screen
+        Navigator.pushNamed(
+          context,
+          '/session/detail',
+          arguments: {
+            'classCode': 'CSE', // You might want to pass this from parent widget
+            'sessionDate': widget.session.date,
+            'sessionTime': widget.session.timeSlot,
+            'status': widget.session.isOpen ? 'Mở' : 'Đóng',
+          },
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAECF0),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFEAECF0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
-            
-            const SizedBox(height: 8),
-            
-            // Attendance and status row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Attendance count
-                Row(
-                  children: [
-                    Container(
-                      width: 16,
-                      height: 16,
-                      margin: const EdgeInsets.only(right: 4),
-                      child: const Icon(
-                        Icons.people_outline,
-                        size: 16,
-                        color: Color(0xFF667085),
-                      ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              // Date and time row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    widget.session.date,
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF344054),
                     ),
-                    Text(
-                      '${widget.session.attendanceCount}/${widget.session.totalStudents} Sinh viên',
+                  ),
+                  Text(
+                    widget.session.timeSlot,
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF344054),
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 8),
+              
+              // Attendance and status row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Attendance count
+                  Row(
+                    children: [
+                      Container(
+                        width: 16,
+                        height: 16,
+                        margin: const EdgeInsets.only(right: 4),
+                        child: const Icon(
+                          Icons.people_outline,
+                          size: 16,
+                          color: Color(0xFF667085),
+                        ),
+                      ),
+                      Text(
+                        '${widget.session.attendanceCount}/${widget.session.totalStudents} Sinh viên',
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF667085),
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  // Session status indicator
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: widget.session.isOpen ? const Color(0xFF00FF40) : Colors.red,
+                      borderRadius: BorderRadius.circular(29),
+                    ),
+                    child: Text(
+                      widget.session.isOpen ? 'Mở' : 'Đóng',
                       style: const TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF667085),
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                  ],
-                ),
-                
-                // Session status indicator
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: widget.session.isOpen ? const Color(0xFF00FF40) : Colors.red,
-                    borderRadius: BorderRadius.circular(29),
                   ),
-                  child: Text(
-                    widget.session.isOpen ? 'Mở' : 'Đóng',
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.black,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
