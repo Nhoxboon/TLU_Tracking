@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
+import 'package:android_app/screens/admin/dashboard/class_management/add_student_to_class_modal.dart';
 
 class ClassStudentsView extends StatefulWidget {
   final String classCode;
@@ -539,7 +540,14 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
                                   height: 38,
                                   child: ElevatedButton.icon(
                                     onPressed: () {
-                                      // Handle add student
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) =>
+                                            AddStudentToClassModal(
+                                              classCode: widget.classCode,
+                                              className: widget.className,
+                                            ),
+                                      );
                                     },
                                     icon: const Icon(Icons.add, size: 16),
                                     label: const Text(

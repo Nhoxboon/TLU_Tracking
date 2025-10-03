@@ -7,10 +7,10 @@ import 'package:android_app/widgets/web/admin_card.dart';
 import 'package:android_app/widgets/web/dashboard_icon.dart';
 import 'package:android_app/screens/admin/dashboard/teacher_management/teachers_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/student_management/students_management_view.dart';
-import 'package:android_app/screens/admin/dashboard/classes_management_view.dart';
-import 'package:android_app/screens/admin/dashboard/subjects_management_view.dart';
-import 'package:android_app/screens/admin/dashboard/majors_management_view.dart';
-import 'package:android_app/screens/admin/dashboard/courses_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/class_management/classes_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/subject_management/subjects_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/major_management/majors_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/course_management/courses_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/change_password_view.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
