@@ -33,8 +33,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Row(
-              children: const [
-                Expanded(
+              children: [
+                const Expanded(
                   child: Text(
                     'Danh sách lớp',
                     textAlign: TextAlign.left,
@@ -44,6 +44,24 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                       fontWeight: FontWeight.w600,
                       letterSpacing: -0.36,
                       height: 1.2,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pushNamed(context, '/student/settings');
+                  },
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2196F3).withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.person_outline,
+                      color: Color(0xFF2196F3),
+                      size: 20,
                     ),
                   ),
                 ),

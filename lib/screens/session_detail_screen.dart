@@ -1,7 +1,31 @@
 import 'package:flutter/material.dart';
 
-class SessionDetailScreen extends StatelessWidget {
+class SessionDetailScreen extends StatefulWidget {
   const SessionDetailScreen({super.key});
+
+  @override
+  State<SessionDetailScreen> createState() => _SessionDetailScreenState();
+}
+
+class _SessionDetailScreenState extends State<SessionDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    
+    // Check if returning from successful attendance
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args?['attendanceSuccess'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Điểm danh thành công! 🎉'),
+            backgroundColor: Color(0xFF4CAF50),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -47,6 +47,13 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     
     // Provide haptic feedback
     HapticFeedback.lightImpact();
+    
+    // Navigate to face scanner after 2 seconds
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/face/scanner');
+      }
+    });
   }
 
   @override
