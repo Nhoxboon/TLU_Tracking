@@ -184,17 +184,8 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                   left: 0,
                   right: 0,
                   child: FadeTransition(
-                    opacity: _scaleAnimation,
-                    child: const Text(
-                      'Điểm danh thành công',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF24EB0A),
-                      ),
-                    ),
+                    opacity: _scaleAnimation
+        
                   ),
                 ),
               
