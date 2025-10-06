@@ -12,6 +12,7 @@ import 'package:android_app/screens/teacher/teacher_dashboard_screen.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'screens/student/student_home_screen.dart';
 import 'screens/session_detail_screen.dart';
+import 'screens/qr_scanner_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -54,6 +55,7 @@ class MyApp extends StatelessWidget {
         // Student routes
         '/student/home': (context) => const StudentHomeScreen(),
         '/session/detail': (context) => const SessionDetailScreen(),
+        '/qr/scanner': (context) => const QRScannerScreen(),
         // '/student/login': (context) => const ClassDetailScreen(classCode: 'CSE'), // Temporary redirect to ClassDetailScreen
       },
     );

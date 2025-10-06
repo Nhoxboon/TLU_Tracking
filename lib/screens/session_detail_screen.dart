@@ -146,13 +146,19 @@ class SessionDetailScreen extends StatelessWidget {
               margin: const EdgeInsets.only(right: 55.0),
               child: ElevatedButton(
                 onPressed: () {
-                  // TODO: Implement attendance marking functionality
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Chức năng điểm danh đang được phát triển'),
-                      backgroundColor: Color(0xFF1FB445),
-                    ),
-                  );
+                  // Check if session is open before allowing attendance
+                  if (status == 'Mở') {
+                    // Navigate to QR scanner for attendance
+                    Navigator.pushNamed(context, '/qr/scanner');
+                  } else {
+                    // Show message that session is closed
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Phiên điểm danh đã đóng'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1FB445),
