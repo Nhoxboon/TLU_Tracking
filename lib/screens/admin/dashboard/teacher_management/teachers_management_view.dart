@@ -340,6 +340,40 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                                 },
                               ),
                               const Spacer(),
+
+                              // Import excel button
+                              SizedBox(
+                                height: 38,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    // Handle import excel
+                                  },
+                                  icon: const Icon(Icons.upload_file, size: 16),
+                                  label: const Text(
+                                    'Nhập excel',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.28,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF46E522),
+                                    foregroundColor: Colors.black,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+
                               // Add teacher button
                               SizedBox(
                                 height: 38,
