@@ -235,7 +235,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                                 onSubmitted: (_) => _handleLogin(),
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
-                                  hintText: 'esteban_schiller@gmail.com',
+                                  hintText: '',
                                   hintStyle: AppTextStyles.bodyTextLight,
                                 ),
                               ),
