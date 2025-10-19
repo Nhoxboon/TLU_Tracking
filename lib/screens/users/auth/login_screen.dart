@@ -64,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
         } else if (email.contains('admin')) {
           // Navigate to admin dashboard for admins
           Navigator.pushReplacementNamed(context, '/admin/dashboard');
-        } else {
+                } else {
           // Default to student view (class detail)
           Navigator.pushReplacementNamed(context, '/class-detail');
         }
