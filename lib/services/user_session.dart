@@ -1,0 +1,57 @@
+import 'package:flutter/foundation.dart';
+import '../models/api_models.dart';
+
+class UserSession extends ChangeNotifier {
+  static final UserSession _instance = UserSession._internal();
+  factory UserSession() => _instance;
+  UserSession._internal();
+
+  UserRole? _userRole;
+  Map<String, dynamic>? _userData;
+  String? _username;
+
+  UserRole? get userRole => _userRole;
+  Map<String, dynamic>? get userData => _userData;
+  String? get username => _username;
+  bool get isLoggedIn => _userRole != null;
+
+  void setUser({
+    required UserRole role,
+    required Map<String, dynamic> userData,
+    required String username,
+  }) {
+    _userRole = role;
+    _userData = userData;
+    _username = username;
+    notifyListeners();
+  }
+
+  void logout() {
+    _userRole = null;
+    _userData = null;
+    _username = null;
+    notifyListeners();
+  }
+
+  // Helper methods to get typed user data
+  Student? get studentData {
+    if (_userRole == UserRole.student && _userData != null) {
+      return Student.fromJson(_userData!);
+    }
+    return null;
+  }
+
+  Teacher? get teacherData {
+    if (_userRole == UserRole.teacher && _userData != null) {
+      return Teacher.fromJson(_userData!);
+    }
+    return null;
+  }
+
+  Admin? get adminData {
+    if (_userRole == UserRole.admin && _userData != null) {
+      return Admin.fromJson(_userData!);
+    }
+    return null;
+  }
+}

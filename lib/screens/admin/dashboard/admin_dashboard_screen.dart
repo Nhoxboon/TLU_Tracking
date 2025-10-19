@@ -12,6 +12,7 @@ import 'package:android_app/screens/admin/dashboard/subject_management/subjects_
 import 'package:android_app/screens/admin/dashboard/major_management/majors_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/course_management/courses_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/change_password_view.dart';
+import '../../../services/user_session.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -21,7 +22,7 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  final String adminName = "Admin";
+  String get adminName => UserSession().adminData?.fullName ?? UserSession().username ?? "Admin";
   DashboardTab _currentTab = DashboardTab.dashboard;
 
   Widget _buildMainContent() {

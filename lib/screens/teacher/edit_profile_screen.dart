@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/user_session.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({Key? key}) : super(key: key);
@@ -19,9 +20,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     // Initialize with current user data
-    _nameController.text = 'Vishal Khadok';
-    _emailController.text = 'hello@halalab.co';
-    _phoneController.text = '408-841-0926';
+    final teacherData = UserSession().teacherData;
+    _nameController.text = teacherData?.fullName ?? UserSession().username ?? '';
+    _emailController.text = teacherData?.email ?? UserSession().username ?? '';
+    _phoneController.text = teacherData?.phoneNumber ?? '';
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
+import '../../services/user_session.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
@@ -297,9 +298,9 @@ class _TeacherSettingsTab extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Text(
-                    'Vishal Khadok',
-                    style: TextStyle(
+                  Text(
+                    UserSession().teacherData?.fullName ?? UserSession().username ?? 'Giảng viên',
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF333333),
@@ -342,7 +343,7 @@ class _TeacherSettingsTab extends StatelessWidget {
                       icon: Icons.person_outline,
                       iconColor: Colors.deepOrange,
                       label: 'TÊN',
-                      value: 'Vishal Khadok',
+                      value: UserSession().teacherData?.fullName ?? UserSession().username ?? 'Giảng viên',
                     ),
                     const SizedBox(height: 16),
                     
@@ -351,7 +352,7 @@ class _TeacherSettingsTab extends StatelessWidget {
                       icon: Icons.email_outlined,
                       iconColor: Colors.blue,
                       label: 'EMAIL',
-                      value: 'hello@halalab.co',
+                      value: UserSession().teacherData?.email ?? UserSession().username ?? '',
                     ),
                     const SizedBox(height: 16),
                     
@@ -378,7 +379,7 @@ class _TeacherSettingsTab extends StatelessWidget {
                       icon: Icons.phone_outlined,
                       iconColor: Colors.blue,
                       label: 'SỐ ĐIỆN THOẠI',
-                      value: '408-841-0926',
+                      value: UserSession().teacherData?.phoneNumber ?? 'Chưa cập nhật',
                     ),
                   ],
                 ),
@@ -440,7 +441,9 @@ class _TeacherSettingsTab extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: InkWell(
-                  onTap: () {},
+                  onTap: () {
+                    _showLogoutDialog(context);
+                  },
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
@@ -476,6 +479,37 @@ class _TeacherSettingsTab extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Đăng xuất'),
+          content: const Text('Bạn có chắc chắn muốn đăng xuất không?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Hủy'),
+            ),
+            TextButton(
+              onPressed: () {
+                UserSession().logout();
+                Navigator.of(context).pop();
+                Navigator.pushReplacementNamed(context, '/student/login');
+              },
+              child: const Text(
+                'Đăng xuất',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
