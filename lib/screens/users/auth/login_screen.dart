@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../services/api_service.dart';
+import '../../../models/api_models.dart';
+import '../../../services/user_session.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -47,37 +50,87 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
+  void _handleLogin() async {
+    // Validate inputs
+    if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
+      _showErrorSnackBar('Vui lòng nhập đầy đủ thông tin');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
-    // Simulate network delay for login
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    try {
+      final loginRequest = LoginRequest(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      final response = await ApiService().login(loginRequest);
+
       if (mounted) {
-        // Simulate different user types based on email
-        final email = _emailController.text.toLowerCase().trim();
-        
-        if (email.contains('teacher') || email.contains('gv')) {
-          // Navigate to teacher dashboard for teachers
-          Navigator.pushReplacementNamed(context, '/teacher/dashboard');
-        } else if (email.contains('admin')) {
-          // Navigate to admin dashboard for admins
-          Navigator.pushReplacementNamed(context, '/admin/dashboard');
-                } else {
-          // Default to student view (class detail)
-          Navigator.pushReplacementNamed(context, '/class-detail');
-        }
-        
-        // Reset loading state
         setState(() {
           _isLoading = false;
         });
+
+        if (response.success && response.data != null) {
+          final loginResponse = response.data!;
+          
+          // Store user session
+          UserSession().setUser(
+            role: loginResponse.role,
+            userData: loginResponse.user,
+            username: _emailController.text.trim(),
+          );
+          
+          // Navigate based on user role
+          switch (loginResponse.role) {
+            case UserRole.admin:
+              Navigator.pushReplacementNamed(context, '/admin/dashboard');
+              break;
+            case UserRole.teacher:
+              Navigator.pushReplacementNamed(context, '/teacher/dashboard');
+              break;
+            case UserRole.student:
+              Navigator.pushReplacementNamed(context, '/student/home');
+              break;
+          }
+          
+          _showSuccessSnackBar('Đăng nhập thành công');
+        } else {
+          _showErrorSnackBar(response.message);
+        }
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showErrorSnackBar('Lỗi kết nối: ${e.toString()}');
+      }
+    }
   }
 
-  @override
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFFE53E3E),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF4CAF50),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
