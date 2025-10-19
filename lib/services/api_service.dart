@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/api_models.dart';
 import 'mock_api_service.dart';
+import 'user_session.dart';
 
 class ApiService {
   static const String baseUrl = 'http://10.0.2.2:8000';
@@ -564,6 +565,88 @@ class ApiService {
       }
     } catch (e) {
       return ApiResponse.error('Failed to delete teaching session: ${e.toString()}');
+    }
+  }
+
+  // Get current user with bearer token
+  Future<ApiResponse<CurrentUserResponse>> getCurrentUser() async {
+    try {
+      final token = UserSession().authToken;
+      if (token == null) {
+        return ApiResponse.error('No authentication token available');
+      }
+
+      final headers = {
+        ..._headers,
+        'Authorization': 'Bearer $token',
+      };
+
+      final response = await _client.get(
+        Uri.parse('$baseUrl/auth/me'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final userResponse = CurrentUserResponse.fromJson(data);
+        return ApiResponse.success(userResponse);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to fetch user information',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to fetch user information: ${e.toString()}');
+    }
+  }
+
+  // Get classes by teacher ID
+  Future<ApiResponse<List<ClassInfo>>> getClassesByTeacher(String teacherId) async {
+    try {
+      final token = UserSession().authToken;
+      final headers = token != null 
+          ? {..._headers, 'Authorization': 'Bearer $token'}
+          : _headers;
+
+      final response = await _client.get(
+        Uri.parse('$baseUrl/classes/teacher/$teacherId'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final classes = data.map((json) => ClassInfo.fromJson(json)).toList();
+        return ApiResponse.success(classes);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to fetch classes',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      // Fallback to mock data
+      print('API not available, using mock classes data: ${e.toString()}');
+      return ApiResponse.success([
+        ClassInfo(
+          id: '1',
+          classCode: 'Mobile app',
+          className: 'Mobile app',
+          subjectName: 'Mobile app',
+          totalStudents: 40,
+          schedule: 'CSE',
+        ),
+        ClassInfo(
+          id: '2',
+          classCode: 'Web Development',
+          className: 'Web Development',
+          subjectName: 'Web Development',
+          totalStudents: 35,
+          schedule: 'CSE',
+        ),
+      ]);
     }
   }
 

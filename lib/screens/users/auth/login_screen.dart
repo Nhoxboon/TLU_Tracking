@@ -82,6 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
             role: loginResponse.role,
             userData: loginResponse.user,
             username: _emailController.text.trim(),
+            token: loginResponse.token,
           );
           
           // Navigate based on user role

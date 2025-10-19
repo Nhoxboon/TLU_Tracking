@@ -21,11 +21,13 @@ class LoginResponse {
   final String message;
   final UserRole role;
   final Map<String, dynamic> user;
+  final String? token;
 
   LoginResponse({
     required this.message,
     required this.role,
     required this.user,
+    this.token,
   });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
@@ -33,6 +35,7 @@ class LoginResponse {
       message: json['message'] ?? '',
       role: UserRole.fromString(json['user_type'] ?? 'student'),
       user: json['user'] ?? {},
+      token: json['access_token'] ?? json['token'],
     );
   }
 }
@@ -277,5 +280,51 @@ class TeachingSession {
       'end_time': endTime.toIso8601String(),
       'location': location,
     };
+  }
+}
+
+class CurrentUserResponse {
+  final String message;
+  final Map<String, dynamic> user;
+
+  CurrentUserResponse({
+    required this.message,
+    required this.user,
+  });
+
+  factory CurrentUserResponse.fromJson(Map<String, dynamic> json) {
+    return CurrentUserResponse(
+      message: json['message'] ?? '',
+      user: json['user'] ?? {},
+    );
+  }
+}
+
+class ClassInfo {
+  final String id;
+  final String classCode;
+  final String className;
+  final String subjectName;
+  final int totalStudents;
+  final String? schedule;
+
+  ClassInfo({
+    required this.id,
+    required this.classCode,
+    required this.className,
+    required this.subjectName,
+    required this.totalStudents,
+    this.schedule,
+  });
+
+  factory ClassInfo.fromJson(Map<String, dynamic> json) {
+    return ClassInfo(
+      id: json['id']?.toString() ?? '',
+      classCode: json['class_code'] ?? '',
+      className: json['class_name'] ?? '',
+      subjectName: json['subject_name'] ?? '',
+      totalStudents: json['total_students'] ?? 0,
+      schedule: json['schedule'],
+    );
   }
 }

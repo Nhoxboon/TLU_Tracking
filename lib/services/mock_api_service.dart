@@ -51,6 +51,7 @@ class MockApiService {
       message: 'Đăng nhập thành công',
       role: UserRole.fromString(userData['user_type']),
       user: userData['user'],
+      token: 'mock_token_123456789', // Mock token for development
     );
 
     return ApiResponse.success(loginResponse);
