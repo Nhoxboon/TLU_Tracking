@@ -2,193 +2,169 @@ import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
-import 'package:android_app/screens/admin/dashboard/teacher_management/add_teacher_modal.dart';
-import 'package:android_app/screens/admin/dashboard/teacher_management/edit_teacher_modal.dart';
+import 'package:android_app/screens/admin/dashboard/semester_management/add_semester_modal.dart';
+import 'package:android_app/screens/admin/dashboard/semester_management/edit_semester_modal.dart';
 
-class TeachersManagementView extends StatefulWidget {
-  const TeachersManagementView({super.key});
+class SemestersManagementView extends StatefulWidget {
+  const SemestersManagementView({super.key});
 
   @override
-  State<TeachersManagementView> createState() => _TeachersManagementViewState();
+  State<SemestersManagementView> createState() =>
+      _SemestersManagementViewState();
 }
 
-class _TeachersManagementViewState extends State<TeachersManagementView> {
+class _SemestersManagementViewState extends State<SemestersManagementView> {
   final TextEditingController _searchController = TextEditingController();
 
   // Pagination variables
   int _currentPage = 1;
   final int _itemsPerPage = 10;
 
-  // Sample data for teachers
-  final List<TeacherData> _teachers = [
-    TeacherData(
+  // Academic years list (should come from a service in production)
+  final List<String> _academicYears = [
+    '2024-2025',
+    '2023-2024',
+    '2022-2023',
+    '2021-2022',
+    '2020-2021',
+    '2019-2020',
+    '2018-2019',
+    '2017-2018',
+  ];
+
+  // Sample data for semesters
+  final List<SemesterData> _semesters = [
+    SemesterData(
       id: 1,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Khoa học máy tính',
+      academicYear: '2024-2025',
+      semester: '1',
+      startDate: DateTime(2024, 1, 1),
+      endDate: DateTime(2025, 1, 1),
     ),
-    TeacherData(
+    SemesterData(
       id: 2,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Công nghệ thông tin',
+      academicYear: '2024-2025',
+      semester: '2',
+      startDate: DateTime(2025, 1, 1),
+      endDate: DateTime(2025, 6, 1),
     ),
-    TeacherData(
+    SemesterData(
       id: 3,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Hệ thống thông tin',
+      academicYear: '2023-2024',
+      semester: '1',
+      startDate: DateTime(2023, 1, 1),
+      endDate: DateTime(2024, 1, 1),
     ),
-    TeacherData(
+    SemesterData(
       id: 4,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Kỹ thuật phần mềm',
+      academicYear: '2023-2024',
+      semester: '2',
+      startDate: DateTime(2024, 1, 1),
+      endDate: DateTime(2024, 6, 1),
     ),
-    TeacherData(
+    SemesterData(
       id: 5,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Khoa học máy tính',
+      academicYear: '2022-2023',
+      semester: '1',
+      startDate: DateTime(2022, 1, 1),
+      endDate: DateTime(2023, 1, 1),
     ),
-    TeacherData(
+    SemesterData(
       id: 6,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Công nghệ thông tin',
+      academicYear: '2022-2023',
+      semester: '2',
+      startDate: DateTime(2023, 1, 1),
+      endDate: DateTime(2023, 6, 1),
     ),
-    TeacherData(
+    SemesterData(
       id: 7,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Hệ thống thông tin',
+      academicYear: '2021-2022',
+      semester: '1',
+      startDate: DateTime(2021, 1, 1),
+      endDate: DateTime(2022, 1, 1),
     ),
-    TeacherData(
+    SemesterData(
       id: 8,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Kỹ thuật phần mềm',
+      academicYear: '2021-2022',
+      semester: '2',
+      startDate: DateTime(2022, 1, 1),
+      endDate: DateTime(2022, 6, 1),
     ),
-    TeacherData(
+    SemesterData(
       id: 9,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Khoa học máy tính',
+      academicYear: '2020-2021',
+      semester: '1',
+      startDate: DateTime(2020, 1, 1),
+      endDate: DateTime(2021, 1, 1),
     ),
-    TeacherData(
+    SemesterData(
       id: 10,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Công nghệ thông tin',
+      academicYear: '2020-2021',
+      semester: '2',
+      startDate: DateTime(2021, 1, 1),
+      endDate: DateTime(2021, 6, 1),
     ),
-    TeacherData(
+    SemesterData(
       id: 11,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Hệ thống thông tin',
+      academicYear: '2019-2020',
+      semester: '1',
+      startDate: DateTime(2019, 1, 1),
+      endDate: DateTime(2020, 1, 1),
     ),
-    TeacherData(
+    SemesterData(
       id: 12,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Kỹ thuật phần mềm',
+      academicYear: '2019-2020',
+      semester: '2',
+      startDate: DateTime(2020, 1, 1),
+      endDate: DateTime(2020, 6, 1),
     ),
   ];
 
-  final Set<int> _selectedTeachers = <int>{};
+  final Set<int> _selectedSemesters = <int>{};
 
-  // Column configuration for teachers table
-  static const List<TableColumn> _teacherColumns = [
+  // Column configuration for semesters table
+  static const List<TableColumn> _semesterColumns = [
     TableColumn(
       type: TableColumnType.id,
       flex: 1,
       styleType: TableColumnStyleType.primary,
     ),
     TableColumn(
-      type: TableColumnType.code,
-      flex: 2,
-      styleType: TableColumnStyleType.primary,
-    ),
-    TableColumn(
-      type: TableColumnType.name,
+      type: TableColumnType.academicYearName,
       flex: 2,
       styleType: TableColumnStyleType.secondary,
     ),
     TableColumn(
-      type: TableColumnType.phone,
-      flex: 2,
-      styleType: TableColumnStyleType.normal,
+      type: TableColumnType.semester,
+      flex: 1,
+      styleType: TableColumnStyleType.secondary,
     ),
     TableColumn(
-      type: TableColumnType.email,
+      type: TableColumnType.startDate,
       flex: 2,
-      textAlign: TextAlign.right,
-      styleType: TableColumnStyleType.normal,
+      styleType: TableColumnStyleType.secondary,
     ),
     TableColumn(
-      type: TableColumnType.birthDate,
+      type: TableColumnType.endDate,
       flex: 2,
-      textAlign: TextAlign.right,
-      styleType: TableColumnStyleType.normal,
-    ),
-    TableColumn(
-      type: TableColumnType.department,
-      flex: 2,
-      textAlign: TextAlign.right,
-      styleType: TableColumnStyleType.normal,
+      styleType: TableColumnStyleType.secondary,
     ),
     TableColumn(
       type: TableColumnType.actions,
-      flex: 2,
+      flex: 1,
       textAlign: TextAlign.right,
     ),
   ];
 
   // Pagination getters and methods
-  int get totalPages => (_teachers.length / _itemsPerPage).ceil();
+  int get totalPages => (_semesters.length / _itemsPerPage).ceil();
 
-  List<TeacherData> get currentPageTeachers {
+  List<SemesterData> get currentPageSemesters {
     final startIndex = (_currentPage - 1) * _itemsPerPage;
     final endIndex = startIndex + _itemsPerPage;
-    return _teachers.sublist(
+    return _semesters.sublist(
       startIndex,
-      endIndex > _teachers.length ? _teachers.length : endIndex,
+      endIndex > _semesters.length ? _semesters.length : endIndex,
     );
   }
 
@@ -224,7 +200,7 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
             ),
           ),
           content: Text(
-            'Bạn có chắc chắn muốn xóa ${_selectedTeachers.length} giảng viên đã chọn? Hành động này không thể hoàn tác.',
+            'Bạn có chắc chắn muốn xóa ${_selectedSemesters.length} học kì đã chọn? Hành động này không thể hoàn tác.',
             style: const TextStyle(
               fontFamily: 'Inter',
               fontSize: 14,
@@ -250,12 +226,12 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
               onPressed: () {
                 // Handle delete action
                 setState(() {
-                  _teachers.removeWhere(
-                    (teacher) => _selectedTeachers.contains(teacher.id),
+                  _semesters.removeWhere(
+                    (semester) => _selectedSemesters.contains(semester.id),
                   );
-                  _selectedTeachers.clear();
+                  _selectedSemesters.clear();
                   // Reset to first page if current page is empty
-                  if (currentPageTeachers.isEmpty && _currentPage > 1) {
+                  if (currentPageSemesters.isEmpty && _currentPage > 1) {
                     _currentPage = 1;
                   }
                 });
@@ -294,7 +270,7 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
         children: [
           // Title
           const Text(
-            'Quản lý giảng viên',
+            'Quản lý học kì',
             style: TextStyle(
               fontFamily: 'Nunito Sans',
               fontWeight: FontWeight.w700,
@@ -337,118 +313,62 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                       horizontal: 24,
                       vertical: 16,
                     ),
-                    child: _selectedTeachers.isEmpty
-                        ? Column(
+                    child: _selectedSemesters.isEmpty
+                        ? Row(
                             children: [
-                              // First row: Search and filters
-                              Row(
-                                children: [
-                                  // Search field
-                                  CustomSearchBar(
-                                    controller: _searchController,
-                                    hintText: 'Tìm kiếm...',
-                                    onChanged: (value) {
-                                      // Handle search logic here
-                                      setState(() {
-                                        // Reset to first page when searching
-                                        _currentPage = 1;
-                                      });
-                                    },
-                                    onClear: () {
-                                      setState(() {
-                                        _currentPage = 1;
-                                      });
-                                    },
-                                  ),
-                                  const SizedBox(width: 16),
+                              // Search field
+                              CustomSearchBar(
+                                controller: _searchController,
+                                hintText: 'Tìm kiếm...',
+                                onChanged: (value) {
+                                  // Handle search logic here
+                                  setState(() {
+                                    _currentPage = 1;
+                                  });
+                                },
+                                onClear: () {
+                                  setState(() {
+                                    _currentPage = 1;
+                                  });
+                                },
+                              ),
+                              const Spacer(),
 
-                                  // Filter buttons
-                                  _buildFilterButton('Lọc theo bộ môn'),
-                                  const SizedBox(width: 16),
-                                  _buildFilterButton('Lọc theo khoa'),
-                                  const Spacer(),
-
-                                  // Import excel button
-                                  SizedBox(
-                                    height: 38,
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        // Handle import excel
-                                      },
-                                      icon: const Icon(
-                                        Icons.upload_file,
-                                        size: 16,
+                              // Add semester button
+                              SizedBox(
+                                height: 32,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AddSemesterModal(
+                                        academicYears: _academicYears,
                                       ),
-                                      label: const Text(
-                                        'Nhập excel',
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          letterSpacing: 0.28,
-                                        ),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFF46E522,
-                                        ),
-                                        foregroundColor: Colors.black,
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.add, size: 12),
+                                  label: const Text(
+                                    'Thêm học kì',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.28,
                                     ),
                                   ),
-                                  const SizedBox(width: 16),
-
-                                  // Add teacher button
-                                  SizedBox(
-                                    height: 38,
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        showDialog(
-                                          context: context,
-                                          builder: (BuildContext context) {
-                                            return const AddTeacherModal();
-                                          },
-                                        );
-                                      },
-                                      icon: const Icon(Icons.add, size: 16),
-                                      label: const Text(
-                                        'Thêm giảng viên',
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          letterSpacing: 0.28,
-                                        ),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFF2264E5,
-                                        ),
-                                        foregroundColor: Colors.white,
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                      ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2264E5),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
                                     ),
                                   ),
-                                ],
+                                ),
                               ),
                             ],
                           )
@@ -456,7 +376,7 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                             children: [
                               // Selected items count
                               Text(
-                                '${_selectedTeachers.length} giảng viên đã chọn',
+                                '${_selectedSemesters.length} học kì đã chọn',
                                 style: const TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 14,
@@ -467,14 +387,14 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                               const Spacer(),
                               // Delete button
                               SizedBox(
-                                height: 38,
+                                height: 32,
                                 child: ElevatedButton.icon(
                                   onPressed: () {
                                     _showDeleteConfirmationDialog();
                                   },
                                   icon: const Icon(
                                     Icons.delete_outline,
-                                    size: 16,
+                                    size: 12,
                                   ),
                                   label: const Text(
                                     'Xóa',
@@ -521,21 +441,15 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                           child: SingleChildScrollView(
                             child: Column(
                               children: [
-                                // Table rows
-                                ...List.generate(_itemsPerPage, (index) {
-                                  if (index < currentPageTeachers.length) {
-                                    final teacher = currentPageTeachers[index];
-                                    final isEven = index % 2 == 0;
-                                    return _buildTableRow(teacher, isEven);
-                                  } else {
-                                    // Empty row to maintain consistent height
-                                    return Container(
-                                      height: 64,
-                                      color: index % 2 == 0
-                                          ? Colors.white
-                                          : const Color(0xFFF9FAFC),
-                                    );
-                                  }
+                                ...currentPageSemesters.asMap().entries.map((
+                                  entry,
+                                ) {
+                                  final index = entry.key;
+                                  final semester = entry.value;
+                                  return _buildTableRow(
+                                    semester,
+                                    index % 2 == 0,
+                                  );
                                 }),
                               ],
                             ),
@@ -557,9 +471,9 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Left side: Items count
+                        // Show results info
                         Text(
-                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageTeachers.length} of ${_teachers.length}',
+                          '${(_currentPage - 1) * _itemsPerPage + 1}-${_currentPage * _itemsPerPage > _semesters.length ? _semesters.length : _currentPage * _itemsPerPage} of ${_semesters.length}',
                           style: const TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
@@ -569,41 +483,47 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                           ),
                         ),
 
-                        // Right side: Navigation controls
+                        // Pagination controls
                         Row(
                           children: [
                             // Previous button
-                            InkWell(
+                            GestureDetector(
                               onTap: _currentPage > 1
                                   ? _goToPreviousPage
                                   : null,
-                              borderRadius: BorderRadius.circular(6),
                               child: Container(
                                 width: 24,
-                                height: 20,
+                                height: 24,
                                 decoration: BoxDecoration(
                                   color: _currentPage > 1
                                       ? const Color(0xFFF7F9FC)
-                                      : const Color(
-                                          0xFFF7F9FC,
-                                        ).withValues(alpha: 0.5),
+                                      : const Color(0xFFF7F9FC),
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color: const Color(
-                                      0xFF464F60,
-                                    ).withValues(alpha: .24),
+                                    color: _currentPage > 1
+                                        ? const Color(
+                                            0xFF464F60,
+                                          ).withValues(alpha: 0.24)
+                                        : const Color(
+                                            0xFF464F60,
+                                          ).withValues(alpha: 0.12),
+                                    width: 1,
                                   ),
                                 ),
                                 child: Icon(
                                   Icons.chevron_left,
                                   size: 16,
                                   color: _currentPage > 1
-                                      ? const Color(0xFF464F60)
-                                      : const Color(0xFF868FA0),
+                                      ? const Color(0xFF868FA0)
+                                      : const Color(
+                                          0xFF868FA0,
+                                        ).withValues(alpha: 0.4),
                                 ),
                               ),
                             ),
                             const SizedBox(width: 10),
+
+                            // Page info
                             Text(
                               '$_currentPage/$totalPages',
                               style: const TextStyle(
@@ -615,52 +535,62 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                               ),
                             ),
                             const SizedBox(width: 10),
+
                             // Next button
-                            InkWell(
+                            GestureDetector(
                               onTap: _currentPage < totalPages
                                   ? _goToNextPage
                                   : null,
-                              borderRadius: BorderRadius.circular(6),
                               child: Container(
                                 width: 24,
-                                height: 20,
+                                height: 24,
                                 decoration: BoxDecoration(
                                   color: _currentPage < totalPages
                                       ? Colors.white
-                                      : Colors.white.withValues(alpha: 0.5),
+                                      : const Color(0xFFF7F9FC),
                                   borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: _currentPage < totalPages
+                                        ? const Color(
+                                            0xFF464F60,
+                                          ).withValues(alpha: 0.24)
+                                        : const Color(
+                                            0xFF464F60,
+                                          ).withValues(alpha: 0.12),
+                                    width: 1,
+                                  ),
                                   boxShadow: _currentPage < totalPages
                                       ? [
                                           BoxShadow(
                                             color: const Color(
                                               0xFF596078,
-                                            ).withValues(alpha: .1),
+                                            ).withValues(alpha: 0.1),
                                             blurRadius: 5,
                                             offset: const Offset(0, 2),
                                           ),
                                           BoxShadow(
                                             color: const Color(
                                               0xFF464F60,
-                                            ).withValues(alpha: .16),
+                                            ).withValues(alpha: 0.16),
                                             offset: const Offset(0, 0),
                                             spreadRadius: 1,
                                           ),
-                                          BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: .1,
-                                            ),
+                                          const BoxShadow(
+                                            color: Color(0x1A000000),
                                             blurRadius: 1,
-                                            offset: const Offset(0, 1),
+                                            offset: Offset(0, 1),
                                           ),
                                         ]
-                                      : [],
+                                      : null,
                                 ),
                                 child: Icon(
                                   Icons.chevron_right,
                                   size: 16,
                                   color: _currentPage < totalPages
-                                      ? const Color(0xFF464F60)
-                                      : const Color(0xFF868FA0),
+                                      ? const Color(0xFF171C26)
+                                      : const Color(
+                                          0xFF868FA0,
+                                        ).withValues(alpha: 0.4),
                                 ),
                               ),
                             ),
@@ -672,47 +602,6 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterButton(String text) {
-    return Container(
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: const Color(0xFF687182).withValues(alpha: 0.16),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 2,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            text,
-            style: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              color: Color(0xFFA1A9B8),
-            ),
-          ),
-          const SizedBox(width: 8),
-          const Icon(
-            Icons.keyboard_arrow_down,
-            size: 16,
-            color: Color(0xFF717680),
           ),
         ],
       ),
@@ -731,26 +620,26 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
               SizedBox(
                 width: 32,
                 child: Checkbox(
-                  value: currentPageTeachers.every(
-                    (teacher) => _selectedTeachers.contains(teacher.id),
+                  value: currentPageSemesters.every(
+                    (semester) => _selectedSemesters.contains(semester.id),
                   ),
                   onChanged: (bool? value) {
                     setState(() {
                       if (value == true) {
-                        _selectedTeachers.addAll(
-                          currentPageTeachers.map((t) => t.id),
+                        _selectedSemesters.addAll(
+                          currentPageSemesters.map((s) => s.id),
                         );
                       } else {
-                        for (final teacher in currentPageTeachers) {
-                          _selectedTeachers.remove(teacher.id);
-                        }
+                        _selectedSemesters.removeAll(
+                          currentPageSemesters.map((s) => s.id),
+                        );
                       }
                     });
                   },
                 ),
               ),
 
-              // ID (#) chiếm 1 phần
+              // # chiếm 1 phần
               Expanded(
                 flex: 1,
                 child: Row(
@@ -805,90 +694,78 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                 ),
               ),
 
-              // Mã GV chiếm 2 phần
-              Expanded(
+              // Năm học chiếm 2 phần
+              const Expanded(
                 flex: 2,
                 child: Text(
-                  'MÃ GV',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                  'NĂM HỌC',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
                   ),
                 ),
               ),
 
-              // Tên chiếm 2 phần
-              Expanded(
-                flex: 2,
+              // Học kì chiếm 1 phần
+              const Expanded(
+                flex: 1,
                 child: Text(
-                  'TÊN',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                  'HỌC KÌ',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
                   ),
                 ),
               ),
 
-              // Số điện thoại chiếm 2 phần
-              Expanded(
+              // Ngày bắt đầu chiếm 2 phần
+              const Expanded(
                 flex: 2,
                 child: Text(
-                  'SỐ ĐIỆN THOẠI',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                  'NGÀY BẮT ĐẦU',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
                   ),
                 ),
               ),
 
-              // Email chiếm 2 phần
-              Expanded(
+              // Ngày kết thúc chiếm 2 phần
+              const Expanded(
                 flex: 2,
                 child: Text(
-                  'EMAIL',
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                  'NGÀY KẾT THÚC',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
                   ),
                 ),
               ),
 
-              // Ngày sinh chiếm 2 phần
-              Expanded(
-                flex: 2,
-                child: Text(
-                  'NGÀY SINH',
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-
-              // Bộ môn chiếm 2 phần
-              Expanded(
-                flex: 2,
-                child: Text(
-                  'BỘ MÔN',
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-
-              // Hành động chiếm 2 phần
-              Expanded(
-                flex: 2,
+              // Hành động chiếm 1 phần
+              const Expanded(
+                flex: 1,
                 child: Text(
                   'HÀNH ĐỘNG',
                   textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
                   ),
                 ),
               ),
@@ -899,27 +776,30 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
     );
   }
 
-  Widget _buildTableRow(TeacherData teacher, bool isEven) {
-    final isSelected = _selectedTeachers.contains(teacher.id);
+  Widget _buildTableRow(SemesterData semester, bool isEven) {
+    final isSelected = _selectedSemesters.contains(semester.id);
 
-    return DataTableRow<TeacherData>(
-      data: teacher,
+    return DataTableRow<SemesterData>(
+      data: semester,
       isEven: isEven,
       isSelected: isSelected,
-      columns: _teacherColumns,
+      columns: _semesterColumns,
       onSelectionChanged: () {
         setState(() {
           if (isSelected) {
-            _selectedTeachers.remove(teacher.id);
+            _selectedSemesters.remove(semester.id);
           } else {
-            _selectedTeachers.add(teacher.id);
+            _selectedSemesters.add(semester.id);
           }
         });
       },
       onEdit: () {
         showDialog(
           context: context,
-          builder: (context) => EditTeacherModal(teacher: teacher),
+          builder: (context) => EditSemesterModal(
+            semester: semester,
+            academicYears: _academicYears,
+          ),
         );
       },
       onDelete: () {
@@ -929,29 +809,35 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
   }
 }
 
-class TeacherData implements TableRowData {
+class SemesterData implements SemesterTableRowData {
   @override
   final int id;
   @override
-  final String code;
+  final String academicYear;
   @override
-  final String name;
+  final String semester;
   @override
-  final String phone;
+  final DateTime startDate;
   @override
-  final String email;
-  @override
-  final String birthDate;
+  final DateTime endDate;
 
-  final String department;
+  // Required fields from TableRowData interface (not used for semesters)
+  @override
+  String get name => '';
+  @override
+  String get code => '';
+  @override
+  String get phone => '';
+  @override
+  String get email => '';
+  @override
+  String get birthDate => '';
 
-  TeacherData({
+  SemesterData({
     required this.id,
-    required this.code,
-    required this.name,
-    required this.phone,
-    required this.email,
-    required this.birthDate,
-    required this.department,
+    required this.academicYear,
+    required this.semester,
+    required this.startDate,
+    required this.endDate,
   });
 }

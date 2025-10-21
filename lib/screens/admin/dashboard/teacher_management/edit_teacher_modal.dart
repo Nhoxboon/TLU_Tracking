@@ -18,6 +18,15 @@ class _EditTeacherModalState extends State<EditTeacherModal> {
   late final TextEditingController _passwordController;
 
   DateTime? _selectedBirthDate;
+  String? _selectedDepartment;
+
+  // Sample departments - TODO: Replace with actual data
+  final List<String> _departments = [
+    'Khoa học máy tính',
+    'Công nghệ thông tin',
+    'Hệ thống thông tin',
+    'Kỹ thuật phần mềm',
+  ];
 
   @override
   void initState() {
@@ -27,6 +36,13 @@ class _EditTeacherModalState extends State<EditTeacherModal> {
     _phoneController = TextEditingController(text: widget.teacher.phone);
     _emailController = TextEditingController(text: widget.teacher.email);
     _passwordController = TextEditingController();
+
+    // Only set department if it exists in the list, otherwise use first item or null
+    if (_departments.contains(widget.teacher.department)) {
+      _selectedDepartment = widget.teacher.department;
+    } else if (_departments.isNotEmpty) {
+      _selectedDepartment = _departments.first;
+    }
 
     // Parse birth date from string format (DD/MM/YYYY)
     try {
@@ -252,6 +268,10 @@ class _EditTeacherModalState extends State<EditTeacherModal> {
             ),
             const SizedBox(height: 16),
 
+            // Department Field
+            _buildDepartmentField(),
+            const SizedBox(height: 16),
+
             // Password Field (optional for editing)
             _buildPasswordField(),
           ],
@@ -369,6 +389,76 @@ class _EditTeacherModalState extends State<EditTeacherModal> {
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDepartmentField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Bộ môn*',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            height: 1.43,
+            color: Color(0xFF414651),
+          ),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          value: _selectedDepartment,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Vui lòng chọn bộ môn';
+            }
+            return null;
+          },
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF2264E5)),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            fillColor: Colors.white,
+            filled: true,
+          ),
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF181D27),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down),
+          items: _departments.map((String department) {
+            return DropdownMenuItem<String>(
+              value: department,
+              child: Text(department),
+            );
+          }).toList(),
+          onChanged: (String? value) {
+            setState(() {
+              _selectedDepartment = value;
+            });
+          },
         ),
       ],
     );

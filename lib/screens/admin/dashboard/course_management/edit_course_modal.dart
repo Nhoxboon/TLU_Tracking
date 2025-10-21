@@ -15,6 +15,7 @@ class _EditCourseModalState extends State<EditCourseModal> {
   late final TextEditingController _nameController;
 
   String? _selectedAdmissionYear;
+  String? _selectedEndYear;
 
   // Generate years dynamically from current year backwards
   late final List<String> _admissionYears;
@@ -45,6 +46,13 @@ class _EditCourseModalState extends State<EditCourseModal> {
       _admissionYears.sort((a, b) => b.compareTo(a)); // Sort descending
     }
     _selectedAdmissionYear = widget.course.admissionYear;
+
+    // Check if existing end year is in our list, if not add it
+    if (!_admissionYears.contains(widget.course.endYear)) {
+      _admissionYears.add(widget.course.endYear);
+      _admissionYears.sort((a, b) => b.compareTo(a)); // Sort descending
+    }
+    _selectedEndYear = widget.course.endYear;
   }
 
   @override
@@ -181,6 +189,10 @@ class _EditCourseModalState extends State<EditCourseModal> {
 
             // Admission Year Dropdown Field
             _buildDropdownField(),
+            const SizedBox(height: 16),
+
+            // End Year Dropdown Field
+            _buildEndYearDropdownField(),
           ],
         ),
       ),
@@ -260,7 +272,7 @@ class _EditCourseModalState extends State<EditCourseModal> {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: _selectedAdmissionYear,
+          initialValue: _selectedAdmissionYear,
           onChanged: (String? newValue) {
             setState(() {
               _selectedAdmissionYear = newValue;
@@ -269,6 +281,73 @@ class _EditCourseModalState extends State<EditCourseModal> {
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Vui lòng chọn năm nhập học';
+            }
+            return null;
+          },
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF2264E5)),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            fillColor: Colors.white,
+            filled: true,
+          ),
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF181D27),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF717680)),
+          items: _admissionYears.map<DropdownMenuItem<String>>((String value) {
+            return DropdownMenuItem<String>(value: value, child: Text(value));
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEndYearDropdownField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Năm kết thúc*',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            height: 1.43,
+            color: Color(0xFF414651),
+          ),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          initialValue: _selectedEndYear,
+          onChanged: (String? newValue) {
+            setState(() {
+              _selectedEndYear = newValue;
+            });
+          },
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Vui lòng chọn năm kết thúc';
             }
             return null;
           },

@@ -27,6 +27,7 @@ class _AddCourseModalState extends State<AddCourseModal> {
   }
 
   String? _selectedAdmissionYear;
+  String? _selectedEndYear;
 
   @override
   void initState() {
@@ -34,6 +35,7 @@ class _AddCourseModalState extends State<AddCourseModal> {
     // Initialize available years and set default to current year
     _availableYears = _generateAdmissionYears();
     _selectedAdmissionYear = _availableYears.first; // Current year
+    _selectedEndYear = _availableYears.first; // Current year
   }
 
   @override
@@ -170,6 +172,10 @@ class _AddCourseModalState extends State<AddCourseModal> {
 
             // Admission Year Field
             _buildYearDropdownField(),
+            const SizedBox(height: 16),
+
+            // End Year Field
+            _buildEndYearDropdownField(),
           ],
         ),
       ),
@@ -249,7 +255,7 @@ class _AddCourseModalState extends State<AddCourseModal> {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: _selectedAdmissionYear,
+          initialValue: _selectedAdmissionYear,
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
@@ -296,6 +302,77 @@ class _AddCourseModalState extends State<AddCourseModal> {
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Vui lòng chọn năm nhập học';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEndYearDropdownField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Năm kết thúc*',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            height: 1.43,
+            color: Color(0xFF414651),
+          ),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          initialValue: _selectedEndYear,
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF2264E5)),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            fillColor: Colors.white,
+            filled: true,
+          ),
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+            color: Color(0xFF000000),
+          ),
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            size: 20,
+            color: Color(0xFF717680),
+          ),
+          items: _availableYears.map((String year) {
+            return DropdownMenuItem<String>(value: year, child: Text(year));
+          }).toList(),
+          onChanged: (String? newValue) {
+            setState(() {
+              _selectedEndYear = newValue;
+            });
+          },
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Vui lòng chọn năm kết thúc';
             }
             return null;
           },

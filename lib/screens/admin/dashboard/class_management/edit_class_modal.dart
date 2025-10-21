@@ -16,7 +16,12 @@ class _EditClassModalState extends State<EditClassModal> {
   final _nameController = TextEditingController();
 
   String? _selectedTeacher;
+  String? _selectedDepartment;
   String? _selectedSubject;
+  String? _selectedCourse;
+  String? _selectedAcademicYear;
+  String? _selectedSemester;
+  String? _selectedPeriod;
 
   // Sample data for dropdowns
   final List<String> _teachers = [
@@ -26,6 +31,14 @@ class _EditClassModalState extends State<EditClassModal> {
     'Phạm Thị D',
     'Hoàng Văn E',
     'Nguyễn Thị F',
+  ];
+
+  final List<String> _departments = [
+    'Công nghệ phần mềm',
+    'Khoa học máy tính',
+    'Hệ thống thông tin',
+    'An toàn thông tin',
+    'Trí tuệ nhân tạo',
   ];
 
   final List<String> _subjects = [
@@ -41,6 +54,14 @@ class _EditClassModalState extends State<EditClassModal> {
     'Phần mềm',
   ];
 
+  final List<String> _courses = ['K65', 'K66', 'K67', 'K68', 'K69'];
+
+  final List<String> _academicYears = ['2024-2025', '2025-2026', '2026-2027'];
+
+  final List<String> _semesters = ['1', '2'];
+
+  final List<String> _periods = ['1', '2'];
+
   @override
   void initState() {
     super.initState();
@@ -53,9 +74,16 @@ class _EditClassModalState extends State<EditClassModal> {
     _selectedTeacher = _teachers.contains(widget.classData.teacher)
         ? widget.classData.teacher
         : _teachers.first;
+    _selectedDepartment = _departments.first;
     _selectedSubject = _subjects.contains(widget.classData.subject)
         ? widget.classData.subject
         : _subjects.first;
+    _selectedCourse = _courses.contains(widget.classData.course)
+        ? widget.classData.course
+        : _courses.first;
+    _selectedAcademicYear = _academicYears[1]; // 2025-2026
+    _selectedSemester = _semesters.first;
+    _selectedPeriod = _periods[1]; // 2
   }
 
   @override
@@ -137,7 +165,7 @@ class _EditClassModalState extends State<EditClassModal> {
           const Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Chỉnh sửa lớp học',
+              'Sửa lớp',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 18,
@@ -223,22 +251,135 @@ class _EditClassModalState extends State<EditClassModal> {
             ),
             const SizedBox(height: 16),
 
-            // Subject Dropdown Field
+            // Department and Subject Row
+            Row(
+              children: [
+                // Department Dropdown Field
+                Expanded(
+                  child: _buildDropdownField(
+                    label: 'Bộ môn*',
+                    value: _selectedDepartment,
+                    items: _departments,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedDepartment = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Vui lòng chọn bộ môn';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Subject Dropdown Field
+                Expanded(
+                  child: _buildDropdownField(
+                    label: 'Môn học*',
+                    value: _selectedSubject,
+                    items: _subjects,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedSubject = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Vui lòng chọn môn học';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Course Dropdown Field
             _buildDropdownField(
-              label: 'Môn học*',
-              value: _selectedSubject,
-              items: _subjects,
+              label: 'Khóa*',
+              value: _selectedCourse,
+              items: _courses,
               onChanged: (value) {
                 setState(() {
-                  _selectedSubject = value;
+                  _selectedCourse = value;
                 });
               },
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Vui lòng chọn môn học';
+                  return 'Vui lòng chọn khóa';
                 }
                 return null;
               },
+            ),
+            const SizedBox(height: 16),
+
+            // Academic Year Dropdown Field
+            _buildDropdownField(
+              label: 'Năm học*',
+              value: _selectedAcademicYear,
+              items: _academicYears,
+              onChanged: (value) {
+                setState(() {
+                  _selectedAcademicYear = value;
+                });
+              },
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Vui lòng chọn năm học';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Semester and Period Row
+            Row(
+              children: [
+                // Semester Dropdown Field
+                Expanded(
+                  child: _buildDropdownField(
+                    label: 'Học kì*',
+                    value: _selectedSemester,
+                    items: _semesters,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedSemester = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Vui lòng chọn học kì';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Period Dropdown Field
+                Expanded(
+                  child: _buildDropdownField(
+                    label: 'Đợt học*',
+                    value: _selectedPeriod,
+                    items: _periods,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedPeriod = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Vui lòng chọn đợt học';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -325,7 +466,7 @@ class _EditClassModalState extends State<EditClassModal> {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           onChanged: onChanged,
           validator: validator,
           decoration: InputDecoration(

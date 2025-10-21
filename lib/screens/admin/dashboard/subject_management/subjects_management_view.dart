@@ -22,18 +22,90 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
 
   // Sample data for subjects
   final List<SubjectData> _subjects = [
-    SubjectData(id: 1, code: 'CS101', name: 'Lập trình cơ bản'),
-    SubjectData(id: 2, code: 'CS102', name: 'Cấu trúc dữ liệu'),
-    SubjectData(id: 3, code: 'CS103', name: 'Cơ sở dữ liệu'),
-    SubjectData(id: 4, code: 'CS104', name: 'Mạng máy tính'),
-    SubjectData(id: 5, code: 'CS105', name: 'Hệ điều hành'),
-    SubjectData(id: 6, code: 'CS106', name: 'Phát triển web'),
-    SubjectData(id: 7, code: 'CS107', name: 'Thuật toán'),
-    SubjectData(id: 8, code: 'CS108', name: 'Trí tuệ nhân tạo'),
-    SubjectData(id: 9, code: 'CS109', name: 'Bảo mật thông tin'),
-    SubjectData(id: 10, code: 'CS110', name: 'Kỹ thuật phần mềm'),
-    SubjectData(id: 11, code: 'CS111', name: 'Học máy'),
-    SubjectData(id: 12, code: 'CS112', name: 'Phân tích dữ liệu'),
+    SubjectData(
+      id: 1,
+      code: 'CS101',
+      name: 'Lập trình cơ bản',
+      department: 'Khoa học máy tính',
+      credits: 3,
+    ),
+    SubjectData(
+      id: 2,
+      code: 'CS102',
+      name: 'Cấu trúc dữ liệu',
+      department: 'Khoa học máy tính',
+      credits: 4,
+    ),
+    SubjectData(
+      id: 3,
+      code: 'CS103',
+      name: 'Cơ sở dữ liệu',
+      department: 'Hệ thống thông tin',
+      credits: 3,
+    ),
+    SubjectData(
+      id: 4,
+      code: 'CS104',
+      name: 'Mạng máy tính',
+      department: 'Công nghệ thông tin',
+      credits: 3,
+    ),
+    SubjectData(
+      id: 5,
+      code: 'CS105',
+      name: 'Hệ điều hành',
+      department: 'Khoa học máy tính',
+      credits: 3,
+    ),
+    SubjectData(
+      id: 6,
+      code: 'CS106',
+      name: 'Phát triển web',
+      department: 'Kỹ thuật phần mềm',
+      credits: 4,
+    ),
+    SubjectData(
+      id: 7,
+      code: 'CS107',
+      name: 'Thuật toán',
+      department: 'Khoa học máy tính',
+      credits: 3,
+    ),
+    SubjectData(
+      id: 8,
+      code: 'CS108',
+      name: 'Trí tuệ nhân tạo',
+      department: 'Khoa học máy tính',
+      credits: 3,
+    ),
+    SubjectData(
+      id: 9,
+      code: 'CS109',
+      name: 'Bảo mật thông tin',
+      department: 'Công nghệ thông tin',
+      credits: 3,
+    ),
+    SubjectData(
+      id: 10,
+      code: 'CS110',
+      name: 'Kỹ thuật phần mềm',
+      department: 'Kỹ thuật phần mềm',
+      credits: 3,
+    ),
+    SubjectData(
+      id: 11,
+      code: 'CS111',
+      name: 'Học máy',
+      department: 'Khoa học máy tính',
+      credits: 4,
+    ),
+    SubjectData(
+      id: 12,
+      code: 'CS112',
+      name: 'Phân tích dữ liệu',
+      department: 'Hệ thống thông tin',
+      credits: 3,
+    ),
   ];
 
   final Set<int> _selectedSubjects = <int>{};
@@ -52,8 +124,18 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
     ),
     TableColumn(
       type: TableColumnType.name,
+      flex: 3,
+      styleType: TableColumnStyleType.secondary,
+    ),
+    TableColumn(
+      type: TableColumnType.department,
       flex: 2,
       styleType: TableColumnStyleType.secondary,
+    ),
+    TableColumn(
+      type: TableColumnType.credits,
+      flex: 2,
+      styleType: TableColumnStyleType.primary,
     ),
     TableColumn(
       type: TableColumnType.actions,
@@ -239,6 +321,12 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
                                   });
                                 },
                               ),
+                              const SizedBox(width: 16),
+
+                              // Filter buttons
+                              _buildFilterButton('Lọc theo bộ môn'),
+                              const SizedBox(width: 16),
+                              _buildFilterButton('Lọc theo khoa'),
                               const Spacer(),
 
                               // Import excel button
@@ -535,6 +623,47 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
     );
   }
 
+  Widget _buildFilterButton(String text) {
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: const Color(0xFF687182).withValues(alpha: 0.16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            text,
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: Color(0xFFA1A9B8),
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(
+            Icons.keyboard_arrow_down,
+            size: 16,
+            color: Color(0xFF717680),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTableHeader() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -636,11 +765,41 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
                 ),
               ),
 
-              // Tên môn học chiếm 2 phần
+              // Tên môn học chiếm 3 phần
+              const Expanded(
+                flex: 3,
+                child: Text(
+                  'TÊN MÔN HỌC',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
+                  ),
+                ),
+              ),
+
+              // Bộ môn chiếm 2 phần
               const Expanded(
                 flex: 2,
                 child: Text(
-                  'TÊN MÔN HỌC',
+                  'BỘ MÔN',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
+                  ),
+                ),
+              ),
+
+              // Số tín chỉ chiếm 2 phần
+              const Expanded(
+                flex: 2,
+                child: Text(
+                  'SỐ TÍN CHỈ',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,

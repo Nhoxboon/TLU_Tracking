@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/widgets/common/custom_action_button.dart';
+import 'package:android_app/models/subject.dart';
+import 'package:intl/intl.dart';
 
 // Base interface for table data
 abstract class TableRowData {
@@ -20,18 +22,55 @@ abstract class StudentTableRowData extends TableRowData {
 // Extended interface for class data with teacher and subject
 abstract class ClassTableRowData extends TableRowData {
   String get teacher;
+  String get department;
   String get subject;
+  String get course;
   String get creationDate;
 }
 
 // Extended interface for major data (simple, no additional fields)
 abstract class MajorTableRowData extends TableRowData {
-  // Majors only need id, code, and name - other fields are inherited but empty
+  String get department;
+  String get departmentName;
 }
 
 // Extended interface for course data with admission year
 abstract class CourseTableRowData extends TableRowData {
   String get admissionYear;
+  String get endYear;
+}
+
+// Extended interface for academic year data
+abstract class AcademicYearTableRowData extends TableRowData {
+  DateTime get startDate;
+  DateTime get endDate;
+}
+
+// Extended interface for semester data
+abstract class SemesterTableRowData extends TableRowData {
+  String get academicYear;
+  String get semester;
+  DateTime get startDate;
+  DateTime get endDate;
+}
+
+// Extended interface for study period data
+abstract class StudyPeriodTableRowData extends TableRowData {
+  String get academicYear;
+  String get semester;
+  String get period;
+  DateTime get startDate;
+  DateTime get endDate;
+}
+
+// Extended interface for faculty data (simple, only needs code and name)
+abstract class FacultyTableRowData extends TableRowData {
+  // Faculties only need id, code, and name - other fields are inherited but empty
+}
+
+// Extended interface for department data
+abstract class DepartmentTableRowData extends TableRowData {
+  String get facultyName;
 }
 
 // Generic reusable table row widget
@@ -158,12 +197,92 @@ class DataTableRow<T extends TableRowData> extends StatelessWidget {
             style: _getTextStyle(column.styleType),
           ),
         );
+      case TableColumnType.facultyCode:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            data.code, // For faculties, show code
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
+      case TableColumnType.facultyName:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            data.name, // For faculties, show name
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
+      case TableColumnType.faculty:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            (data is DepartmentTableRowData)
+                ? (data as DepartmentTableRowData).facultyName
+                : '',
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
+      case TableColumnType.department:
+        String departmentText = '';
+        if (data is ClassTableRowData) {
+          departmentText = (data as ClassTableRowData).department;
+        } else if (data is MajorTableRowData) {
+          departmentText = (data as MajorTableRowData).department;
+        } else if (data is SubjectData) {
+          departmentText = (data as SubjectData).department;
+        } else {
+          // Try to access department field dynamically for teacher data
+          try {
+            final dynamic dynamicData = data;
+            if (dynamicData.department != null) {
+              departmentText = dynamicData.department.toString();
+            }
+          } catch (e) {
+            departmentText = '';
+          }
+        }
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            departmentText,
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
+      case TableColumnType.departmentName:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            (data is MajorTableRowData)
+                ? (data as MajorTableRowData).departmentName
+                : '',
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
+      case TableColumnType.credits:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            (data is SubjectData)
+                ? (data as SubjectData).credits.toString()
+                : '',
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
       case TableColumnType.course:
         return Expanded(
           flex: column.flex,
           child: Text(
             (data is StudentTableRowData)
                 ? (data as StudentTableRowData).course
+                : (data is ClassTableRowData)
+                ? (data as ClassTableRowData).course
                 : '',
             textAlign: column.textAlign,
             style: _getTextStyle(column.styleType),
@@ -202,19 +321,128 @@ class DataTableRow<T extends TableRowData> extends StatelessWidget {
             style: _getTextStyle(column.styleType),
           ),
         );
+      case TableColumnType.academicYearName:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            (data is SemesterTableRowData)
+                ? (data as SemesterTableRowData).academicYear
+                : (data is StudyPeriodTableRowData)
+                ? (data as StudyPeriodTableRowData).academicYear
+                : data.name, // For academic years, use name
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
+      case TableColumnType.startYear:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            (data is AcademicYearTableRowData)
+                ? DateFormat(
+                    'dd/MM/yyyy',
+                  ).format((data as AcademicYearTableRowData).startDate)
+                : '',
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
+      case TableColumnType.endYear:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            (data is AcademicYearTableRowData)
+                ? DateFormat(
+                    'dd/MM/yyyy',
+                  ).format((data as AcademicYearTableRowData).endDate)
+                : '',
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
+      case TableColumnType.semester:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            (data is SemesterTableRowData)
+                ? (data as SemesterTableRowData).semester
+                : (data is StudyPeriodTableRowData)
+                ? (data as StudyPeriodTableRowData).semester
+                : '',
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
+      case TableColumnType.period:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            (data is StudyPeriodTableRowData)
+                ? (data as StudyPeriodTableRowData).period
+                : '',
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
+      case TableColumnType.startDate:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            (data is AcademicYearTableRowData)
+                ? DateFormat(
+                    'dd/MM/yyyy',
+                  ).format((data as AcademicYearTableRowData).startDate)
+                : (data is SemesterTableRowData)
+                ? DateFormat(
+                    'dd/MM/yyyy',
+                  ).format((data as SemesterTableRowData).startDate)
+                : (data is StudyPeriodTableRowData)
+                ? DateFormat(
+                    'dd/MM/yyyy',
+                  ).format((data as StudyPeriodTableRowData).startDate)
+                : '',
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
+      case TableColumnType.endDate:
+        return Expanded(
+          flex: column.flex,
+          child: Text(
+            (data is AcademicYearTableRowData)
+                ? DateFormat(
+                    'dd/MM/yyyy',
+                  ).format((data as AcademicYearTableRowData).endDate)
+                : (data is SemesterTableRowData)
+                ? DateFormat(
+                    'dd/MM/yyyy',
+                  ).format((data as SemesterTableRowData).endDate)
+                : (data is StudyPeriodTableRowData)
+                ? DateFormat(
+                    'dd/MM/yyyy',
+                  ).format((data as StudyPeriodTableRowData).endDate)
+                : '',
+            textAlign: column.textAlign,
+            style: _getTextStyle(column.styleType),
+          ),
+        );
       case TableColumnType.custom:
         String customText = '';
         if (column.customValue == 'admissionYear' &&
             data is CourseTableRowData) {
           customText = (data as CourseTableRowData).admissionYear;
+        } else if (column.customValue == 'endYear' &&
+            data is CourseTableRowData) {
+          customText = (data as CourseTableRowData).endYear;
         } else if (column.customGetter != null) {
           customText = column.customGetter!(data);
         } else {
           customText = column.customValue ?? '';
         }
 
-        // Special handling for admissionYear - add left padding to shift text left
-        if (column.customValue == 'admissionYear') {
+        // Special handling for admissionYear and endYear - add right padding to align properly
+        if (column.customValue == 'admissionYear' ||
+            column.customValue == 'endYear') {
           return Expanded(
             flex: column.flex,
             child: Padding(
@@ -329,6 +557,19 @@ enum TableColumnType {
   teacher,
   subject,
   creationDate,
+  academicYearName,
+  startYear,
+  endYear,
+  semester,
+  period,
+  startDate,
+  endDate,
+  facultyCode,
+  facultyName,
+  faculty,
+  department,
+  departmentName,
+  credits,
   custom,
   actions,
 }

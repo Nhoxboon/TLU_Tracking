@@ -14,6 +14,15 @@ class _EditMajorModalState extends State<EditMajorModal> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _codeController;
   late final TextEditingController _nameController;
+  String? _selectedFaculty;
+
+  final List<String> _faculties = [
+    'Công nghệ thông tin',
+    'Điện - Điện tử',
+    'Xây dựng',
+    'Cơ khí',
+    'Kinh tế',
+  ];
 
   @override
   void initState() {
@@ -21,6 +30,7 @@ class _EditMajorModalState extends State<EditMajorModal> {
     // Initialize controllers with existing major data
     _codeController = TextEditingController(text: widget.major.code);
     _nameController = TextEditingController(text: widget.major.name);
+    _selectedFaculty = widget.major.department;
   }
 
   @override
@@ -173,9 +183,84 @@ class _EditMajorModalState extends State<EditMajorModal> {
                 return null;
               },
             ),
+            const SizedBox(height: 16),
+
+            // Faculty Dropdown Field
+            _buildFacultyDropdown(),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFacultyDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Khoa*',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            height: 1.43,
+            color: Color(0xFF414651),
+          ),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          value: _selectedFaculty,
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF2264E5)),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            fillColor: Colors.white,
+            filled: true,
+          ),
+          items: _faculties.map((String faculty) {
+            return DropdownMenuItem<String>(
+              value: faculty,
+              child: Text(
+                faculty,
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF181D27),
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: (String? newValue) {
+            setState(() {
+              _selectedFaculty = newValue;
+            });
+          },
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Vui lòng chọn khoa';
+            }
+            return null;
+          },
+        ),
+      ],
     );
   }
 

@@ -11,11 +11,22 @@ class _AddSubjectModalState extends State<AddSubjectModal> {
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
   final _nameController = TextEditingController();
+  final _creditsController = TextEditingController();
+  String? _selectedDepartment;
+
+  // Sample departments - TODO: Replace with actual data
+  final List<String> _departments = [
+    'Khoa học máy tính',
+    'Công nghệ thông tin',
+    'Hệ thống thông tin',
+    'Kỹ thuật phần mềm',
+  ];
 
   @override
   void dispose() {
     _codeController.dispose();
     _nameController.dispose();
+    _creditsController.dispose();
     super.dispose();
   }
 
@@ -156,6 +167,43 @@ class _AddSubjectModalState extends State<AddSubjectModal> {
                 return null;
               },
             ),
+            const SizedBox(height: 16),
+
+            // Department Dropdown Field
+            _buildDropdownField(
+              label: 'Bộ môn*',
+              value: _selectedDepartment,
+              items: _departments,
+              onChanged: (value) {
+                setState(() {
+                  _selectedDepartment = value;
+                });
+              },
+              validator: (value) {
+                if (value == null) {
+                  return 'Vui lòng chọn bộ môn';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Credits Field
+            _buildInputField(
+              label: 'Số tín chỉ*',
+              controller: _creditsController,
+              keyboardType: TextInputType.number,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Vui lòng nhập số tín chỉ';
+                }
+                final credits = int.tryParse(value);
+                if (credits == null || credits <= 0) {
+                  return 'Số tín chỉ phải là số nguyên dương';
+                }
+                return null;
+              },
+            ),
           ],
         ),
       ),
@@ -166,6 +214,7 @@ class _AddSubjectModalState extends State<AddSubjectModal> {
     required String label,
     required TextEditingController controller,
     String? Function(String?)? validator,
+    TextInputType? keyboardType,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,6 +232,66 @@ class _AddSubjectModalState extends State<AddSubjectModal> {
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
+          validator: validator,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF2264E5)),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            fillColor: Colors.white,
+            filled: true,
+          ),
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF181D27),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required void Function(String?) onChanged,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            height: 1.43,
+            color: Color(0xFF414651),
+          ),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          value: value,
           validator: validator,
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(
@@ -214,6 +323,11 @@ class _AddSubjectModalState extends State<AddSubjectModal> {
             fontWeight: FontWeight.w500,
             color: Color(0xFF181D27),
           ),
+          icon: const Icon(Icons.keyboard_arrow_down),
+          items: items.map((String item) {
+            return DropdownMenuItem<String>(value: item, child: Text(item));
+          }).toList(),
+          onChanged: onChanged,
         ),
       ],
     );
