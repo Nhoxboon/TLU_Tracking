@@ -417,6 +417,47 @@ class _StudentsManagementViewState extends State<StudentsManagementView> {
                                 ),
                               ),
                               const SizedBox(width: 16),
+                              // Faculty filter dropdown
+                              Container(
+                                height: 38,
+                                width: 200,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFF687182,
+                                    ).withValues(alpha: 0.16),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const SizedBox(width: 12),
+                                    const Expanded(
+                                      child: Text(
+                                        'Lọc theo khoa',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 14,
+                                          color: Color(0xFFA1A9B8),
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 20,
+                                      height: 20,
+                                      alignment: Alignment.center,
+                                      child: Icon(
+                                        Icons.keyboard_arrow_down,
+                                        size: 16,
+                                        color: const Color(0xFF717680),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 16),
                               // Course filter dropdown
                               Container(
                                 height: 38,

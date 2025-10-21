@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
+import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
 import 'package:android_app/screens/admin/dashboard/major_management/add_major_modal.dart';
 import 'package:android_app/screens/admin/dashboard/major_management/edit_major_modal.dart';
@@ -20,18 +21,78 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
 
   // Sample data for majors
   final List<MajorData> _majors = [
-    MajorData(id: 1, code: 'CNTT', name: 'Công nghệ thông tin'),
-    MajorData(id: 2, code: 'KHMT', name: 'Khoa học máy tính'),
-    MajorData(id: 3, code: 'HTTT', name: 'Hệ thống thông tin'),
-    MajorData(id: 4, code: 'KTPM', name: 'Kỹ thuật phần mềm'),
-    MajorData(id: 5, code: 'ATTT', name: 'An toàn thông tin'),
-    MajorData(id: 6, code: 'KTDK', name: 'Kỹ thuật điện tử'),
-    MajorData(id: 7, code: 'KTDT', name: 'Kỹ thuật điện tử viễn thông'),
-    MajorData(id: 8, code: 'CNXD', name: 'Công nghệ xây dựng'),
-    MajorData(id: 9, code: 'KTCK', name: 'Kỹ thuật cơ khí'),
-    MajorData(id: 10, code: 'QTKD', name: 'Quản trị kinh doanh'),
-    MajorData(id: 11, code: 'TCNH', name: 'Tài chính ngân hàng'),
-    MajorData(id: 12, code: 'KTKT', name: 'Kế toán kiểm toán'),
+    MajorData(
+      id: 1,
+      code: 'CNTT',
+      name: 'Công nghệ thông tin',
+      department: 'Công nghệ thông tin',
+    ),
+    MajorData(
+      id: 2,
+      code: 'KHMT',
+      name: 'Khoa học máy tính',
+      department: 'Công nghệ thông tin',
+    ),
+    MajorData(
+      id: 3,
+      code: 'HTTT',
+      name: 'Hệ thống thông tin',
+      department: 'Công nghệ thông tin',
+    ),
+    MajorData(
+      id: 4,
+      code: 'KTPM',
+      name: 'Kỹ thuật phần mềm',
+      department: 'Công nghệ thông tin',
+    ),
+    MajorData(
+      id: 5,
+      code: 'ATTT',
+      name: 'An toàn thông tin',
+      department: 'Công nghệ thông tin',
+    ),
+    MajorData(
+      id: 6,
+      code: 'KTDK',
+      name: 'Kỹ thuật điện tử',
+      department: 'Điện - Điện tử',
+    ),
+    MajorData(
+      id: 7,
+      code: 'KTDT',
+      name: 'Kỹ thuật điện tử viễn thông',
+      department: 'Điện - Điện tử',
+    ),
+    MajorData(
+      id: 8,
+      code: 'CNXD',
+      name: 'Công nghệ xây dựng',
+      department: 'Xây dựng',
+    ),
+    MajorData(
+      id: 9,
+      code: 'KTCK',
+      name: 'Kỹ thuật cơ khí',
+      department: 'Cơ khí',
+    ),
+    MajorData(
+      id: 10,
+      code: 'QTKD',
+      name: 'Quản trị kinh doanh',
+      department: 'Kinh tế',
+    ),
+    MajorData(
+      id: 11,
+      code: 'TCNH',
+      name: 'Tài chính ngân hàng',
+      department: 'Kinh tế',
+    ),
+    MajorData(
+      id: 12,
+      code: 'KTKT',
+      name: 'Kế toán kiểm toán',
+      department: 'Kinh tế',
+    ),
   ];
 
   final Set<int> _selectedMajors = <int>{};
@@ -50,6 +111,11 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
     ),
     TableColumn(
       type: TableColumnType.majorName,
+      flex: 2,
+      styleType: TableColumnStyleType.secondary,
+    ),
+    TableColumn(
+      type: TableColumnType.departmentName,
       flex: 2,
       styleType: TableColumnStyleType.secondary,
     ),
@@ -221,57 +287,26 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                         ? Row(
                             children: [
                               // Search field
-                              Expanded(
-                                child: SizedBox(
-                                  height: 32,
-                                  child: TextField(
-                                    controller: _searchController,
-                                    decoration: InputDecoration(
-                                      hintText: 'Tìm kiếm...',
-                                      hintStyle: const TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w400,
-                                        color: Color(0xFFA1A9B8),
-                                      ),
-                                      prefixIcon: const Icon(
-                                        Icons.search,
-                                        size: 16,
-                                        color: Color(0xFF868FA0),
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: const BorderSide(
-                                          color: Color(0xFF687182),
-                                          width: 0.16,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: const BorderSide(
-                                          color: Color(0xFF687182),
-                                          width: 0.16,
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: const BorderSide(
-                                          color: Color(0xFF2264E5),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
-                                          ),
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                    ),
-                                  ),
-                                ),
+                              CustomSearchBar(
+                                controller: _searchController,
+                                hintText: 'Tìm kiếm...',
+                                onChanged: (value) {
+                                  // Handle search logic here
+                                  setState(() {
+                                    _currentPage = 1;
+                                  });
+                                },
+                                onClear: () {
+                                  setState(() {
+                                    _currentPage = 1;
+                                  });
+                                },
                               ),
                               const SizedBox(width: 16),
+
+                              // Filter button
+                              _buildFilterButton('Lọc theo khoa'),
+                              const Spacer(),
 
                               // Add major button
                               SizedBox(
@@ -537,6 +572,47 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
     );
   }
 
+  Widget _buildFilterButton(String text) {
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: const Color(0xFF687182).withValues(alpha: 0.16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            text,
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: Color(0xFFA1A9B8),
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(
+            Icons.keyboard_arrow_down,
+            size: 16,
+            color: Color(0xFF717680),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTableHeader() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -653,6 +729,21 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                 ),
               ),
 
+              // Khoa chiếm 2 phần
+              const Expanded(
+                flex: 2,
+                child: Text(
+                  'KHOA',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
+                  ),
+                ),
+              ),
+
               // Hành động chiếm 1 phần
               const Expanded(
                 flex: 1,
@@ -712,6 +803,8 @@ class MajorData implements MajorTableRowData {
   final String code;
   @override
   final String name;
+  @override
+  final String department;
 
   // Required fields from TableRowData interface (not used for majors)
   @override
@@ -720,11 +813,13 @@ class MajorData implements MajorTableRowData {
   String get email => '';
   @override
   String get birthDate => '';
+  @override
+  String get departmentName => department;
 
-  MajorData({required this.id, required this.code, required this.name});
-}
-
-// Interface for major table row data
-abstract class MajorTableRowData extends TableRowData {
-  // Majors only need id, code, and name - other fields are inherited but empty
+  MajorData({
+    required this.id,
+    required this.code,
+    required this.name,
+    required this.department,
+  });
 }

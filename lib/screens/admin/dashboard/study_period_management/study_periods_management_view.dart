@@ -2,83 +2,187 @@ import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
-import 'package:android_app/screens/admin/dashboard/course_management/add_course_modal.dart';
-import 'package:android_app/screens/admin/dashboard/course_management/edit_course_modal.dart';
+import 'package:android_app/screens/admin/dashboard/study_period_management/add_study_period_modal.dart';
+import 'package:android_app/screens/admin/dashboard/study_period_management/edit_study_period_modal.dart';
 
-class CoursesManagementView extends StatefulWidget {
-  const CoursesManagementView({super.key});
+class StudyPeriodsManagementView extends StatefulWidget {
+  const StudyPeriodsManagementView({super.key});
 
   @override
-  State<CoursesManagementView> createState() => _CoursesManagementViewState();
+  State<StudyPeriodsManagementView> createState() =>
+      _StudyPeriodsManagementViewState();
 }
 
-class _CoursesManagementViewState extends State<CoursesManagementView> {
+class _StudyPeriodsManagementViewState
+    extends State<StudyPeriodsManagementView> {
   final TextEditingController _searchController = TextEditingController();
 
   // Pagination variables
   int _currentPage = 1;
   final int _itemsPerPage = 10;
 
-  // Sample data for courses
-  final List<CourseData> _courses = [
-    CourseData(id: 1, name: 'K65', admissionYear: '2019', endYear: '2023'),
-    CourseData(id: 2, name: 'K66', admissionYear: '2020', endYear: '2024'),
-    CourseData(id: 3, name: 'K67', admissionYear: '2021', endYear: '2025'),
-    CourseData(id: 4, name: 'K68', admissionYear: '2022', endYear: '2026'),
-    CourseData(id: 5, name: 'K69', admissionYear: '2023', endYear: '2027'),
-    CourseData(id: 6, name: 'K70', admissionYear: '2024', endYear: '2028'),
-    CourseData(id: 7, name: 'K71', admissionYear: '2025', endYear: '2029'),
-    CourseData(id: 8, name: 'K72', admissionYear: '2026', endYear: '2030'),
-    CourseData(id: 9, name: 'K73', admissionYear: '2027', endYear: '2031'),
-    CourseData(id: 10, name: 'K74', admissionYear: '2028', endYear: '2032'),
-    CourseData(id: 11, name: 'K75', admissionYear: '2029', endYear: '2033'),
-    CourseData(id: 12, name: 'K76', admissionYear: '2030', endYear: '2034'),
+  // Academic years list (should come from a service in production)
+  final List<String> _academicYears = [
+    '2024-2025',
+    '2023-2024',
+    '2022-2023',
+    '2021-2022',
+    '2020-2021',
+    '2019-2020',
+    '2018-2019',
+    '2017-2018',
   ];
 
-  final Set<int> _selectedCourses = <int>{};
+  // Sample data for study periods
+  final List<StudyPeriodData> _studyPeriods = [
+    StudyPeriodData(
+      id: 1,
+      academicYear: '2024-2025',
+      semester: '1',
+      period: '1',
+      startDate: DateTime(2024, 1, 1),
+      endDate: DateTime(2025, 1, 1),
+    ),
+    StudyPeriodData(
+      id: 2,
+      academicYear: '2024-2025',
+      semester: '1',
+      period: '1',
+      startDate: DateTime(2025, 1, 1),
+      endDate: DateTime(2025, 6, 1),
+    ),
+    StudyPeriodData(
+      id: 3,
+      academicYear: '2023-2024',
+      semester: '1',
+      period: '1',
+      startDate: DateTime(2023, 1, 1),
+      endDate: DateTime(2024, 1, 1),
+    ),
+    StudyPeriodData(
+      id: 4,
+      academicYear: '2023-2024',
+      semester: '1',
+      period: '1',
+      startDate: DateTime(2024, 1, 1),
+      endDate: DateTime(2024, 6, 1),
+    ),
+    StudyPeriodData(
+      id: 5,
+      academicYear: '2022-2023',
+      semester: '1',
+      period: '1',
+      startDate: DateTime(2022, 1, 1),
+      endDate: DateTime(2023, 1, 1),
+    ),
+    StudyPeriodData(
+      id: 6,
+      academicYear: '2022-2023',
+      semester: '1',
+      period: '1',
+      startDate: DateTime(2023, 1, 1),
+      endDate: DateTime(2023, 6, 1),
+    ),
+    StudyPeriodData(
+      id: 7,
+      academicYear: '2021-2022',
+      semester: '1',
+      period: '1',
+      startDate: DateTime(2021, 1, 1),
+      endDate: DateTime(2022, 1, 1),
+    ),
+    StudyPeriodData(
+      id: 8,
+      academicYear: '2021-2022',
+      semester: '1',
+      period: '1',
+      startDate: DateTime(2022, 1, 1),
+      endDate: DateTime(2022, 6, 1),
+    ),
+    StudyPeriodData(
+      id: 9,
+      academicYear: '2020-2021',
+      semester: '1',
+      period: '1',
+      startDate: DateTime(2020, 1, 1),
+      endDate: DateTime(2021, 1, 1),
+    ),
+    StudyPeriodData(
+      id: 10,
+      academicYear: '2020-2021',
+      semester: '1',
+      period: '1',
+      startDate: DateTime(2021, 1, 1),
+      endDate: DateTime(2021, 6, 1),
+    ),
+    StudyPeriodData(
+      id: 11,
+      academicYear: '2019-2020',
+      semester: '1',
+      period: '1',
+      startDate: DateTime(2019, 1, 1),
+      endDate: DateTime(2020, 1, 1),
+    ),
+    StudyPeriodData(
+      id: 12,
+      academicYear: '2019-2020',
+      semester: '1',
+      period: '1',
+      startDate: DateTime(2020, 1, 1),
+      endDate: DateTime(2020, 6, 1),
+    ),
+  ];
 
-  // Column configuration for courses table
-  static const List<TableColumn> _courseColumns = [
+  final Set<int> _selectedStudyPeriods = <int>{};
+
+  // Column configuration for study periods table
+  static const List<TableColumn> _studyPeriodColumns = [
     TableColumn(
       type: TableColumnType.id,
       flex: 1,
       styleType: TableColumnStyleType.primary,
     ),
     TableColumn(
-      type: TableColumnType.name,
-      flex: 3,
+      type: TableColumnType.semester,
+      flex: 1,
       styleType: TableColumnStyleType.secondary,
     ),
     TableColumn(
-      type: TableColumnType.custom,
-      flex: 3,
-      textAlign: TextAlign.right,
-      styleType: TableColumnStyleType.normal,
-      customValue: 'admissionYear',
+      type: TableColumnType.period,
+      flex: 1,
+      styleType: TableColumnStyleType.secondary,
     ),
     TableColumn(
-      type: TableColumnType.custom,
-      flex: 3,
-      textAlign: TextAlign.right,
-      styleType: TableColumnStyleType.normal,
-      customValue: 'endYear',
+      type: TableColumnType.startDate,
+      flex: 2,
+      styleType: TableColumnStyleType.secondary,
+    ),
+    TableColumn(
+      type: TableColumnType.endDate,
+      flex: 2,
+      styleType: TableColumnStyleType.secondary,
+    ),
+    TableColumn(
+      type: TableColumnType.academicYearName,
+      flex: 2,
+      styleType: TableColumnStyleType.secondary,
     ),
     TableColumn(
       type: TableColumnType.actions,
-      flex: 3,
+      flex: 1,
       textAlign: TextAlign.right,
     ),
   ];
 
   // Pagination getters and methods
-  int get totalPages => (_courses.length / _itemsPerPage).ceil();
+  int get totalPages => (_studyPeriods.length / _itemsPerPage).ceil();
 
-  List<CourseData> get currentPageCourses {
+  List<StudyPeriodData> get currentPageStudyPeriods {
     final startIndex = (_currentPage - 1) * _itemsPerPage;
     final endIndex = startIndex + _itemsPerPage;
-    return _courses.sublist(
+    return _studyPeriods.sublist(
       startIndex,
-      endIndex > _courses.length ? _courses.length : endIndex,
+      endIndex > _studyPeriods.length ? _studyPeriods.length : endIndex,
     );
   }
 
@@ -114,7 +218,7 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
             ),
           ),
           content: Text(
-            'Bạn có chắc chắn muốn xóa ${_selectedCourses.length} khóa học đã chọn? Hành động này không thể hoàn tác.',
+            'Bạn có chắc chắn muốn xóa ${_selectedStudyPeriods.length} đợt học đã chọn? Hành động này không thể hoàn tác.',
             style: const TextStyle(
               fontFamily: 'Inter',
               fontSize: 14,
@@ -140,12 +244,12 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
               onPressed: () {
                 // Handle delete action
                 setState(() {
-                  _courses.removeWhere(
-                    (course) => _selectedCourses.contains(course.id),
+                  _studyPeriods.removeWhere(
+                    (period) => _selectedStudyPeriods.contains(period.id),
                   );
-                  _selectedCourses.clear();
+                  _selectedStudyPeriods.clear();
                   // Reset to first page if current page is empty
-                  if (currentPageCourses.isEmpty && _currentPage > 1) {
+                  if (currentPageStudyPeriods.isEmpty && _currentPage > 1) {
                     _currentPage = 1;
                   }
                 });
@@ -184,7 +288,7 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
         children: [
           // Title
           const Text(
-            'Quản lý khóa học',
+            'Quản lý đợt học',
             style: TextStyle(
               fontFamily: 'Nunito Sans',
               fontWeight: FontWeight.w700,
@@ -227,7 +331,7 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                       horizontal: 24,
                       vertical: 16,
                     ),
-                    child: _selectedCourses.isEmpty
+                    child: _selectedStudyPeriods.isEmpty
                         ? Row(
                             children: [
                               // Search field
@@ -235,49 +339,45 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                                 controller: _searchController,
                                 hintText: 'Tìm kiếm...',
                                 onChanged: (value) {
-                                  // Handle search logic here
-                                  setState(() {
-                                    _currentPage = 1;
-                                  });
+                                  // TODO: Implement search
                                 },
                                 onClear: () {
-                                  setState(() {
-                                    _currentPage = 1;
-                                  });
+                                  _searchController.clear();
                                 },
                               ),
                               const Spacer(),
-                              // Add course button
+
+                              // Add study period button
                               SizedBox(
-                                height: 38,
+                                height: 32,
                                 child: ElevatedButton.icon(
                                   onPressed: () {
                                     showDialog(
                                       context: context,
-                                      builder: (context) =>
-                                          const AddCourseModal(),
+                                      builder: (context) => AddStudyPeriodModal(
+                                        academicYears: _academicYears,
+                                      ),
                                     );
                                   },
                                   icon: const Icon(Icons.add, size: 16),
                                   label: const Text(
-                                    'Thêm khóa học',
+                                    'Thêm đợt học',
                                     style: TextStyle(
                                       fontFamily: 'Inter',
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
-                                      letterSpacing: 0.28,
                                     ),
                                   ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF2264E5),
                                     foregroundColor: Colors.white,
                                     elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 12,
                                       vertical: 6,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
                                   ),
                                 ),
@@ -288,7 +388,7 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                             children: [
                               // Selected items count
                               Text(
-                                '${_selectedCourses.length} khóa học đã chọn',
+                                '${_selectedStudyPeriods.length} đợt học đã chọn',
                                 style: const TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 14,
@@ -299,34 +399,28 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                               const Spacer(),
                               // Delete button
                               SizedBox(
-                                height: 38,
+                                height: 32,
                                 child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    _showDeleteConfirmationDialog();
-                                  },
-                                  icon: const Icon(
-                                    Icons.delete_outline,
-                                    size: 16,
-                                  ),
+                                  onPressed: _showDeleteConfirmationDialog,
+                                  icon: const Icon(Icons.delete, size: 16),
                                   label: const Text(
                                     'Xóa',
                                     style: TextStyle(
                                       fontFamily: 'Inter',
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
-                                      letterSpacing: 0.28,
                                     ),
                                   ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFFEF4444),
                                     foregroundColor: Colors.white,
                                     elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 12,
                                       vertical: 6,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
                                   ),
                                 ),
@@ -353,22 +447,15 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                           child: SingleChildScrollView(
                             child: Column(
                               children: [
-                                // Table rows
-                                ...List.generate(_itemsPerPage, (index) {
-                                  if (index < currentPageCourses.length) {
-                                    final course = currentPageCourses[index];
-                                    final isEven = index % 2 == 0;
-                                    return _buildTableRow(course, isEven);
-                                  } else {
-                                    // Empty row to maintain consistent height
-                                    return Container(
-                                      height: 64,
-                                      color: index % 2 == 0
-                                          ? Colors.white
-                                          : const Color(0xFFF9FAFC),
-                                    );
-                                  }
-                                }),
+                                for (
+                                  int i = 0;
+                                  i < currentPageStudyPeriods.length;
+                                  i++
+                                )
+                                  _buildTableRow(
+                                    currentPageStudyPeriods[i],
+                                    i % 2 == 0,
+                                  ),
                               ],
                             ),
                           ),
@@ -389,102 +476,98 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Left side: Items count
+                        // Show results info
                         Text(
-                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageCourses.length} of ${_courses.length}',
+                          '${(_currentPage - 1) * _itemsPerPage + 1}-${_currentPage * _itemsPerPage > _studyPeriods.length ? _studyPeriods.length : _currentPage * _itemsPerPage} of ${_studyPeriods.length}',
                           style: const TextStyle(
                             fontFamily: 'Inter',
-                            fontWeight: FontWeight.w500,
                             fontSize: 12,
+                            fontWeight: FontWeight.w500,
                             letterSpacing: 0.36,
                             color: Color(0xFF687182),
                           ),
                         ),
 
-                        // Right side: Navigation controls
+                        // Pagination controls
                         Row(
                           children: [
                             // Previous button
                             GestureDetector(
-                              onTap: () {
-                                if (_currentPage > 1) {
-                                  _goToPreviousPage();
-                                }
-                              },
+                              onTap: _currentPage > 1
+                                  ? _goToPreviousPage
+                                  : null,
                               child: Container(
-                                width: 20,
-                                height: 20,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: _currentPage > 1
-                                      ? Colors.white
-                                      : const Color(0xFFF7F9FC),
+                                      ? const Color(0xFFF7F9FC)
+                                      : const Color(
+                                          0xFFF7F9FC,
+                                        ).withValues(alpha: 0.5),
                                   borderRadius: BorderRadius.circular(6),
-                                  boxShadow: _currentPage > 1
-                                      ? [
-                                          BoxShadow(
-                                            color: const Color(
-                                              0xFF596078,
-                                            ).withValues(alpha: 0.1),
-                                            blurRadius: 5,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                          BoxShadow(
-                                            color: const Color(
-                                              0xFF464F60,
-                                            ).withValues(alpha: 0.16),
-                                            blurRadius: 0,
-                                            offset: const Offset(0, 0),
-                                            spreadRadius: 1,
-                                          ),
-                                          BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: .1,
-                                            ),
-                                            blurRadius: 1,
-                                            offset: const Offset(0, 1),
-                                          ),
-                                        ]
-                                      : [],
+                                  border: Border.all(
+                                    color: _currentPage > 1
+                                        ? const Color(
+                                            0xFF464F60,
+                                          ).withValues(alpha: 0.24)
+                                        : const Color(
+                                            0xFF464F60,
+                                          ).withValues(alpha: 0.12),
+                                  ),
                                 ),
                                 child: Icon(
                                   Icons.chevron_left,
                                   size: 16,
                                   color: _currentPage > 1
-                                      ? const Color(0xFF464F60)
-                                      : const Color(0xFF868FA0),
+                                      ? const Color(0xFF868FA0)
+                                      : const Color(
+                                          0xFF868FA0,
+                                        ).withValues(alpha: 0.5),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 10),
 
                             // Page info
                             Text(
                               '$_currentPage/$totalPages',
                               style: const TextStyle(
                                 fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
                                 fontSize: 12,
+                                fontWeight: FontWeight.w500,
                                 letterSpacing: 0.36,
                                 color: Color(0xFF687182),
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 10),
 
                             // Next button
                             GestureDetector(
-                              onTap: () {
-                                if (_currentPage < totalPages) {
-                                  _goToNextPage();
-                                }
-                              },
+                              onTap: _currentPage < totalPages
+                                  ? _goToNextPage
+                                  : null,
                               child: Container(
-                                width: 20,
-                                height: 20,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: _currentPage < totalPages
                                       ? Colors.white
-                                      : const Color(0xFFF7F9FC),
+                                      : Colors.white.withValues(alpha: 0.5),
                                   borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: _currentPage < totalPages
+                                        ? const Color(
+                                            0xFF464F60,
+                                          ).withValues(alpha: 0.24)
+                                        : const Color(
+                                            0xFF464F60,
+                                          ).withValues(alpha: 0.12),
+                                  ),
                                   boxShadow: _currentPage < totalPages
                                       ? [
                                           BoxShadow(
@@ -498,26 +581,27 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                                             color: const Color(
                                               0xFF464F60,
                                             ).withValues(alpha: 0.16),
-                                            blurRadius: 0,
                                             offset: const Offset(0, 0),
                                             spreadRadius: 1,
                                           ),
                                           BoxShadow(
                                             color: Colors.black.withValues(
-                                              alpha: .1,
+                                              alpha: 0.1,
                                             ),
                                             blurRadius: 1,
                                             offset: const Offset(0, 1),
                                           ),
                                         ]
-                                      : [],
+                                      : null,
                                 ),
                                 child: Icon(
                                   Icons.chevron_right,
                                   size: 16,
                                   color: _currentPage < totalPages
-                                      ? const Color(0xFF464F60)
-                                      : const Color(0xFF868FA0),
+                                      ? const Color(0xFF868FA0)
+                                      : const Color(
+                                          0xFF868FA0,
+                                        ).withValues(alpha: 0.5),
                                 ),
                               ),
                             ),
@@ -547,19 +631,19 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
               SizedBox(
                 width: 32,
                 child: Checkbox(
-                  value: currentPageCourses.every(
-                    (course) => _selectedCourses.contains(course.id),
+                  value: currentPageStudyPeriods.every(
+                    (period) => _selectedStudyPeriods.contains(period.id),
                   ),
                   onChanged: (bool? value) {
                     setState(() {
                       if (value == true) {
-                        _selectedCourses.addAll(
-                          currentPageCourses.map((c) => c.id),
+                        _selectedStudyPeriods.addAll(
+                          currentPageStudyPeriods.map((p) => p.id),
                         );
                       } else {
-                        for (final course in currentPageCourses) {
-                          _selectedCourses.remove(course.id);
-                        }
+                        _selectedStudyPeriods.removeAll(
+                          currentPageStudyPeriods.map((p) => p.id),
+                        );
                       }
                     });
                   },
@@ -590,13 +674,14 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                           height: 5,
                           decoration: const BoxDecoration(
                             color: Color(0xFF171C26),
-                            borderRadius: BorderRadius.all(
-                              Radius.circular(0.5),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(1),
+                              topRight: Radius.circular(1),
                             ),
                           ),
                           child: const Icon(
-                            Icons.keyboard_arrow_up,
-                            size: 4,
+                            Icons.arrow_drop_up,
+                            size: 5,
                             color: Colors.white,
                           ),
                         ),
@@ -605,13 +690,14 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                           height: 5,
                           decoration: const BoxDecoration(
                             color: Color(0xFFBCC2CE),
-                            borderRadius: BorderRadius.all(
-                              Radius.circular(0.5),
+                            borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(1),
+                              bottomRight: Radius.circular(1),
                             ),
                           ),
                           child: const Icon(
-                            Icons.keyboard_arrow_down,
-                            size: 4,
+                            Icons.arrow_drop_down,
+                            size: 5,
                             color: Colors.white,
                           ),
                         ),
@@ -621,11 +707,11 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                 ),
               ),
 
-              // Tên khóa chiếm 3 phần
+              // Học kì chiếm 1 phần
               const Expanded(
-                flex: 3,
+                flex: 1,
                 child: Text(
-                  'TÊN KHÓA',
+                  'HỌC KÌ',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,
@@ -636,12 +722,11 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                 ),
               ),
 
-              // Năm nhập học chiếm 3 phần
+              // Đợt học chiếm 1 phần
               const Expanded(
-                flex: 3,
+                flex: 1,
                 child: Text(
-                  'NĂM NHẬP HỌC',
-                  textAlign: TextAlign.right,
+                  'ĐỢT HỌC',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,
@@ -652,12 +737,11 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                 ),
               ),
 
-              // Năm kết thúc chiếm 3 phần
+              // Ngày bắt đầu chiếm 2 phần
               const Expanded(
-                flex: 3,
+                flex: 2,
                 child: Text(
-                  'NĂM KẾT THÚC',
-                  textAlign: TextAlign.right,
+                  'NGÀY BẮT ĐẦU',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,
@@ -668,9 +752,39 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                 ),
               ),
 
-              // Hành động chiếm 3 phần
+              // Ngày kết thúc chiếm 2 phần
               const Expanded(
-                flex: 3,
+                flex: 2,
+                child: Text(
+                  'NGÀY KẾT THÚC',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
+                  ),
+                ),
+              ),
+
+              // Năm học chiếm 2 phần
+              const Expanded(
+                flex: 2,
+                child: Text(
+                  'NĂM HỌC',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    letterSpacing: 0.44,
+                    color: Color(0xFF464F60),
+                  ),
+                ),
+              ),
+
+              // Hành động chiếm 1 phần
+              const Expanded(
+                flex: 1,
                 child: Text(
                   'HÀNH ĐỘNG',
                   textAlign: TextAlign.right,
@@ -690,27 +804,30 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
     );
   }
 
-  Widget _buildTableRow(CourseData course, bool isEven) {
-    final isSelected = _selectedCourses.contains(course.id);
+  Widget _buildTableRow(StudyPeriodData period, bool isEven) {
+    final isSelected = _selectedStudyPeriods.contains(period.id);
 
-    return DataTableRow<CourseData>(
-      data: course,
+    return DataTableRow<StudyPeriodData>(
+      data: period,
       isEven: isEven,
       isSelected: isSelected,
-      columns: _courseColumns,
+      columns: _studyPeriodColumns,
       onSelectionChanged: () {
         setState(() {
           if (isSelected) {
-            _selectedCourses.remove(course.id);
+            _selectedStudyPeriods.remove(period.id);
           } else {
-            _selectedCourses.add(course.id);
+            _selectedStudyPeriods.add(period.id);
           }
         });
       },
       onEdit: () {
         showDialog(
           context: context,
-          builder: (context) => EditCourseModal(course: course),
+          builder: (context) => EditStudyPeriodModal(
+            studyPeriod: period,
+            academicYears: _academicYears,
+          ),
         );
       },
       onDelete: () {
@@ -720,18 +837,23 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
   }
 }
 
-// Course data class
-class CourseData implements CourseTableRowData {
+class StudyPeriodData implements StudyPeriodTableRowData {
   @override
   final int id;
   @override
-  final String name;
+  final String academicYear;
   @override
-  final String admissionYear;
+  final String semester;
   @override
-  final String endYear;
+  final String period;
+  @override
+  final DateTime startDate;
+  @override
+  final DateTime endDate;
 
-  // Required fields from TableRowData interface (courses don't have these)
+  // Required fields from TableRowData interface (not used for study periods)
+  @override
+  String get name => '';
   @override
   String get code => '';
   @override
@@ -741,10 +863,12 @@ class CourseData implements CourseTableRowData {
   @override
   String get birthDate => '';
 
-  CourseData({
+  StudyPeriodData({
     required this.id,
-    required this.name,
-    required this.admissionYear,
-    required this.endYear,
+    required this.academicYear,
+    required this.semester,
+    required this.period,
+    required this.startDate,
+    required this.endDate,
   });
 }
