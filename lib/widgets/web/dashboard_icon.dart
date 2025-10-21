@@ -30,11 +30,27 @@ class DashboardIcon extends StatelessWidget {
         return Icon(Icons.work_outline, color: color, size: size);
       case DashboardIconType.award:
         return Icon(Icons.emoji_events_outlined, color: color, size: size);
+      case DashboardIconType.department:
+        return Icon(Icons.account_tree, color: color, size: size);
+      case DashboardIconType.faculty:
+        return Icon(Icons.apartment, color: color, size: size);
+      case DashboardIconType.calendar:
+        return Icon(Icons.date_range, color: color, size: size);
     }
   }
 }
 
-enum DashboardIconType { server, users, user, book, briefcase, award }
+enum DashboardIconType {
+  server,
+  users,
+  user,
+  book,
+  briefcase,
+  award,
+  department,
+  faculty,
+  calendar,
+}
 
 class ServerIconPainter extends CustomPainter {
   final Color color;

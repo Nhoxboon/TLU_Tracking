@@ -60,6 +60,8 @@ class SubjectData implements TableRowData {
   final String code;
   @override
   final String name;
+  final String department;
+  final int credits;
 
   // Required fields from TableRowData interface - not used for subjects
   @override
@@ -69,21 +71,41 @@ class SubjectData implements TableRowData {
   @override
   String get birthDate => '';
 
-  SubjectData({required this.id, required this.code, required this.name});
+  SubjectData({
+    required this.id,
+    required this.code,
+    required this.name,
+    required this.department,
+    required this.credits,
+  });
 
   factory SubjectData.fromJson(Map<String, dynamic> json) {
     return SubjectData(
       id: json['id'] ?? 0,
       code: json['code'] ?? '',
       name: json['name'] ?? '',
+      department: json['department'] ?? '',
+      credits: json['credits'] ?? 0,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'id': id, 'code': code, 'name': name};
+    return {
+      'id': id,
+      'code': code,
+      'name': name,
+      'department': department,
+      'credits': credits,
+    };
   }
 
   factory SubjectData.fromSubject(Subject subject, int tableId) {
-    return SubjectData(id: tableId, code: subject.code, name: subject.name);
+    return SubjectData(
+      id: tableId,
+      code: subject.code,
+      name: subject.name,
+      department: subject.department,
+      credits: subject.credits,
+    );
   }
 }

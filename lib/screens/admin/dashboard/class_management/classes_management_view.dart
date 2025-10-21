@@ -26,7 +26,9 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
       code: 'CSE101',
       name: 'Lập trình cơ bản',
       teacher: 'Nguyễn Văn A',
+      department: 'Công nghệ phần mềm',
       subject: 'Lập trình',
+      course: 'K65',
       creationDate: '12/04/2025',
     ),
     ClassData(
@@ -34,7 +36,9 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
       code: 'CSE102',
       name: 'Cấu trúc dữ liệu',
       teacher: 'Trần Thị B',
+      department: 'Khoa học máy tính',
       subject: 'Khoa học máy tính',
+      course: 'K65',
       creationDate: '15/04/2025',
     ),
     ClassData(
@@ -42,7 +46,9 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
       code: 'CSE103',
       name: 'Cơ sở dữ liệu',
       teacher: 'Lê Văn C',
+      department: 'Hệ thống thông tin',
       subject: 'Cơ sở dữ liệu',
+      course: 'K66',
       creationDate: '18/04/2025',
     ),
     ClassData(
@@ -50,7 +56,9 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
       code: 'CSE104',
       name: 'Mạng máy tính',
       teacher: 'Phạm Thị D',
+      department: 'An toàn thông tin',
       subject: 'Mạng',
+      course: 'K66',
       creationDate: '20/04/2025',
     ),
     ClassData(
@@ -58,7 +66,9 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
       code: 'CSE105',
       name: 'Hệ điều hành',
       teacher: 'Hoàng Văn E',
+      department: 'Hệ thống thông tin',
       subject: 'Hệ thống',
+      course: 'K67',
       creationDate: '22/04/2025',
     ),
     ClassData(
@@ -66,7 +76,9 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
       code: 'CSE106',
       name: 'Phát triển web',
       teacher: 'Nguyễn Thị F',
+      department: 'Công nghệ phần mềm',
       subject: 'Web',
+      course: 'K67',
       creationDate: '25/04/2025',
     ),
     ClassData(
@@ -74,7 +86,9 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
       code: 'CSE107',
       name: 'Thuật toán',
       teacher: 'Trần Văn G',
+      department: 'Khoa học máy tính',
       subject: 'Thuật toán',
+      course: 'K65',
       creationDate: '28/04/2025',
     ),
     ClassData(
@@ -82,7 +96,9 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
       code: 'CSE108',
       name: 'Trí tuệ nhân tạo',
       teacher: 'Lê Thị H',
+      department: 'Trí tuệ nhân tạo',
       subject: 'AI',
+      course: 'K66',
       creationDate: '30/04/2025',
     ),
     ClassData(
@@ -90,7 +106,9 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
       code: 'CSE109',
       name: 'Bảo mật thông tin',
       teacher: 'Phạm Văn I',
+      department: 'An toàn thông tin',
       subject: 'Bảo mật',
+      course: 'K67',
       creationDate: '02/05/2025',
     ),
     ClassData(
@@ -98,7 +116,9 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
       code: 'CSE110',
       name: 'Kỹ thuật phần mềm',
       teacher: 'Hoàng Thị J',
+      department: 'Công nghệ phần mềm',
       subject: 'Phần mềm',
+      course: 'K65',
       creationDate: '05/05/2025',
     ),
     ClassData(
@@ -106,7 +126,9 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
       code: 'CSE111',
       name: 'Học máy',
       teacher: 'Nguyễn Văn K',
+      department: 'Trí tuệ nhân tạo',
       subject: 'Machine Learning',
+      course: 'K66',
       creationDate: '08/05/2025',
     ),
     ClassData(
@@ -114,7 +136,9 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
       code: 'CSE112',
       name: 'Phân tích dữ liệu',
       teacher: 'Trần Thị L',
+      department: 'Khoa học máy tính',
       subject: 'Data Science',
+      course: 'K67',
       creationDate: '10/05/2025',
     ),
   ];
@@ -135,11 +159,21 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
     ),
     TableColumn(
       type: TableColumnType.name,
-      flex: 3,
+      flex: 2,
       styleType: TableColumnStyleType.secondary,
     ),
     TableColumn(
+      type: TableColumnType.creationDate,
+      flex: 2,
+      styleType: TableColumnStyleType.normal,
+    ),
+    TableColumn(
       type: TableColumnType.teacher,
+      flex: 2,
+      styleType: TableColumnStyleType.normal,
+    ),
+    TableColumn(
+      type: TableColumnType.department,
       flex: 2,
       styleType: TableColumnStyleType.normal,
     ),
@@ -149,8 +183,8 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
       styleType: TableColumnStyleType.normal,
     ),
     TableColumn(
-      type: TableColumnType.creationDate,
-      flex: 2,
+      type: TableColumnType.course,
+      flex: 1,
       textAlign: TextAlign.right,
       styleType: TableColumnStyleType.normal,
     ),
@@ -319,70 +353,97 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
                       vertical: 16,
                     ),
                     child: _selectedClasses.isEmpty
-                        ? Row(
+                        ? Column(
                             children: [
-                              // Search field
-                              CustomSearchBar(
-                                controller: _searchController,
-                                hintText: 'Tìm kiếm...',
-                                onChanged: (value) {
-                                  // Handle search logic here
-                                  setState(() {
-                                    // Reset to first page when searching
-                                    _currentPage = 1;
-                                  });
-                                },
-                                onClear: () {
-                                  setState(() {
-                                    _currentPage = 1;
-                                  });
-                                },
+                              // First row: Search and primary filters
+                              Row(
+                                children: [
+                                  // Search field
+                                  CustomSearchBar(
+                                    controller: _searchController,
+                                    hintText: 'Tìm kiếm...',
+                                    onChanged: (value) {
+                                      // Handle search logic here
+                                      setState(() {
+                                        // Reset to first page when searching
+                                        _currentPage = 1;
+                                      });
+                                    },
+                                    onClear: () {
+                                      setState(() {
+                                        _currentPage = 1;
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(width: 16),
+
+                                  // Filter buttons - Row 1
+                                  _buildFilterButton('Lọc theo mã lớp'),
+                                  const SizedBox(width: 16),
+                                  _buildFilterButton('Lọc theo giảng viên'),
+                                  const SizedBox(width: 16),
+                                  _buildFilterButton('Lọc theo môn học'),
+                                  const SizedBox(width: 16),
+                                  _buildFilterButton('Lọc theo bộ môn'),
+                                  const SizedBox(width: 16),
+                                  _buildFilterButton('Lọc theo khoa'),
+                                  const Spacer(),
+
+                                  // Add class button
+                                  SizedBox(
+                                    height: 38,
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) =>
+                                              const AddClassModal(),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.add, size: 16),
+                                      label: const Text(
+                                        'Thêm lớp học',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          letterSpacing: 0.28,
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF2264E5,
+                                        ),
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(height: 12),
 
-                              // Filter buttons
-                              _buildFilterButton('Lọc theo mã lớp'),
-                              const SizedBox(width: 16),
-                              _buildFilterButton('Lọc theo giảng viên'),
-                              const SizedBox(width: 16),
-                              _buildFilterButton('Lọc theo môn học'),
-
-                              const Spacer(),
-
-                              // Add class button
-                              SizedBox(
-                                height: 38,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) =>
-                                          const AddClassModal(),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.add, size: 16),
-                                  label: const Text(
-                                    'Thêm lớp học',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      letterSpacing: 0.28,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF2264E5),
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                  ),
-                                ),
+                              // Second row: Additional filters
+                              Row(
+                                children: [
+                                  _buildFilterButton('Lọc theo khóa'),
+                                  const SizedBox(width: 16),
+                                  _buildFilterButton('Lọc theo đợt học'),
+                                  const SizedBox(width: 16),
+                                  _buildFilterButton('Lọc theo học kì'),
+                                  const SizedBox(width: 16),
+                                  _buildFilterButton('Lọc theo năm học'),
+                                  const Spacer(),
+                                ],
                               ),
                             ],
                           )
@@ -751,11 +812,23 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
                 ),
               ),
 
-              // Tên lớp chiếm 3 phần
+              // Tên lớp chiếm 2 phần
               Expanded(
-                flex: 3,
+                flex: 2,
                 child: Text(
                   'TÊN LỚP',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+
+              // Ngày tạo chiếm 2 phần
+              Expanded(
+                flex: 2,
+                child: Text(
+                  'NGÀY TẠO',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
@@ -775,6 +848,18 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
                 ),
               ),
 
+              // Bộ môn chiếm 2 phần
+              Expanded(
+                flex: 2,
+                child: Text(
+                  'BỘ MÔN',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+
               // Môn học chiếm 2 phần
               Expanded(
                 flex: 2,
@@ -787,11 +872,11 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
                 ),
               ),
 
-              // Ngày tạo chiếm 2 phần
+              // Khóa chiếm 1 phần
               Expanded(
-                flex: 2,
+                flex: 1,
                 child: Text(
-                  'NGÀY TẠO',
+                  'KHÓA',
                   textAlign: TextAlign.right,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
@@ -869,7 +954,11 @@ class ClassData implements ClassTableRowData {
   @override
   final String teacher;
   @override
+  final String department;
+  @override
   final String subject;
+  @override
+  final String course;
   @override
   final String creationDate;
 
@@ -886,7 +975,9 @@ class ClassData implements ClassTableRowData {
     required this.code,
     required this.name,
     required this.teacher,
+    required this.department,
     required this.subject,
+    required this.course,
     required this.creationDate,
   });
 }

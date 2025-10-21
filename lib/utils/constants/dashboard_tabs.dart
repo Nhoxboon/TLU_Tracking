@@ -5,7 +5,12 @@ enum DashboardTab {
   classes('Lớp học'),
   subjects('Môn học'),
   majors('Ngành'),
-  courses('Khóa'),
+  academicYears('Năm học'),
+  semesters('Học kì'),
+  learningPeriods('Đợt học'),
+  faculties('Khoa'),
+  departments('Bộ môn'),
+  cohorts('Khóa'),
   changePassword('Đổi mật khẩu');
 
   const DashboardTab(this.displayName);

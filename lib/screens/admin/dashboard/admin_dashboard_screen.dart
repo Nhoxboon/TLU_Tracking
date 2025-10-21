@@ -11,6 +11,11 @@ import 'package:android_app/screens/admin/dashboard/class_management/classes_man
 import 'package:android_app/screens/admin/dashboard/subject_management/subjects_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/major_management/majors_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/course_management/courses_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/study_period_management/study_periods_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/semester_management/semesters_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/academic_year_management/academic_years_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/faculty_management/faculties_management_view.dart';
+import 'package:android_app/screens/admin/dashboard/department_management/departments_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/change_password_view.dart';
 import '../../../services/user_session.dart';
 
@@ -39,8 +44,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return const SubjectsManagementView();
       case DashboardTab.majors:
         return const MajorsManagementView();
-      case DashboardTab.courses:
+      case DashboardTab.cohorts:
         return const CoursesManagementView();
+      case DashboardTab.departments:
+        return const DepartmentsManagementView();
+      case DashboardTab.faculties:
+        return const FacultiesManagementView();
+      case DashboardTab.learningPeriods:
+        return const StudyPeriodsManagementView();
+      case DashboardTab.semesters:
+        return const SemestersManagementView();
+      case DashboardTab.academicYears:
+        return const AcademicYearsManagementView();
       case DashboardTab.changePassword:
         return const ChangePasswordView();
     }
@@ -125,6 +140,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 value: '40',
                 iconColor: const Color(0xFFFFC280),
                 iconType: DashboardIconType.award,
+              ),
+            ],
+          ),
+          const SizedBox(height: 31),
+
+          // Dashboard cards - Row 3
+          Row(
+            children: [
+              // Card for total departments
+              DashboardCard(
+                title: 'Tổng bộ môn',
+                value: '40',
+                iconColor: const Color(0xFF4CAF50),
+                iconType: DashboardIconType.department,
+              ),
+              const SizedBox(width: 47),
+
+              // Card for total faculties
+              DashboardCard(
+                title: 'Tổng khoa',
+                value: '40',
+                iconColor: const Color(0xFF9C27B0),
+                iconType: DashboardIconType.faculty,
+              ),
+              const SizedBox(width: 47),
+
+              // Card for total academic years
+              DashboardCard(
+                title: 'Tổng năm học',
+                value: '40',
+                iconColor: const Color(0xFF00BCD4),
+                iconType: DashboardIconType.calendar,
               ),
             ],
           ),
@@ -227,10 +274,55 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
                 SidebarItem(
                   title: 'Khóa',
-                  isActive: _currentTab == DashboardTab.courses,
+                  isActive: _currentTab == DashboardTab.cohorts,
                   onTap: () {
                     setState(() {
-                      _currentTab = DashboardTab.courses;
+                      _currentTab = DashboardTab.cohorts;
+                    });
+                  },
+                ),
+                SidebarItem(
+                  title: 'Bộ môn',
+                  isActive: _currentTab == DashboardTab.departments,
+                  onTap: () {
+                    setState(() {
+                      _currentTab = DashboardTab.departments;
+                    });
+                  },
+                ),
+                SidebarItem(
+                  title: 'Khoa',
+                  isActive: _currentTab == DashboardTab.faculties,
+                  onTap: () {
+                    setState(() {
+                      _currentTab = DashboardTab.faculties;
+                    });
+                  },
+                ),
+                SidebarItem(
+                  title: 'Đợt học',
+                  isActive: _currentTab == DashboardTab.learningPeriods,
+                  onTap: () {
+                    setState(() {
+                      _currentTab = DashboardTab.learningPeriods;
+                    });
+                  },
+                ),
+                SidebarItem(
+                  title: 'Học kì',
+                  isActive: _currentTab == DashboardTab.semesters,
+                  onTap: () {
+                    setState(() {
+                      _currentTab = DashboardTab.semesters;
+                    });
+                  },
+                ),
+                SidebarItem(
+                  title: 'Năm học',
+                  isActive: _currentTab == DashboardTab.academicYears,
+                  onTap: () {
+                    setState(() {
+                      _currentTab = DashboardTab.academicYears;
                     });
                   },
                 ),
