@@ -18,10 +18,18 @@ class ApiService {
   final http.Client _client = http.Client();
 
   // Common headers
-  Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      };
+  Map<String, String> get _headers {
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    final token = UserSession().accessToken;
+    final type = UserSession().tokenType ?? 'Bearer';
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = '$type $token';
+    }
+    return headers;
+  }
 
   // Login endpoint
   Future<ApiResponse<LoginResponse>> login(LoginRequest request) async {
@@ -35,6 +43,14 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final loginResponse = LoginResponse.fromJson(data);
+        // Persist session
+        UserSession().setUser(
+          role: loginResponse.role,
+          userData: loginResponse.user,
+          username: loginResponse.user['email'] ?? '',
+          accessToken: loginResponse.accessToken,
+          tokenType: loginResponse.tokenType,
+        );
         return ApiResponse.success(loginResponse, message: 'Login successful');
       } else {
         final error = jsonDecode(response.body);
@@ -47,6 +63,32 @@ class ApiService {
       // Fallback to mock data when API is not available
       print('API not available, using mock data: ${e.toString()}');
       return MockApiService.mockLogin(request.email, request.password);
+    }
+  }
+
+  // Get current user (requires Authorization)
+  Future<ApiResponse<Map<String, dynamic>>> getCurrentUser() async {
+    try {
+      final response = await _client.get(
+        Uri.parse('$baseUrl/auth/me'),
+        headers: _headers,
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        // backend may return data directly or wrapped
+        final extracted = (data['data'] is Map<String, dynamic>)
+            ? (data['data'] as Map<String, dynamic>)
+            : data;
+        return ApiResponse.success(extracted);
+      }
+      final error = jsonDecode(response.body);
+      return ApiResponse.error(
+        error['detail'] ?? 'Failed to fetch current user',
+        statusCode: response.statusCode,
+      );
+    } catch (e) {
+      return ApiResponse.error('Failed to fetch current user: ${e.toString()}');
     }
   }
 
