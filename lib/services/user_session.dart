@@ -9,20 +9,28 @@ class UserSession extends ChangeNotifier {
   UserRole? _userRole;
   Map<String, dynamic>? _userData;
   String? _username;
+  String? _accessToken;
+  String? _tokenType;
 
   UserRole? get userRole => _userRole;
   Map<String, dynamic>? get userData => _userData;
   String? get username => _username;
+  String? get accessToken => _accessToken;
+  String? get tokenType => _tokenType;
   bool get isLoggedIn => _userRole != null;
 
   void setUser({
     required UserRole role,
     required Map<String, dynamic> userData,
     required String username,
+    String? accessToken,
+    String? tokenType,
   }) {
     _userRole = role;
     _userData = userData;
     _username = username;
+    _accessToken = accessToken;
+    _tokenType = tokenType;
     notifyListeners();
   }
 
@@ -30,6 +38,8 @@ class UserSession extends ChangeNotifier {
     _userRole = null;
     _userData = null;
     _username = null;
+    _accessToken = null;
+    _tokenType = null;
     notifyListeners();
   }
 

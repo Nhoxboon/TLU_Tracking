@@ -50,7 +50,7 @@ class MockApiService {
     final loginResponse = LoginResponse(
       message: 'Đăng nhập thành công',
       role: UserRole.fromString(userData['user_type']),
-      user: userData['user'],
+      user: userData['user'], accessToken: '', tokenType: '',
     );
 
     return ApiResponse.success(loginResponse);

@@ -2,9 +2,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/api_models.dart';
 import 'mock_api_service.dart';
+import 'user_session.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://10.0.2.2:8000';
+  static const String baseUrl = 'http://192.168.10.9:8000/api/v1';
+  // static const String baseUrl = 'http://10.0.2.2:8000'; //old address
+
   
   // Singleton pattern
   static final ApiService _instance = ApiService._internal();
