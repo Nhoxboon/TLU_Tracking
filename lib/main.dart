@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'models/api_models.dart';
 import 'screens/class_detail_screen.dart';
+import 'services/user_session.dart';
 import 'package:android_app/screens/admin/auth/admin_login_screen.dart';
 import 'package:android_app/screens/admin/dashboard/admin_dashboard_screen.dart';
 import 'package:android_app/screens/admin/dashboard/class_management/class_students_view.dart';
@@ -17,8 +19,11 @@ import 'screens/face_scanner_screen.dart';
 import 'screens/student_settings_screen.dart';
 import 'screens/face_registration_screen.dart';
 import 'screens/change_password_screen.dart';
+import 'utils/navigation.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await UserSession().restore();
   runApp(const MyApp());
 }
 
@@ -36,9 +41,11 @@ class MyApp extends StatelessWidget {
         fontFamily: 'Roboto',
       ),
       initialRoute: '/',
+      navigatorObservers: [routeObserver],
       routes: {
-        '/': (context) =>
-            kIsWeb ? const AdminLoginScreen() : const OnboardingScreen(),
+        '/': (context) => UserSession().isLoggedIn
+            ? _homeByRole()
+            : (kIsWeb ? const AdminLoginScreen() : const OnboardingScreen()),
         '/admin/login': (context) => const AdminLoginScreen(),
         '/admin/dashboard': (context) => const AdminDashboardScreen(),
         '/class-students': (context) {
@@ -67,5 +74,18 @@ class MyApp extends StatelessWidget {
         // '/student/login': (context) => const ClassDetailScreen(classCode: 'CSE'), // Temporary redirect to ClassDetailScreen
       },
     );
+  }
+}
+
+Widget _homeByRole() {
+  final role = UserSession().userRole;
+  switch (role) {
+    case UserRole.admin:
+      return const AdminDashboardScreen();
+    case UserRole.teacher:
+      return const TeacherDashboardScreen();
+    case UserRole.student:
+    default:
+      return const StudentHomeScreen();
   }
 }
