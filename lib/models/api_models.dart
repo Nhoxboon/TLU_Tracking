@@ -18,21 +18,25 @@ class LoginRequest {
 }
 
 class LoginResponse {
-  final String message;
+  final String accessToken;
+  final String tokenType;
   final UserRole role;
   final Map<String, dynamic> user;
 
   LoginResponse({
-    required this.message,
+    required this.accessToken,
+    required this.tokenType,
     required this.role,
-    required this.user,
+    required this.user, required String message,
   });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
+    final userMap = json['user'] as Map<String, dynamic>? ?? {};
     return LoginResponse(
-      message: json['message'] ?? '',
-      role: UserRole.fromString(json['user_type'] ?? 'student'),
-      user: json['user'] ?? {},
+      accessToken: json['access_token'] ?? '',
+      tokenType: json['token_type'] ?? 'bearer',
+      role: UserRole.fromString(userMap['user_type'] ?? 'student'),
+      user: userMap, message: '',
     );
   }
 }
@@ -90,6 +94,56 @@ class ApiResponse<T> {
       statusCode: statusCode,
     );
   }
+}
+
+class BaseResponse {
+  final bool success;
+  final String message;
+  final Map<String, dynamic>? data;
+
+  BaseResponse({required this.success, required this.message, this.data});
+
+  factory BaseResponse.fromJson(Map<String, dynamic> json) => BaseResponse(
+        success: json['success'] ?? true,
+        message: json['message'] ?? 'Operation successful',
+        data: json['data'] is Map<String, dynamic> ? (json['data'] as Map<String, dynamic>) : null,
+      );
+}
+
+class Faculty {
+  final int id;
+  final String name;
+  final String code;
+  final String? createdAt;
+  final String? updatedAt;
+
+  Faculty({required this.id, required this.name, required this.code, this.createdAt, this.updatedAt});
+
+  factory Faculty.fromJson(Map<String, dynamic> json) => Faculty(
+        id: json['id'] is int ? json['id'] : int.tryParse('${json['id']}') ?? 0,
+        name: json['name'] ?? '',
+        code: json['code'] ?? '',
+        createdAt: json['created_at'],
+        updatedAt: json['updated_at'],
+      );
+}
+
+class FacultyPage {
+  final List<Faculty> items;
+  final int total;
+  final int page;
+  final int limit;
+  final int totalPages;
+
+  FacultyPage({required this.items, required this.total, required this.page, required this.limit, required this.totalPages});
+
+  factory FacultyPage.fromJson(Map<String, dynamic> json) => FacultyPage(
+        items: (json['items'] as List<dynamic>? ?? const []).map((e) => Faculty.fromJson(e as Map<String, dynamic>)).toList(),
+        total: json['total'] ?? 0,
+        page: json['page'] ?? 1,
+        limit: json['limit'] ?? 10,
+        totalPages: json['total_pages'] ?? 1,
+      );
 }
 
 class Student {
@@ -279,3 +333,118 @@ class TeachingSession {
     };
   }
 }
+
+class ClassCreate {
+  final String name;
+  final String code;
+  final int? subjectId;
+  final int? teacherId;
+  final int? facultyId;
+  final int? departmentId;
+  final int? majorId;
+  final int? cohortId;
+  final int? academicYearId;
+  final int? semesterId;
+  final int? studyPhaseId;
+
+  ClassCreate({
+    required this.name,
+    required this.code,
+    this.subjectId,
+    this.teacherId,
+    this.facultyId,
+    this.departmentId,
+    this.majorId,
+    this.cohortId,
+    this.academicYearId,
+    this.semesterId,
+    this.studyPhaseId,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'code': code,
+        'subject_id': subjectId,
+        'teacher_id': teacherId,
+        'faculty_id': facultyId,
+        'department_id': departmentId,
+        'major_id': majorId,
+        'cohort_id': cohortId,
+        'academic_year_id': academicYearId,
+        'semester_id': semesterId,
+        'study_phase_id': studyPhaseId,
+      };
+}
+
+class ClassItem {
+  final int id;
+  final String name;
+  final String code;
+  final int? subjectId;
+  final int? teacherId;
+  final int? facultyId;
+  final int? departmentId;
+  final int? majorId;
+  final int? cohortId;
+  final int? academicYearId;
+  final int? semesterId;
+  final int? studyPhaseId;
+  final String? status;
+  final String? createdAt;
+  final String? updatedAt;
+
+  ClassItem({
+    required this.id,
+    required this.name,
+    required this.code,
+    this.subjectId,
+    this.teacherId,
+    this.facultyId,
+    this.departmentId,
+    this.majorId,
+    this.cohortId,
+    this.academicYearId,
+    this.semesterId,
+    this.studyPhaseId,
+    this.status,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  factory ClassItem.fromJson(Map<String, dynamic> json) => ClassItem(
+        id: json['id'] is int ? json['id'] : int.tryParse('${json['id']}') ?? 0,
+        name: json['name'] ?? '',
+        code: json['code'] ?? '',
+        subjectId: json['subject_id'],
+        teacherId: json['teacher_id'],
+        facultyId: json['faculty_id'],
+        departmentId: json['department_id'],
+        majorId: json['major_id'],
+        cohortId: json['cohort_id'],
+        academicYearId: json['academic_year_id'],
+        semesterId: json['semester_id'],
+        studyPhaseId: json['study_phase_id'],
+        status: json['status'],
+        createdAt: json['created_at'],
+        updatedAt: json['updated_at'],
+      );
+}
+
+class ClassPage {
+  final List<ClassItem> items;
+  final int total;
+  final int page;
+  final int limit;
+  final int totalPages;
+
+  ClassPage({required this.items, required this.total, required this.page, required this.limit, required this.totalPages});
+
+  factory ClassPage.fromJson(Map<String, dynamic> json) => ClassPage(
+        items: (json['items'] as List<dynamic>? ?? const []).map((e) => ClassItem.fromJson(e as Map<String, dynamic>)).toList(),
+        total: json['total'] ?? 0,
+        page: json['page'] ?? 1,
+        limit: json['limit'] ?? 10,
+        totalPages: json['total_pages'] ?? 1,
+      );
+}
+

@@ -21,6 +21,35 @@ class Teacher extends User {
          role: UserRole.teacher,
        );
 
+  // Factory constructor to create Teacher from JSON (API response)
+  factory Teacher.fromJson(Map<String, dynamic> json) {
+    return Teacher(
+      teacherId: json['teacher_code'] ?? json['teacherId'] ?? '',
+      email: json['email'] ?? '',
+      password: '', // Password not included in API response
+      fullName: json['full_name'] ?? json['fullName'] ?? '',
+      hometown: json['hometown'] ?? '',
+      phoneNumber: json['phone_number'] ?? json['phoneNumber'] ?? '',
+      dateOfBirth: json['date_of_birth'] != null 
+          ? DateTime.parse(json['date_of_birth']) 
+          : DateTime.now(),
+    );
+  }
+
+  // Convert Teacher to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'teacher_code': teacherId,
+      'email': email,
+      'full_name': fullName,
+      'hometown': hometown,
+      'phone_number': phoneNumber,
+      'date_of_birth': dateOfBirth.toIso8601String(),
+      'user_type': 'teacher',
+    };
+  }
+
   @override
   bool authenticate(String username, String password) {
     // In a real app, this would check against a database and use hashing
