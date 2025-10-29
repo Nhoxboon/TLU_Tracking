@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import '../services/user_service.dart';
+import '../services/user_session.dart';
+import '../utils/auth_manager.dart';
 
 class StudentSettingsScreen extends StatelessWidget {
   const StudentSettingsScreen({super.key});
@@ -335,8 +339,22 @@ class StudentSettingsScreen extends StatelessWidget {
             ),
             TextButton(
               onPressed: () {
+                // Clear all auth/session states before navigating
+                try {
+                  AuthManager().logout();
+                } catch (_) {}
+                try {
+                  AuthService().logout();
+                } catch (_) {}
+                try {
+                  UserService.instance.logout();
+                } catch (_) {}
+                try {
+                  UserSession().logout();
+                } catch (_) {}
+
                 Navigator.pop(context);
-                // Navigate to login screen
+                // Navigate to login screen and remove all previous routes
                 Navigator.pushNamedAndRemoveUntil(
                   context,
                   '/student/login',

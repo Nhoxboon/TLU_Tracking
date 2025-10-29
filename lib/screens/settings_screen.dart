@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'edit_profile_screen.dart';
 import 'users/change_password_screen.dart';
+import 'package:android_app/services/auth_service.dart';
+import 'package:android_app/services/user_service.dart';
+import 'package:android_app/services/user_session.dart';
+import 'package:android_app/utils/auth_manager.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -119,15 +123,12 @@ class SettingsScreen extends StatelessWidget {
                     Icons.logout,
                     isLogout: true,
                     onPressed: () {
-                      // Logout logic here
                       showDialog(
                         context: context,
                         builder: (BuildContext context) {
                           return AlertDialog(
                             title: const Text('Đăng xuất'),
-                            content: const Text(
-                              'Bạn có chắc chắn muốn đăng xuất?',
-                            ),
+                            content: const Text('Bạn có chắc chắn muốn đăng xuất?'),
                             actions: <Widget>[
                               TextButton(
                                 child: const Text('Hủy'),
@@ -138,9 +139,20 @@ class SettingsScreen extends StatelessWidget {
                               TextButton(
                                 child: const Text('Đăng xuất'),
                                 onPressed: () {
-                                  // Handle logout action
+                                  // Clear all auth/session states
+                                  try { AuthManager().logout(); } catch (_) {}
+                                  try { AuthService().logout(); } catch (_) {}
+                                  try { UserService.instance.logout(); } catch (_) {}
+                                  try { UserSession().logout(); } catch (_) {}
+
+                                  // Close dialog
                                   Navigator.of(context).pop();
-                                  // Navigate to login screen or home
+                                  // Navigate to login screen and clear history
+                                  Navigator.pushNamedAndRemoveUntil(
+                                    context,
+                                    '/student/login',
+                                    (route) => false,
+                                  );
                                 },
                               ),
                             ],
