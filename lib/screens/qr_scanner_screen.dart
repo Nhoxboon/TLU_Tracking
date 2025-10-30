@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({super.key});
@@ -14,6 +15,8 @@ class _QRScannerScreenState extends State<QRScannerScreen>
   bool _scanSuccess = false;
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
+  MobileScannerController cameraController = MobileScannerController();
+  String? scannedCode;
 
   @override
   void initState() {
@@ -29,19 +32,15 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       parent: _animationController,
       curve: Curves.elasticOut,
     ));
-
-    // Simulate QR scan success after 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        _onQRScanned();
-      }
-    });
   }
 
-  void _onQRScanned() {
+  void _onQRScanned(String code) {
+    if (!_isScanning) return; // Prevent multiple scans
+    
     setState(() {
       _isScanning = false;
       _scanSuccess = true;
+      scannedCode = code;
     });
     _animationController.forward();
     
@@ -59,6 +58,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
   @override
   void dispose() {
     _animationController.dispose();
+    cameraController.dispose();
     super.dispose();
   }
 
@@ -80,11 +80,25 @@ class _QRScannerScreenState extends State<QRScannerScreen>
         child: SafeArea(
           child: Stack(
             children: [
-              // Camera background simulation
+              // Real camera view
+              MobileScanner(
+                controller: cameraController,
+                onDetect: (capture) {
+                  final List<Barcode> barcodes = capture.barcodes;
+                  for (final barcode in barcodes) {
+                    if (barcode.rawValue != null) {
+                      _onQRScanned(barcode.rawValue!);
+                      break;
+                    }
+                  }
+                },
+              ),
+              
+              // Dark overlay
               Container(
                 width: double.infinity,
                 height: double.infinity,
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withOpacity(0.5),
               ),
               
               // QR Scanner viewfinder
@@ -108,54 +122,43 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(4),
-                    child: Container(
-                      color: Colors.white,
-                      child: Stack(
-                        children: [
-                          // QR Code placeholder
-                          Center(
+                    child: Stack(
+                      children: [
+                        // Transparent area to show camera
+                        Container(
+                          color: Colors.transparent,
+                        ),
+                        
+                        // Corner indicators
+                        _buildCornerIndicators(),
+                        
+                        // Scanning instruction
+                        if (_isScanning)
+                          Positioned(
+                            bottom: 20,
+                            left: 0,
+                            right: 0,
                             child: Container(
-                              width: 200,
-                              height: 200,
-                              decoration: BoxDecoration(
-                                color: Colors.black,
-                                borderRadius: BorderRadius.circular(8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 10,
                               ),
-                              child: CustomPaint(
-                                painter: QRCodePainter(),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text(
+                                'Đặt mã QR vào khung hình',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ),
-                          
-                          // Scanning line animation
-                          if (_isScanning)
-                            AnimatedBuilder(
-                              animation: _animationController,
-                              builder: (context, child) {
-                                return Positioned(
-                                  top: 50 + (_scaleAnimation.value * 260),
-                                  left: 0,
-                                  right: 0,
-                                  child: Container(
-                                    height: 2,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Colors.transparent,
-                                          const Color(0xFF2196F3),
-                                          Colors.transparent,
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          
-                          // Corner indicators
-                          _buildCornerIndicators(),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
                 ),
@@ -191,8 +194,22 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                   left: 0,
                   right: 0,
                   child: FadeTransition(
-                    opacity: _scaleAnimation
-        
+                    opacity: _scaleAnimation,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      child: Text(
+                        'Quét thành công!\n${scannedCode ?? ""}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               
