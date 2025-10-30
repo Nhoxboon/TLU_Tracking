@@ -48,21 +48,7 @@ class _SessionCardState extends State<SessionCard> {
   }
 
   Widget _buildCardContent() {
-    return GestureDetector(
-      onTap: () {
-        // Navigate to session detail screen
-        Navigator.pushNamed(
-          context,
-          '/session/detail',
-          arguments: {
-            'classCode': 'CSE', // You might want to pass this from parent widget
-            'sessionDate': widget.session.date,
-            'sessionTime': widget.session.timeSlot,
-            'status': widget.session.isOpen ? 'Mở' : 'Đóng',
-          },
-        );
-      },
-      child: Container(
+    return Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: const Color(0xFFEAECF0),
@@ -159,8 +145,7 @@ class _SessionCardState extends State<SessionCard> {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   // Yellow background with edit icon when swiping from left to right

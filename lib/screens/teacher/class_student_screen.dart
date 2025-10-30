@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../class_detail_screen.dart';
+import 'teacher_class_detail_screen.dart';
 
 class ClassStudentScreen extends StatefulWidget {
   final String className;
@@ -223,7 +223,7 @@ class _ClassStudentScreenState extends State<ClassStudentScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ClassDetailScreen(
+                          builder: (context) => TeacherClassDetailScreen(
                             classCode: widget.classCode,
                           ),
                         ),
