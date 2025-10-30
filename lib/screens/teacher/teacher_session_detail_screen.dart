@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import '../../models/teaching_session.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
-class SessionDetailScreen extends StatelessWidget {
+class TeacherSessionDetailScreen extends StatelessWidget {
   final TeachingSession session;
 
-  const SessionDetailScreen({Key? key, required this.session})
+  const TeacherSessionDetailScreen({Key? key, required this.session})
     : super(key: key);
 
   @override
@@ -60,53 +60,59 @@ class SessionDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // Attendance list header and QR button
+            // Attendance list header (left aligned)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Danh sách điểm danh',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2196F3),
-                      letterSpacing: -0.02,
-                    ),
+              child: const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Danh sách điểm danh',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2196F3),
+                    letterSpacing: -0.02,
                   ),
-                  // QR Code button
-                  ElevatedButton.icon(
-                    icon: Image.asset(
-                      'assets/images/qr_code.png',
-                      width: 16,
-                      height: 16,
-                    ),
-                    label: const Text('QR Code'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2264E5),
-                      foregroundColor: Colors.white,
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => QRCodeScreen(session: session),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                ),
               ),
             ),
 
+            const SizedBox(height: 12),
+
+            // QR Code button (left aligned)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.qr_code, size: 20),
+                  label: const Text('QR Code'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2264E5),
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => QRCodeScreen(session: session),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
             // Student attendance count
             Padding(
-              padding: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
                   Icon(Icons.people, color: const Color(0xFF667085), size: 16),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../settings_screen.dart';
-import '../class_detail_screen.dart';
+import 'student_class_detail_screen.dart';
 
 class StudentHomeScreen extends StatefulWidget {
   const StudentHomeScreen({Key? key}) : super(key: key);
@@ -134,7 +134,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => ClassDetailScreen(classCode: item.code),
+                          builder: (_) => StudentClassDetailScreen(
+                            classCode: item.code,
+                            className: item.title,
+                          ),
                         ),
                       );
                     },
@@ -152,10 +155,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         backgroundColor: const Color(0xFF2196F3),
         shape: const CircleBorder(),
         onPressed: () {
-          // Placeholder for QR scan action
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Mở trình quét QR (đang phát triển)')),
-          );
+          Navigator.pushNamed(context, '/qr/scanner');
         },
         child: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 28),
       ),

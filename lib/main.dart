@@ -1,7 +1,8 @@
+import 'package:android_app/screens/teacher/teacher_session_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'models/api_models.dart';
-import 'screens/class_detail_screen.dart';
+import 'screens/teacher/teacher_class_detail_screen.dart';
 import 'services/user_session.dart';
 import 'package:android_app/screens/admin/auth/admin_login_screen.dart';
 import 'package:android_app/screens/admin/dashboard/admin_dashboard_screen.dart';
@@ -13,7 +14,7 @@ import 'package:android_app/screens/users/auth/reset_password_screen.dart';
 import 'package:android_app/screens/teacher/teacher_dashboard_screen.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'screens/student/student_home_screen.dart';
-import 'screens/session_detail_screen.dart';
+import 'screens/student/student_session_detail_screen.dart';
 import 'screens/qr_scanner_screen.dart';
 import 'screens/face_scanner_screen.dart';
 import 'screens/student_settings_screen.dart';
@@ -57,7 +58,7 @@ class MyApp extends StatelessWidget {
             className: args['className'] as String,
           );
         },
-        '/class-detail': (context) => const ClassDetailScreen(classCode: 'CSE'),
+        '/class-detail': (context) => const TeacherClassDetailScreen(classCode: 'CSE'),
         '/onboarding': (context) => const OnboardingScreen(),
         '/student/login': (context) => const LoginScreen(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
@@ -68,7 +69,7 @@ class MyApp extends StatelessWidget {
         '/student/settings': (context) => const StudentSettingsScreen(),
         '/face/registration': (context) => const FaceRegistrationScreen(),
         '/change/password': (context) => const ChangePasswordScreen(),
-        '/session/detail': (context) => const SessionDetailScreen(),
+        '/session/detail': (context) => const StudentSessionDetailScreen(),
         '/qr/scanner': (context) => const QRScannerScreen(),
         '/face/scanner': (context) => const FaceScannerScreen(),
         // '/student/login': (context) => const ClassDetailScreen(classCode: 'CSE'), // Temporary redirect to ClassDetailScreen

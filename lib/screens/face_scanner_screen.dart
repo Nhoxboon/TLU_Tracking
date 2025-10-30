@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:camera/camera.dart';
 
 class FaceScannerScreen extends StatefulWidget {
   const FaceScannerScreen({super.key});
@@ -16,6 +17,10 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
   late AnimationController _pulseController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _pulseAnimation;
+  
+  CameraController? _cameraController;
+  bool _isCameraInitialized = false;
+  List<CameraDescription>? _cameras;
 
   @override
   void initState() {
@@ -50,12 +55,73 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
     // Start pulse animation
     _pulseController.repeat(reverse: true);
 
-    // Simulate face scan success after 4 seconds
+    // Initialize camera
+    _initializeCamera();
+
+    // Simulate face scan success after 4 seconds (for demo)
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted) {
         _onFaceScanned();
       }
     });
+  }
+
+  Future<void> _initializeCamera() async {
+    try {
+      _cameras = await availableCameras();
+      debugPrint('Available cameras: ${_cameras?.length}');
+      
+      if (_cameras != null && _cameras!.isNotEmpty) {
+        // Use front camera for face detection
+        final frontCamera = _cameras!.firstWhere(
+          (camera) {
+            debugPrint('Camera: ${camera.name}, Direction: ${camera.lensDirection}');
+            return camera.lensDirection == CameraLensDirection.front;
+          },
+          orElse: () => _cameras!.first,
+        );
+        
+        debugPrint('Selected camera: ${frontCamera.name}');
+        
+        _cameraController = CameraController(
+          frontCamera,
+          ResolutionPreset.medium,  // Changed to medium for better performance
+          enableAudio: false,
+          imageFormatGroup: ImageFormatGroup.yuv420,
+        );
+
+        await _cameraController!.initialize();
+        debugPrint('Camera initialized successfully');
+        
+        if (mounted) {
+          setState(() {
+            _isCameraInitialized = true;
+          });
+        }
+      } else {
+        debugPrint('No cameras available');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Không tìm thấy camera trên thiết bị'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error initializing camera: $e');
+      // Show error dialog
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể truy cập camera: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
   }
 
   void _onFaceScanned() {
@@ -91,6 +157,11 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
     _animationController.reset();
     _pulseController.repeat(reverse: true);
     
+    // Restart camera if needed
+    if (!_isCameraInitialized) {
+      _initializeCamera();
+    }
+    
     // Simulate face scan again after 4 seconds
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted) {
@@ -103,6 +174,7 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
   void dispose() {
     _animationController.dispose();
     _pulseController.dispose();
+    _cameraController?.dispose();
     super.dispose();
   }
 
@@ -172,38 +244,46 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.grey[200]!,
-                      Colors.grey[400]!,
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    // Simulated face image area
-                    Center(
-                      child: Container(
-                        width: 200,
-                        height: 250,
-                        decoration: BoxDecoration(
-                          color: Colors.brown[200],
-                          borderRadius: BorderRadius.circular(100),
+              child: _isCameraInitialized && 
+                     _cameraController != null && 
+                     _cameraController!.value.isInitialized
+                  ? AspectRatio(
+                      aspectRatio: _cameraController!.value.aspectRatio,
+                      child: CameraPreview(_cameraController!),
+                    )
+                  : Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.grey[200]!,
+                            Colors.grey[400]!,
+                          ],
                         ),
-                        child: Icon(
-                          Icons.person,
-                          size: 120,
-                          color: Colors.brown[400],
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const CircularProgressIndicator(
+                              color: Color(0xFF2196F3),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _cameraController == null 
+                                ? 'Đang khởi động camera...' 
+                                : 'Đang tải...',
+                              style: const TextStyle(
+                                color: Colors.black54,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
             ),
           ),
         ),

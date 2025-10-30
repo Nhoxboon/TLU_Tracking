@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class SessionDetailScreen extends StatefulWidget {
-  const SessionDetailScreen({super.key});
+class StudentSessionDetailScreen extends StatefulWidget {
+  const StudentSessionDetailScreen({super.key});
 
   @override
-  State<SessionDetailScreen> createState() => _SessionDetailScreenState();
+  State<StudentSessionDetailScreen> createState() => _StudentSessionDetailScreenState();
 }
 
-class _SessionDetailScreenState extends State<SessionDetailScreen> {
+class _StudentSessionDetailScreenState extends State<StudentSessionDetailScreen> {
   @override
   void initState() {
     super.initState();
