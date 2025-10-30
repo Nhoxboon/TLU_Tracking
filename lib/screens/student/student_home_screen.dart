@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../settings_screen.dart';
-import '../class_detail_screen.dart';
+import 'student_class_detail_screen.dart';
 
 class StudentHomeScreen extends StatefulWidget {
   const StudentHomeScreen({Key? key}) : super(key: key);
@@ -134,7 +134,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => ClassDetailScreen(classCode: item.code),
+                          builder: (_) => StudentClassDetailScreen(
+                            classCode: item.code,
+                            className: item.title,
+                          ),
                         ),
                       );
                     },
