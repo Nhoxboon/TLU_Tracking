@@ -30,47 +30,69 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF2196F3),
-        unselectedItemColor: const Color(0xFF333333),
-        selectedLabelStyle: const TextStyle(
-          fontFamily: 'Roboto',
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-          height: 1.235,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontFamily: 'Roboto',
-          fontSize: 10,
-          height: 1.235,
-        ),
-        type: BottomNavigationBarType.fixed,
-        elevation: 8,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined, size: 24),
-            activeIcon: Icon(Icons.home, size: 24),
-            label: 'Trang chủ',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.07),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined, size: 24),
-            activeIcon: Icon(Icons.settings, size: 24),
-            label: 'Cài đặt',
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF565656).withOpacity(0.25),
+              blurRadius: 100,
+              offset: const Offset(0, -10),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
           ),
-        ],
+          child: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+            backgroundColor: Colors.white,
+            selectedItemColor: const Color(0xFF2196F3),
+            unselectedItemColor: const Color(0xFF333333),
+            selectedLabelStyle: const TextStyle(
+              fontFamily: 'Roboto',
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              height: 1.235,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontFamily: 'Roboto',
+              fontSize: 10,
+              height: 1.235,
+            ),
+            type: BottomNavigationBarType.fixed,
+            elevation: 0,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined, size: 24),
+                activeIcon: Icon(Icons.home, size: 24),
+                label: 'Trang chủ',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.settings_outlined, size: 24),
+                activeIcon: Icon(Icons.settings, size: 24),
+                label: 'Cài đặt',
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-// Home Tab with empty state
+// Home Tab with search functionality
 class _TeacherHomeTab extends StatefulWidget {
   const _TeacherHomeTab({Key? key}) : super(key: key);
 
@@ -80,11 +102,8 @@ class _TeacherHomeTab extends StatefulWidget {
 
 class _TeacherHomeTabState extends State<_TeacherHomeTab> with RouteAware {
   bool _loading = false;
-  String? _error;
   List<ClassItem> _classes = const [];
-
-  String get _teacherName =>
-      UserSession().teacherData?.fullName ?? UserSession().username ?? 'Giảng viên';
+  final TextEditingController _searchController = TextEditingController();
 
   Map<String, String> _headers() {
     final session = UserSession();
@@ -112,6 +131,7 @@ class _TeacherHomeTabState extends State<_TeacherHomeTab> with RouteAware {
 
   @override
   void dispose() {
+    _searchController.dispose();
     routeObserver.unsubscribe(this);
     super.dispose();
   }
@@ -139,7 +159,6 @@ class _TeacherHomeTabState extends State<_TeacherHomeTab> with RouteAware {
     if (profileId == null) {
       print('DEBUG: No teacher ID found in userData');
       setState(() {
-        _error = 'Không tìm thấy mã giáo viên trong dữ liệu đăng nhập';
         _loading = false;
       });
       return;
@@ -147,7 +166,6 @@ class _TeacherHomeTabState extends State<_TeacherHomeTab> with RouteAware {
     
     setState(() {
       _loading = true;
-      _error = null;
     });
     
     try {
@@ -178,8 +196,8 @@ class _TeacherHomeTabState extends State<_TeacherHomeTab> with RouteAware {
           _loading = false;
         });
       } else {
+        print('DEBUG: Failed to load classes: HTTP ${resp.statusCode}');
         setState(() {
-          _error = 'Không tải được danh sách lớp (HTTP ${resp.statusCode})';
           _loading = false;
         });
       }
@@ -187,7 +205,6 @@ class _TeacherHomeTabState extends State<_TeacherHomeTab> with RouteAware {
       print('DEBUG: Error fetching classes: $e');
       if (!mounted) return;
       setState(() {
-        _error = 'Lỗi tải lớp: ${e.toString()}';
         _loading = false;
       });
     }
@@ -195,244 +212,205 @@ class _TeacherHomeTabState extends State<_TeacherHomeTab> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    final hasData = _classes.isNotEmpty;
-    return SafeArea(child: hasData ? _buildHomeWithData(context) : _buildEmptyState(context));
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(height: 60),
-          // Header
-          Row(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
+            // Search box
+            Container(
+              height: 52,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2196F3).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFF333333).withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
                 children: [
-                  const Text(
-                    'Xin chào,',
-                    style: TextStyle(
-                      fontFamily: 'Roboto',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF333333),
-                      letterSpacing: -0.28,
-                      height: 1.4,
+                  const SizedBox(width: 15),
+                  const Icon(
+                    Icons.search,
+                    color: Color(0xFF333333),
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: const InputDecoration(
+                        hintText: 'Tìm kiếm lớp',
+                        hintStyle: TextStyle(
+                          fontFamily: 'Roboto',
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                          color: Color(0x70333333),
+                          letterSpacing: -0.32,
+                          height: 1.235,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      style: const TextStyle(
+                        fontFamily: 'Roboto',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                        color: Color(0xFF333333),
+                        letterSpacing: -0.32,
+                        height: 1.235,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _teacherName,
-                    style: TextStyle(
-                      fontFamily: 'Roboto',
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2196F3),
-                      letterSpacing: -0.48,
-                      height: 1.235,
-                    ),
-                  ),
+                  const SizedBox(width: 15),
                 ],
               ),
-              const Spacer(),
-              Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFFF2F2F2),
+            ),
+            const SizedBox(height: 18),
+            // "Danh sách lớp" heading
+            const Text(
+              'Danh sách lớp',
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF2196F3),
+                letterSpacing: -0.36,
+                height: 1.235,
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Content area
+            Expanded(
+              child: _buildContent(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    if (_classes.isEmpty) {
+      return _buildEmptyState();
+    }
+    
+    return _buildClassesList();
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0xFFEAECF0),
+          width: 1,
+        ),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Empty state illustration
+          SvgPicture.asset(
+            'assets/images/class_empty_list.svg',
+            width: 300,
+            height: 200,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(height: 16),
+          // Text content
+          const Column(
+            children: [
+              Text(
+                'Bạn chưa có lớp!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF101828),
+                  height: 1.5,
                 ),
-                child: const Icon(
-                  Icons.person,
-                  size: 30,
-                  color: Color(0xFF333333),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Danh sách lớp của bạn sẽ được thể hiện ở đây, hãy đợi nhà trường thêm bạn vào.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF667085),
+                  height: 1.43,
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 42),
-          // Date display
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFF2196F3),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.calendar_month,
-                  color: Colors.white,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Thứ 3',
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
-                        letterSpacing: -0.28,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    const Text(
-                      '26 tháng 9, 2025',
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: -0.28,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          // Classes label
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Các lớp của bạn',
-              style: TextStyle(
-                fontFamily: 'Roboto',
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF333333),
-                letterSpacing: -0.4,
-                height: 1.26,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Center(
-              child: _loading
-                  ? const CircularProgressIndicator()
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SvgPicture.asset(
-                          'assets/images/class_empty_list.svg',
-                          width: 80,
-                          height: 80,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _error == null ? 'Bạn chưa có lớp' : 'Có lỗi xảy ra',
-                          style: const TextStyle(
-                            fontFamily: 'Roboto',
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF333333),
-                            letterSpacing: -0.32,
-                            height: 1.235,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 40),
-                          child: Text(
-                            _error == null
-                                ? 'Danh sách lớp của bạn sẽ được thể hiện ở đây, hãy đợi nhà trường thêm bạn vào.'
-                                : (_error ?? ''),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontFamily: 'Roboto',
-                              fontSize: 14,
-                              color: Color(0xFF757575),
-                              letterSpacing: -0.28,
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
           ),
         ],
       ),
     );
   }
 
-  // This would be implemented when we have data to display
-  Widget _buildHomeWithData(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 60),
-          Row(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Xin chào,', style: TextStyle(fontFamily: 'Roboto', fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF333333), letterSpacing: -0.28, height: 1.4)),
-                  const SizedBox(height: 4),
-                  Text(_teacherName, style: const TextStyle(fontFamily: 'Roboto', fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2196F3), letterSpacing: -0.48, height: 1.235)),
-                ],
+  Widget _buildClassesList() {
+    return ListView.separated(
+      itemCount: _classes.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final c = _classes[index];
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
-              const Spacer(),
-              Container(width: 48, height: 48, decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFF2F2F2)), child: const Icon(Icons.person, size: 30, color: Color(0xFF333333))),
             ],
           ),
-          const SizedBox(height: 24),
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Các lớp của bạn', style: TextStyle(fontFamily: 'Roboto', fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333), letterSpacing: -0.4, height: 1.26)),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: ListView.separated(
-              itemCount: _classes.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final c = _classes[index];
-                return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2)),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.class_, color: Color(0xFF2196F3)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(c.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 2),
-                            Text('Mã lớp: ${c.code}', style: const TextStyle(fontSize: 13, color: Colors.black54)),
-                          ],
-                        ),
+          child: Row(
+            children: [
+              const Icon(Icons.class_, color: Color(0xFF2196F3)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      c.name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const Icon(Icons.chevron_right),
-                    ],
-                  ),
-                );
-              },
-            ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Mã lớp: ${c.code}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
