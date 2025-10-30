@@ -1,42 +1,86 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
+import 'class_student_screen.dart';
 import '../../services/user_session.dart';
-import 'package:http/http.dart' as http;
-import '../../services/api_service.dart';
-import '../../models/api_models.dart';
-import 'dart:convert';
-import '../../utils/navigation.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
-  const TeacherDashboardScreen({super.key});
+  const TeacherDashboardScreen({Key? key}) : super(key: key);
 
   @override
   State<TeacherDashboardScreen> createState() => _TeacherDashboardScreenState();
 }
 
 class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
-  int _selectedIndex = 0;
+  final TextEditingController _searchController = TextEditingController();
 
-  // List of screens to display based on bottom navigation selection
-  late final List<Widget> _screens = [
-    const _TeacherHomeTab(), // Home tab
-    const _TeacherSettingsTab(),
+  // Mock data for now - will be replaced with API data later
+  final List<_ClassItem> _classes = const [
+    _ClassItem(title: 'Lập trình di động', code: 'CSE301', students: 45),
+    _ClassItem(title: 'Cơ sở dữ liệu', code: 'CSE202', students: 38),
+    _ClassItem(title: 'Công nghệ phần mềm', code: 'CSE401', students: 42),
+    _ClassItem(title: 'Mạng máy tính', code: 'CSE303', students: 35),
+    _ClassItem(title: 'Trí tuệ nhân tạo', code: 'CSE501', students: 40),
   ];
+
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.07),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(30),
-            topRight: Radius.circular(30),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(56),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Danh sách lớp',
+                    textAlign: TextAlign.left,
+                    style: TextStyle(
+                      color: Color(0xFF2196F3),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.36,
+                      height: 1.2,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _currentIndex = 1; // Switch to settings tab
+                    });
+                  },
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2196F3).withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.person_outline,
+                      color: Color(0xFF2196F3),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
+        ),
+      ),
+      body: _currentIndex == 0 ? _buildHomeTab() : _buildSettingsTab(),
+      // Simple bottom navigation bar
+      bottomNavigationBar: Container(
+        height: 60,
+        decoration: BoxDecoration(
+          color: Colors.white,
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF565656).withOpacity(0.25),
@@ -44,248 +88,47 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               offset: const Offset(0, -10),
             ),
           ],
-        ),
-        child: ClipRRect(
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(30),
             topRight: Radius.circular(30),
           ),
-          child: BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-            backgroundColor: Colors.white,
-            selectedItemColor: const Color(0xFF2196F3),
-            unselectedItemColor: const Color(0xFF333333),
-            selectedLabelStyle: const TextStyle(
-              fontFamily: 'Roboto',
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              height: 1.235,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontFamily: 'Roboto',
-              fontSize: 10,
-              height: 1.235,
-            ),
-            type: BottomNavigationBarType.fixed,
-            elevation: 0,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined, size: 24),
-                activeIcon: Icon(Icons.home, size: 24),
-                label: 'Trang chủ',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.settings_outlined, size: 24),
-                activeIcon: Icon(Icons.settings, size: 24),
-                label: 'Cài đặt',
-              ),
-            ],
-          ),
         ),
-      ),
-    );
-  }
-}
-
-// Home Tab with search functionality
-class _TeacherHomeTab extends StatefulWidget {
-  const _TeacherHomeTab({Key? key}) : super(key: key);
-
-  @override
-  State<_TeacherHomeTab> createState() => _TeacherHomeTabState();
-}
-
-class _TeacherHomeTabState extends State<_TeacherHomeTab> with RouteAware {
-  bool _loading = false;
-  List<ClassItem> _classes = const [];
-  final TextEditingController _searchController = TextEditingController();
-
-  Map<String, String> _headers() {
-    final session = UserSession();
-    final headers = <String, String>{
-      'Accept': 'application/json',
-    };
-    if (session.accessToken != null && session.accessToken!.isNotEmpty) {
-      final t = session.tokenType?.isNotEmpty == true ? session.tokenType! : 'Bearer';
-      headers['Authorization'] = '$t ${session.accessToken}';
-    }
-    return headers;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchClasses();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    routeObserver.subscribe(this, ModalRoute.of(context)!);
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    routeObserver.unsubscribe(this);
-    super.dispose();
-  }
-
-  // Called when coming back to this screen
-  @override
-  void didPopNext() {
-    _fetchClasses();
-  }
-
-  Future<void> _fetchClasses() async {
-    final session = UserSession();
-    final userData = session.userData;
-    
-    // Try different possible keys for teacher ID
-    final profileId = userData?['profile_id'] ?? 
-                     userData?['id'] ?? 
-                     userData?['teacher_id'] ?? 
-                     userData?['user_id'];
-    
-    print('DEBUG: Fetching classes for teacher_id: $profileId');
-    print('DEBUG: UserSession data: $userData');
-    print('DEBUG: Access token: ${session.accessToken}');
-    
-    if (profileId == null) {
-      print('DEBUG: No teacher ID found in userData');
-      setState(() {
-        _loading = false;
-      });
-      return;
-    }
-    
-    setState(() {
-      _loading = true;
-    });
-    
-    try {
-      final uri = Uri.parse('${ApiService.baseUrl}/classes')
-          .replace(queryParameters: {
-        'teacher_id': profileId.toString(),
-        'page': '1',
-        'limit': '10',
-        'active_only': 'true',
-      });
-      
-      print('DEBUG: Making request to: $uri');
-      print('DEBUG: Headers: ${_headers()}');
-      
-      final resp = await http.get(uri, headers: _headers());
-      
-      print('DEBUG: Response status: ${resp.statusCode}');
-      print('DEBUG: Response body: ${resp.body}');
-      
-      if (!mounted) return;
-      
-      if (resp.statusCode == 200) {
-        final parsed = ClassPage.fromJson(
-            jsonDecode(resp.body) as Map<String, dynamic>);
-        print('DEBUG: Parsed classes: ${parsed.items.length}');
-        setState(() {
-          _classes = parsed.items;
-          _loading = false;
-        });
-      } else {
-        print('DEBUG: Failed to load classes: HTTP ${resp.statusCode}');
-        setState(() {
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      print('DEBUG: Error fetching classes: $e');
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            const SizedBox(height: 20),
-            // Search box
-            Container(
-              height: 52,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2196F3).withOpacity(0.08),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: const Color(0xFF333333).withOpacity(0.3),
-                  width: 1,
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _currentIndex = 0;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  _currentIndex == 0 ? Icons.home : Icons.home_outlined,
+                  color: _currentIndex == 0 
+                      ? const Color(0xFF2196F3) 
+                      : Colors.black.withOpacity(0.7),
+                  size: 24,
                 ),
               ),
-              child: Row(
-                children: [
-                  const SizedBox(width: 15),
-                  const Icon(
-                    Icons.search,
-                    color: Color(0xFF333333),
-                    size: 24,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: const InputDecoration(
-                        hintText: 'Tìm kiếm lớp',
-                        hintStyle: TextStyle(
-                          fontFamily: 'Roboto',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                          color: Color(0x70333333),
-                          letterSpacing: -0.32,
-                          height: 1.235,
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      style: const TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: Color(0xFF333333),
-                        letterSpacing: -0.32,
-                        height: 1.235,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                ],
-              ),
             ),
-            const SizedBox(height: 18),
-            // "Danh sách lớp" heading
-            const Text(
-              'Danh sách lớp',
-              style: TextStyle(
-                fontFamily: 'Roboto',
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF2196F3),
-                letterSpacing: -0.36,
-                height: 1.235,
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _currentIndex = 1;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  _currentIndex == 1 ? Icons.person : Icons.person_outline,
+                  color: _currentIndex == 1 
+                      ? const Color(0xFF2196F3) 
+                      : Colors.black.withOpacity(0.7),
+                  size: 24,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            // Content area
-            Expanded(
-              child: _buildContent(),
             ),
           ],
         ),
@@ -293,136 +136,88 @@ class _TeacherHomeTabState extends State<_TeacherHomeTab> with RouteAware {
     );
   }
 
-  Widget _buildContent() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    
-    if (_classes.isEmpty) {
-      return _buildEmptyState();
-    }
-    
-    return _buildClassesList();
-  }
-
-  Widget _buildEmptyState() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFFEAECF0),
-          width: 1,
-        ),
-      ),
-      padding: const EdgeInsets.all(24),
+  Widget _buildHomeTab() {
+    return SafeArea(
+      top: false,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Empty state illustration
-          SvgPicture.asset(
-            'assets/images/class_empty_list.svg',
-            width: 300,
-            height: 200,
-            fit: BoxFit.contain,
+          // Search
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Container(
+              height: 52,
+              decoration: BoxDecoration(
+                color: const Color(0x142196F3), // #2196F3 @ 8%
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0x4D333333)),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 12),
+                  const Icon(Icons.search, size: 24, color: Colors.black54),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: const InputDecoration(
+                        hintText: 'Tìm kiếm lớp',
+                        border: InputBorder.none,
+                        hintStyle: TextStyle(
+                          fontSize: 16,
+                          height: 1.235,
+                          letterSpacing: -0.32,
+                          color: Color(0xB3333333), // 70%
+                        ),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
-          // Text content
-          const Column(
-            children: [
-              Text(
-                'Bạn chưa có lớp!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF101828),
-                  height: 1.5,
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Danh sách lớp của bạn sẽ được thể hiện ở đây, hãy đợi nhà trường thêm bạn vào.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF667085),
-                  height: 1.43,
-                ),
-              ),
-            ],
+          const SizedBox(height: 12),
+          // List of classes
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(13, 12, 13, 20),
+              itemCount: _classes.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final item = _classes[index];
+                if (_searchController.text.isNotEmpty) {
+                  final q = _searchController.text.toLowerCase();
+                  if (!item.title.toLowerCase().contains(q) &&
+                      !item.code.toLowerCase().contains(q)) {
+                    return const SizedBox.shrink();
+                  }
+                }
+                return _ClassCard(
+                  item: item,
+                  onTap: () {
+                    // Navigate to class detail screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ClassStudentScreen(
+                          className: item.title,
+                          classCode: item.code,
+                          studentCount: item.students,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildClassesList() {
-    return ListView.separated(
-      itemCount: _classes.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final c = _classes[index];
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.class_, color: Color(0xFF2196F3)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      c.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Mã lớp: ${c.code}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-
-
-// Settings Tab based on the provided design screenshot
-class _TeacherSettingsTab extends StatelessWidget {
-  const _TeacherSettingsTab({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildSettingsTab() {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -431,7 +226,9 @@ class _TeacherSettingsTab extends StatelessWidget {
         leadingWidth: 40,
         leading: GestureDetector(
           onTap: () {
-            Navigator.pop(context);
+            setState(() {
+              _currentIndex = 0; // Go back to home tab
+            });
           },
           child: const Padding(
             padding: EdgeInsets.only(left: 16.0),
@@ -722,6 +519,98 @@ class _TeacherSettingsTab extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Class item model
+class _ClassItem {
+  final String title;
+  final String code;
+  final int students;
+  const _ClassItem({required this.title, required this.code, required this.students});
+}
+
+// Class card widget
+class _ClassCard extends StatelessWidget {
+  final _ClassItem item;
+  final VoidCallback onTap;
+  const _ClassCard({required this.item, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFFFF),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFEAECF0)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                    height: 28 / 18,
+                    color: Color(0xFF344054), // Gray/700
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _Tag(
+                      icon: Icons.list_alt_outlined,
+                      label: '${item.students} Sinh viên',
+                    ),
+                    _Tag(
+                      icon: Icons.code,
+                      label: item.code,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Tag widget
+class _Tag extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _Tag({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: const Color(0xFF667085)),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+            height: 20 / 14,
+            color: Color(0xFF667085), // Gray/500
           ),
         ),
       ],
