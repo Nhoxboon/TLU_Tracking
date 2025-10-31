@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../../widgets/session_card.dart';
 import '../../widgets/swipe_instructions.dart';
 import '../../models/teaching_session.dart';
+import '../../services/api_service.dart';
+import '../../services/user_session.dart';
 import '../settings_screen.dart';
 import '../users/add_session_screen.dart';
 import '../users/edit_session_screen.dart';
 import 'teacher_session_detail_screen.dart'; // Import teacher screen
 
 class TeacherClassDetailScreen extends StatefulWidget {
+  final int classId;
   final String classCode;
 
-  const TeacherClassDetailScreen({Key? key, required this.classCode})
-    : super(key: key);
+  const TeacherClassDetailScreen({
+    Key? key,
+    required this.classId,
+    required this.classCode,
+  }) : super(key: key);
 
   @override
   State<TeacherClassDetailScreen> createState() => _TeacherClassDetailScreenState();
@@ -19,12 +27,108 @@ class TeacherClassDetailScreen extends StatefulWidget {
 
 class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
   late List<TeachingSession> sessions;
+  bool _isLoading = false;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    // In a real app, this would fetch data from a backend service
-    sessions = TeachingSession.getMockSessions();
+    print('DEBUG - TeacherClassDetailScreen initState called with classId: ${widget.classId}');
+    sessions = [];
+    _fetchSessions();
+  }
+
+  Future<void> _fetchSessions() async {
+    print('DEBUG - _fetchSessions called');
+    print('DEBUG - Fetching sessions for classId: ${widget.classId}');
+    
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    
+    try {
+      final baseUrl = ApiService.baseUrl;
+      final url = Uri.parse('$baseUrl/classes/${widget.classId}/sessions');
+      
+      print('DEBUG - Request URL: $url');
+      
+      // Build headers with Authorization
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      final token = UserSession().accessToken;
+      final tokenType = UserSession().tokenType ?? 'Bearer';
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = '$tokenType $token';
+      }
+      
+      final response = await http.get(url, headers: headers);
+      
+      print('DEBUG - Response status: ${response.statusCode}');
+      print('DEBUG - Response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final List<TeachingSession> loaded = [];
+        
+        for (var item in data) {
+          // Map API response to TeachingSession model
+          // API returns: id, class_id, session_date, start_time, end_time, session_type, qr_code, qr_expired_at, status, created_at, updated_at
+          final id = (item['id'] ?? 0).toString();
+          final sessionDate = item['session_date'] ?? '';
+          final startTime = item['start_time'] ?? '';
+          final endTime = item['end_time'] ?? '';
+          final status = item['status'] ?? 'Closed';
+          
+          // Format date and time slot
+          String formattedDate = sessionDate;
+          try {
+            final date = DateTime.parse(sessionDate);
+            final weekday = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][date.weekday % 7];
+            formattedDate = '$weekday ${date.day}/${date.month}/${date.year}';
+          } catch (_) {}
+          
+          String timeSlot = '$startTime - $endTime';
+          try {
+            final start = startTime.split(':');
+            final end = endTime.split(':');
+            if (start.length >= 2 && end.length >= 2) {
+              timeSlot = '${start[0]}:${start[1]} - ${end[0]}:${end[1]}';
+            }
+          } catch (_) {}
+          
+          loaded.add(TeachingSession(
+            id: id,
+            date: formattedDate,
+            timeSlot: timeSlot,
+            attendanceCount: 0, // Will be fetched separately if needed
+            totalStudents: 0,   // Will be fetched separately if needed
+            isOpen: status.toLowerCase() == 'open',
+          ));
+        }
+        
+        print('DEBUG - Loaded ${loaded.length} sessions');
+        
+        setState(() {
+          sessions = loaded;
+        });
+      } else {
+        setState(() {
+          _error = 'Lỗi lấy dữ liệu buổi học';
+        });
+      }
+    } catch (e) {
+      print('DEBUG - Error: $e');
+      setState(() {
+        _error = 'Lỗi kết nối: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -118,39 +222,55 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
 
             // Session list
             Expanded(
-              child: Container(
-                color: Colors.white,
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: sessions.length + 1, // +1 for the instructions
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      // First item is the instructions
-                      return const SwipeInstructions();
-                    }
-
-                    // Adjust index for sessions
-                    final sessionIndex = index - 1;
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => TeacherSessionDetailScreen(
-                              session: sessions[sessionIndex],
-                            ),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(_error!),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: _fetchSessions,
+                                child: const Text('Thử lại'),
+                              ),
+                            ],
                           ),
-                        );
-                      },
-                      child: SessionCard(
-                        session: sessions[sessionIndex],
-                        onEdit: _handleEditSession,
-                        onDelete: _handleDeleteSession,
-                      ),
-                    );
-                  },
-                ),
-              ),
+                        )
+                      : Container(
+                          color: Colors.white,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: sessions.length + 1, // +1 for the instructions
+                            itemBuilder: (context, index) {
+                              if (index == 0) {
+                                // First item is the instructions
+                                return const SwipeInstructions();
+                              }
+
+                              // Adjust index for sessions
+                              final sessionIndex = index - 1;
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => TeacherSessionDetailScreen(
+                                        session: sessions[sessionIndex],
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: SessionCard(
+                                  session: sessions[sessionIndex],
+                                  onEdit: _handleEditSession,
+                                  onDelete: _handleDeleteSession,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
             ),
           ],
         ),
@@ -209,6 +329,7 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
               const SnackBar(content: Text('Đã thêm buổi học mới')),
             );
           },
+          classId: widget.classId,
         ),
       ),
     );

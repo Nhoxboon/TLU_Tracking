@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'teacher_class_detail_screen.dart';
 import '../../widgets/teacher_bottom_nav.dart';
+import '../../services/api_service.dart';
+import '../../services/user_session.dart';
 
 class ClassStudentScreen extends StatefulWidget {
+  final int classId;
   final String className;
   final String classCode;
   final int studentCount;
 
   const ClassStudentScreen({
     Key? key,
+    required this.classId,
     required this.className,
     required this.classCode,
     required this.studentCount,
@@ -21,16 +27,88 @@ class ClassStudentScreen extends StatefulWidget {
 class _ClassStudentScreenState extends State<ClassStudentScreen> {
   final TextEditingController _searchController = TextEditingController();
   
-  // Mock student data
-  final List<_StudentItem> _students = const [
-    _StudentItem(name: 'Nguyễn Sơn', studentId: '2251171235'),
-    _StudentItem(name: 'Trần Minh Anh', studentId: '2251171236'),
-    _StudentItem(name: 'Lê Văn Hùng', studentId: '2251171237'),
-    _StudentItem(name: 'Phạm Thị Lan', studentId: '2251171238'),
-    _StudentItem(name: 'Hoàng Đức Nam', studentId: '2251171239'),
-    _StudentItem(name: 'Nguyễn Thị Mai', studentId: '2251171240'),
-    _StudentItem(name: 'Vũ Minh Tuấn', studentId: '2251171241'),
-  ];
+  List<_StudentItem> _students = [];
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchStudents();
+  }
+
+  Future<void> _fetchStudents() async {
+    print('DEBUG - Fetching students for classId: ${widget.classId}');
+    
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    
+    try {
+      if (widget.classId <= 0) {
+        print('DEBUG - Invalid classId (<= 0), aborting fetch');
+        setState(() {
+          _error = 'ID lớp không hợp lệ';
+        });
+        return;
+      }
+
+      final baseUrl = ApiService.baseUrl;
+      final url = Uri.parse('$baseUrl/classes/${widget.classId}/students?active_only=true');
+      
+      print('DEBUG - Request URL: $url');
+      // Build headers with Authorization if available
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      // Access token is stored in UserSession via ApiService.login
+      // Avoid logging full token for security
+      final token = UserSession().accessToken;
+      final tokenType = UserSession().tokenType ?? 'Bearer';
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = '$tokenType $token';
+      }
+      print("DEBUG - Authorization header present: ${headers.containsKey('Authorization')}");
+
+      final response = await http.get(url, headers: headers);
+      
+      print('DEBUG - Response status: ${response.statusCode}');
+      print('DEBUG - Response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final List<_StudentItem> loaded = [];
+        
+        for (var item in data) {
+          loaded.add(_StudentItem(
+            name: item['student_name'] ?? '',
+            studentId: item['student_code'] ?? '',
+          ));
+        }
+        
+        print('DEBUG - Loaded ${loaded.length} students');
+        
+        setState(() {
+          _students = loaded;
+        });
+      } else {
+        setState(() {
+          _error = 'Lỗi lấy dữ liệu sinh viên';
+        });
+      }
+    } catch (e) {
+      print('DEBUG - Error: $e');
+      setState(() {
+        _error = 'Lỗi kết nối: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   List<_StudentItem> get filteredStudents {
     if (_searchController.text.isEmpty) {
@@ -221,10 +299,12 @@ class _ClassStudentScreenState extends State<ClassStudentScreen> {
                     borderRadius: BorderRadius.circular(6),
                     onTap: () {
                       // Navigate to class detail screen
+                      print('DEBUG - Navigating to TeacherClassDetailScreen with classId: ${widget.classId}, classCode: ${widget.classCode}');
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => TeacherClassDetailScreen(
+                            classId: widget.classId,
                             classCode: widget.classCode,
                           ),
                         ),
@@ -253,15 +333,33 @@ class _ClassStudentScreenState extends State<ClassStudentScreen> {
             
             // Student list
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: filteredStudents.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final student = filteredStudents[index];
-                  return _StudentCard(student: student);
-                },
-              ),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(_error!),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: _fetchStudents,
+                                child: const Text('Thử lại'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : filteredStudents.isEmpty
+                          ? const Center(child: Text('Không có sinh viên nào'))
+                          : ListView.separated(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: filteredStudents.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 12),
+                              itemBuilder: (context, index) {
+                                final student = filteredStudents[index];
+                                return _StudentCard(student: student);
+                              },
+                            ),
             ),
           ],
         ),

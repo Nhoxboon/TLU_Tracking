@@ -5,12 +5,14 @@ class SessionForm extends StatefulWidget {
   final TeachingSession? session;
   final String title;
   final Function(TeachingSession) onSave;
+  final void Function(DateTime date, TimeOfDay start, TimeOfDay end, bool isOpen)? onSaveRaw;
 
   const SessionForm({
     Key? key,
     this.session,
     required this.title,
     required this.onSave,
+    this.onSaveRaw,
   }) : super(key: key);
 
   @override
@@ -375,21 +377,23 @@ class _SessionFormState extends State<SessionForm> {
   }
 
   void _saveSession() {
+    // If raw callback provided, delegate saving to parent (do not pop here)
+    if (widget.onSaveRaw != null) {
+      widget.onSaveRaw!(selectedDate, startTime, endTime, isOpen);
+      return;
+    }
+
     // Create a formatted time slot string
     final timeSlot =
         '${_formatTimeOfDay(startTime).split(' ')[0]} - ${_formatTimeOfDay(endTime).split(' ')[0]}${endTime.period == DayPeriod.am ? 'AM' : 'PM'}';
 
     // Create a new session or update existing one
     final session = TeachingSession(
-      id:
-          widget.session?.id ??
-          DateTime.now().millisecondsSinceEpoch.toString(),
+      id: widget.session?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       date: dateController.text,
       timeSlot: timeSlot,
-      attendanceCount:
-          widget.session?.attendanceCount ?? 0, // Default to 0 for new sessions
-      totalStudents:
-          widget.session?.totalStudents ?? 40, // Default to 40 for new sessions
+      attendanceCount: widget.session?.attendanceCount ?? 0,
+      totalStudents: widget.session?.totalStudents ?? 40,
       isOpen: isOpen,
     );
 
