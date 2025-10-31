@@ -85,7 +85,20 @@ class _LoginScreenState extends State<LoginScreen> {
             accessToken: loginResponse.accessToken,
             tokenType: loginResponse.tokenType,
           );
-          
+
+          // Sau khi đăng nhập, gọi API lấy thông tin user hiện tại
+          final meResponse = await ApiService().getCurrentUser();
+          if (meResponse.success && meResponse.data != null) {
+            // Cập nhật lại userData với thông tin từ /auth/me
+            UserSession().setUser(
+              role: loginResponse.role,
+              userData: meResponse.data!,
+              username: _emailController.text.trim(),
+              accessToken: loginResponse.accessToken,
+              tokenType: loginResponse.tokenType,
+            );
+          }
+
           // Navigate based on user role
           switch (loginResponse.role) {
             case UserRole.admin:

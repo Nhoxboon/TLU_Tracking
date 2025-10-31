@@ -16,6 +16,12 @@ class UserSession extends ChangeNotifier {
 
   UserRole? get userRole => _userRole;
   Map<String, dynamic>? get userData => _userData;
+  int? get profileId {
+    final profileId = _userData?['profile_id'];
+    if (profileId is int) return profileId;
+    if (profileId is String) return int.tryParse(profileId);
+    return null;
+  }
   String? get username => _username;
   String? get accessToken => _accessToken;
   String? get tokenType => _tokenType;
