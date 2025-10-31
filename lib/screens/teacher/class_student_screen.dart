@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'teacher_class_detail_screen.dart';
+import '../../widgets/teacher_bottom_nav.dart';
 
 class ClassStudentScreen extends StatefulWidget {
   final String className;
@@ -265,45 +266,8 @@ class _ClassStudentScreenState extends State<ClassStudentScreen> {
           ],
         ),
       ),
-      // Custom bottom navigation to match design
-      bottomNavigationBar: Container(
-        height: 59,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.07),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF565656).withOpacity(0.25),
-              blurRadius: 100,
-              offset: const Offset(0, -10),
-            ),
-          ],
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(30),
-            topRight: Radius.circular(30),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              child: Icon(
-                Icons.home_outlined,
-                color: Colors.black.withOpacity(0.7),
-                size: 25,
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(8),
-              child: Icon(
-                Icons.person_outline,
-                color: Colors.black.withOpacity(0.7),
-                size: 20,
-              ),
-            ),
-          ],
-        ),
-      ),
+      // Use shared bottom navigation
+      bottomNavigationBar: const TeacherBottomNav(currentIndex: 0),
     );
   }
 }
