@@ -68,24 +68,35 @@ class _SessionCardState extends State<SessionCard> {
             children: [
               // Date and time row
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    widget.session.date,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF344054),
+                  Expanded(
+                    child: Text(
+                      widget.session.date,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF344054),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Text(
-                    widget.session.timeSlot,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF344054),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        widget.session.timeSlot,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF344054),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                 ],
@@ -95,33 +106,38 @@ class _SessionCardState extends State<SessionCard> {
               
               // Attendance and status row
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Attendance count
-                  Row(
-                    children: [
-                      Container(
-                        width: 16,
-                        height: 16,
-                        margin: const EdgeInsets.only(right: 4),
-                        child: const Icon(
-                          Icons.people_outline,
-                          size: 16,
-                          color: Color(0xFF667085),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 16,
+                          height: 16,
+                          margin: const EdgeInsets.only(right: 4),
+                          child: const Icon(
+                            Icons.people_outline,
+                            size: 16,
+                            color: Color(0xFF667085),
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${widget.session.attendanceCount}/${widget.session.totalStudents} Sinh viên',
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF667085),
+                        Flexible(
+                          child: Text(
+                            '${widget.session.attendanceCount}/${widget.session.totalStudents} Sinh viên',
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF667085),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  
+                  const SizedBox(width: 12),
                   // Session status indicator
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

@@ -45,21 +45,57 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       final baseUrl = ApiService.baseUrl;
       final url = Uri.parse('$baseUrl/classes?teacher_id=$teacherId');
 
-      final response = await http.get(url);
+      // Build headers with Authorization if available
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      final token = UserSession().accessToken;
+      final tokenType = UserSession().tokenType ?? 'Bearer';
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = '$tokenType $token';
+      }
+
+      final response = await http.get(url, headers: headers);
+      print('DEBUG - API Response status: ${response.statusCode}');
+      print('DEBUG - API Response body: ${response.body}');
+      
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // Giả sử data['items'] là List các lớp
+        print('DEBUG - Parsed data: $data');
+        
+        // API trả về PaginatedResponse với items array
         final List<_ClassItem> loaded = [];
         for (var item in (data['items'] ?? [])) {
+          print('DEBUG - Processing item: $item');
+          
+          // Parse id an toàn
+          final rawId = item['id'] ?? item['class_id'];
+          print('DEBUG - Raw id value: $rawId (type: ${rawId.runtimeType})');
+          
+          final int classId = (rawId is int)
+              ? rawId
+              : (rawId is String ? int.tryParse(rawId) ?? 0 : 0);
+          
+          final title = item['name'] ?? item['class_name'] ?? '';
+          final code = item['code'] ?? item['class_code'] ?? '';
+          final studentsCount = item['student_count'] ?? item['students_count'] ?? 0;
+
+          print('DEBUG - Class item parsed -> id=$classId, name=$title, code=$code, student_count=$studentsCount');
+          
           loaded.add(_ClassItem(
-            title: item['name'] ?? '',
-            code: item['code'] ?? '',
-            students: item['students_count'] ?? 0,
+            id: classId,
+            title: title,
+            code: code,
+            students: studentsCount is int
+                ? studentsCount
+                : (studentsCount is String ? int.tryParse(studentsCount) ?? 0 : 0),
           ));
         }
         setState(() {
           _classes = loaded;
         });
+        print('DEBUG - Loaded ${loaded.length} classes');
       } else {
         setState(() {
           _error = 'Lỗi lấy dữ liệu lớp học';
@@ -262,10 +298,20 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                                 item: item,
                                 onTap: () {
                                   // Navigate to class detail screen
+                                  print('DEBUG - Navigating to class: id=${item.id}, name=${item.title}, code=${item.code}');
+                                  
+                                  if (item.id == 0) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Lỗi: ID lớp không hợp lệ')),
+                                    );
+                                    return;
+                                  }
+                                  
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => ClassStudentScreen(
+                                        classId: item.id,
                                         className: item.title,
                                         classCode: item.code,
                                         studentCount: item.students,
@@ -593,10 +639,11 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
 
 // Class item model
 class _ClassItem {
+  final int id;
   final String title;
   final String code;
   final int students;
-  const _ClassItem({required this.title, required this.code, required this.students});
+  const _ClassItem({required this.id, required this.title, required this.code, required this.students});
 }
 
 // Class card widget

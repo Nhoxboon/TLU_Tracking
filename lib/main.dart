@@ -58,7 +58,13 @@ class MyApp extends StatelessWidget {
             className: args['className'] as String,
           );
         },
-        '/class-detail': (context) => const TeacherClassDetailScreen(classCode: 'CSE'),
+        '/class-detail': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          return TeacherClassDetailScreen(
+            classId: args?['classId'] as int? ?? 1,
+            classCode: args?['classCode'] as String? ?? 'CSE',
+          );
+        },
         '/onboarding': (context) => const OnboardingScreen(),
         '/student/login': (context) => const LoginScreen(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
