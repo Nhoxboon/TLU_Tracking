@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../../services/api_service.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 import 'class_student_screen.dart';
@@ -14,19 +18,74 @@ class TeacherDashboardScreen extends StatefulWidget {
 class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   final TextEditingController _searchController = TextEditingController();
 
-  // Mock data for now - will be replaced with API data later
-  final List<_ClassItem> _classes = const [
-    _ClassItem(title: 'Lập trình di động', code: 'CSE301', students: 45),
-    _ClassItem(title: 'Cơ sở dữ liệu', code: 'CSE202', students: 38),
-    _ClassItem(title: 'Công nghệ phần mềm', code: 'CSE401', students: 42),
-    _ClassItem(title: 'Mạng máy tính', code: 'CSE303', students: 35),
-    _ClassItem(title: 'Trí tuệ nhân tạo', code: 'CSE501', students: 40),
-  ];
+  List<_ClassItem> _classes = [];
+  bool _isLoading = false;
+  String? _error;
+
+  // Lấy teacherId từ profile_id trong UserSession
+  int? get teacherId {
+    final profileId = UserSession().userData?['profile_id'];
+    if (profileId is int) return profileId;
+    if (profileId is String) return int.tryParse(profileId);
+    return null;
+  }
+
+  Future<void> _fetchClasses() async {
+    if (teacherId == null) {
+      setState(() {
+        _error = 'Không tìm thấy mã giáo viên';
+      });
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final baseUrl = ApiService.baseUrl;
+      final url = Uri.parse('$baseUrl/classes?teacher_id=$teacherId');
+
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Giả sử data['items'] là List các lớp
+        final List<_ClassItem> loaded = [];
+        for (var item in (data['items'] ?? [])) {
+          loaded.add(_ClassItem(
+            title: item['name'] ?? '',
+            code: item['code'] ?? '',
+            students: item['students_count'] ?? 0,
+          ));
+        }
+        setState(() {
+          _classes = loaded;
+        });
+      } else {
+        setState(() {
+          _error = 'Lỗi lấy dữ liệu lớp học';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Lỗi kết nối: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
+    // Gọi API mỗi khi màn hình được load lại
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_classes.isEmpty && !_isLoading) {
+        _fetchClasses();
+      }
+    });
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: PreferredSize(
@@ -180,37 +239,43 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           const SizedBox(height: 12),
           // List of classes
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(13, 12, 13, 20),
-              itemCount: _classes.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final item = _classes[index];
-                if (_searchController.text.isNotEmpty) {
-                  final q = _searchController.text.toLowerCase();
-                  if (!item.title.toLowerCase().contains(q) &&
-                      !item.code.toLowerCase().contains(q)) {
-                    return const SizedBox.shrink();
-                  }
-                }
-                return _ClassCard(
-                  item: item,
-                  onTap: () {
-                    // Navigate to class detail screen
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ClassStudentScreen(
-                          className: item.title,
-                          classCode: item.code,
-                          studentCount: item.students,
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? Center(child: Text(_error!))
+                    : _classes.isEmpty
+                        ? const Center(child: Text('Không có lớp học nào'))
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(13, 12, 13, 20),
+                            itemCount: _classes.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final item = _classes[index];
+                              if (_searchController.text.isNotEmpty) {
+                                final q = _searchController.text.toLowerCase();
+                                if (!item.title.toLowerCase().contains(q) &&
+                                    !item.code.toLowerCase().contains(q)) {
+                                  return const SizedBox.shrink();
+                                }
+                              }
+                              return _ClassCard(
+                                item: item,
+                                onTap: () {
+                                  // Navigate to class detail screen
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ClassStudentScreen(
+                                        className: item.title,
+                                        classCode: item.code,
+                                        studentCount: item.students,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
           ),
         ],
       ),
