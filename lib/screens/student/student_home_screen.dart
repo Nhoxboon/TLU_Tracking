@@ -6,6 +6,7 @@ import '../../services/user_session.dart';
 import '../../utils/navigation.dart';
 import '../settings_screen.dart';
 import 'student_class_detail_screen.dart';
+import 'class_search_screen.dart';
 
 class StudentHomeScreen extends StatefulWidget {
   const StudentHomeScreen({Key? key}) : super(key: key);
@@ -169,36 +170,42 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> with RouteAware {
             // Search
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                height: 52,
-                decoration: BoxDecoration(
-                  color: const Color(0x142196F3), // #2196F3 @ 8%
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0x4D333333)),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 12),
-                    const Icon(Icons.search, size: 24, color: Colors.black54),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: const InputDecoration(
-                          hintText: 'Tìm kiếm lớp',
-                          border: InputBorder.none,
-                          hintStyle: TextStyle(
+              child: GestureDetector(
+                onTap: () {
+                  // Navigate to advanced search screen
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ClassSearchScreen(),
+                    ),
+                  );
+                },
+                child: Container(
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: const Color(0x142196F3), // #2196F3 @ 8%
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0x4D333333)),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 12),
+                      const Icon(Icons.search, size: 24, color: Colors.black54),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Tìm kiếm lớp',
+                          style: TextStyle(
                             fontSize: 16,
                             height: 1.235,
                             letterSpacing: -0.32,
                             color: Color(0xB3333333), // 70%
                           ),
                         ),
-                        onChanged: (_) => setState(() {}),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
+                      const SizedBox(width: 12),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -232,13 +239,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> with RouteAware {
                           separatorBuilder: (_, __) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final item = _classes[index];
-                            if (_searchController.text.isNotEmpty) {
-                              final q = _searchController.text.toLowerCase();
-                              if (!item.title.toLowerCase().contains(q) &&
-                                  !item.code.toLowerCase().contains(q)) {
-                                return const SizedBox.shrink();
-                              }
-                            }
                             return _ClassCard(
                               item: item,
                               onTap: () {
