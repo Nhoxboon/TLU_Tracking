@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../../services/api_service.dart';
+import '../../services/user_session.dart';
+import '../../utils/navigation.dart';
 import '../settings_screen.dart';
 import 'student_class_detail_screen.dart';
 
@@ -9,18 +14,105 @@ class StudentHomeScreen extends StatefulWidget {
   State<StudentHomeScreen> createState() => _StudentHomeScreenState();
 }
 
-class _StudentHomeScreenState extends State<StudentHomeScreen> {
+class _StudentHomeScreenState extends State<StudentHomeScreen> with RouteAware {
   final TextEditingController _searchController = TextEditingController();
 
-  final List<_ClassItem> _classes = const [
-    _ClassItem(title: 'Mobile app', code: 'CSE', students: 40),
-    _ClassItem(title: 'Mobile app', code: 'CSE', students: 40),
-    _ClassItem(title: 'Mobile app', code: 'CSE', students: 40),
-    _ClassItem(title: 'Mobile app', code: 'CSE', students: 40),
-    _ClassItem(title: 'Mobile app', code: 'CSE', students: 40),
-  ];
+  List<_ClassItem> _classes = [];
+  bool _isLoading = false;
+  String? _error;
 
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchClasses();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Subscribe to route changes so we can refresh when coming back
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Called when coming back to this screen
+    _fetchClasses();
+  }
+
+  Future<void> _fetchClasses() async {
+    final studentId = UserSession().profileId;
+    if (studentId == null) {
+      setState(() {
+        _error = 'Không xác định được student_id. Vui lòng đăng nhập lại.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final baseUrl = ApiService.baseUrl;
+      final url = Uri.parse('$baseUrl/classes/student/$studentId?active_only=true');
+
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      final token = UserSession().accessToken;
+      final tokenType = UserSession().tokenType ?? 'Bearer';
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = '$tokenType $token';
+      }
+
+      debugPrint('DEBUG - Fetching student classes: $url');
+      final resp = await http.get(url, headers: headers);
+      debugPrint('DEBUG - Status: ${resp.statusCode}');
+      debugPrint('DEBUG - Body: ${resp.body}');
+
+      if (resp.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(resp.body);
+        final loaded = data.map((e) {
+          final m = e as Map<String, dynamic>;
+          return _ClassItem(
+            id: (m['id'] ?? 0) is int ? m['id'] as int : int.tryParse('${m['id']}') ?? 0,
+            title: (m['name'] ?? m['class_name'] ?? 'Chưa rõ').toString(),
+            code: (m['code'] ?? m['class_code'] ?? '—').toString(),
+            students: (m['student_count'] ?? m['students_count'] ?? 0) as int,
+          );
+        }).toList();
+        setState(() {
+          _classes = loaded;
+        });
+      } else {
+        setState(() {
+          _error = 'Lỗi tải danh sách lớp (${resp.statusCode})';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Lỗi kết nối: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -115,35 +207,54 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
             // List of classes
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(13, 12, 13, 100),
-                itemCount: _classes.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final item = _classes[index];
-                  if (_searchController.text.isNotEmpty) {
-                    final q = _searchController.text.toLowerCase();
-                    if (!item.title.toLowerCase().contains(q) &&
-                        !item.code.toLowerCase().contains(q)) {
-                      return const SizedBox.shrink();
-                    }
-                  }
-                  return _ClassCard(
-                    item: item,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => StudentClassDetailScreen(
-                            classCode: item.code,
-                            className: item.title,
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(_error!, textAlign: TextAlign.center),
+                                const SizedBox(height: 12),
+                                ElevatedButton(
+                                  onPressed: _fetchClasses,
+                                  child: const Text('Thử lại'),
+                                )
+                              ],
+                            ),
                           ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(13, 12, 13, 100),
+                          itemCount: _classes.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final item = _classes[index];
+                            if (_searchController.text.isNotEmpty) {
+                              final q = _searchController.text.toLowerCase();
+                              if (!item.title.toLowerCase().contains(q) &&
+                                  !item.code.toLowerCase().contains(q)) {
+                                return const SizedBox.shrink();
+                              }
+                            }
+                            return _ClassCard(
+                              item: item,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => StudentClassDetailScreen(
+                                      classCode: item.code,
+                                      className: item.title,
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
                         ),
-                      );
-                    },
-                  );
-                },
-              ),
             ),
           ],
         ),
@@ -202,10 +313,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 }
 
 class _ClassItem {
+  final int id;
   final String title;
   final String code;
   final int students;
-  const _ClassItem({required this.title, required this.code, required this.students});
+  const _ClassItem({required this.id, required this.title, required this.code, required this.students});
 }
 
 class _ClassCard extends StatelessWidget {
