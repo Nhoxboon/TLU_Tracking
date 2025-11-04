@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../services/user_session.dart';
+import '../services/api_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({Key? key}) : super(key: key);
@@ -11,11 +15,101 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   
   // Form controllers
-  final TextEditingController _nameController = TextEditingController(text: 'Vishal Khadok');
-  final TextEditingController _emailController = TextEditingController(text: 'hello@halallab.co');
-  final TextEditingController _birthdayController = TextEditingController(text: '12/02/2025');
-  final TextEditingController _hometownController = TextEditingController(text: 'Hải Dương');
-  final TextEditingController _phoneController = TextEditingController(text: '408-841-0926');
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _birthdayController = TextEditingController();
+  final TextEditingController _hometownController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _studentCodeController = TextEditingController();
+  final TextEditingController _facultyController = TextEditingController();
+  final TextEditingController _majorController = TextEditingController();
+  
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserProfile();
+  }
+
+  Future<void> _fetchUserProfile() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final token = UserSession().accessToken;
+      if (token == null) {
+        throw Exception('Chưa đăng nhập');
+      }
+
+      final url = Uri.parse('${ApiService.baseUrl}/auth/me');
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      debugPrint('DEBUG - Profile API Status: ${response.statusCode}');
+      debugPrint('DEBUG - Profile API Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        
+        if (data['success'] == true && data['data'] != null) {
+          final userData = data['data'];
+          final profile = userData['profile'];
+          
+          setState(() {
+            _emailController.text = userData['email'] ?? '';
+            
+            if (profile != null) {
+              _nameController.text = profile['full_name'] ?? '';
+              _phoneController.text = profile['phone'] ?? '';
+              _studentCodeController.text = profile['student_code'] ?? '';
+              _hometownController.text = profile['hometown'] ?? '';
+              
+              // Format birth_date from "2004-10-25" to "12/02/2025"
+              if (profile['birth_date'] != null) {
+                try {
+                  final parts = profile['birth_date'].toString().split('-');
+                  if (parts.length == 3) {
+                    _birthdayController.text = '${parts[2]}/${parts[1]}/${parts[0]}';
+                  }
+                } catch (e) {
+                  _birthdayController.text = profile['birth_date'] ?? '';
+                }
+              }
+              
+              // Store faculty_id and major_id for reference
+              if (profile['faculty_id'] != null) {
+                _facultyController.text = 'Khoa ${profile['faculty_id']}';
+              }
+              if (profile['major_id'] != null) {
+                _majorController.text = 'Ngành ${profile['major_id']}';
+              }
+            }
+            
+            _isLoading = false;
+          });
+        } else {
+          throw Exception(data['message'] ?? 'Lỗi lấy thông tin người dùng');
+        }
+      } else {
+        throw Exception('Lỗi server: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error fetching profile: $e');
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -24,6 +118,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _birthdayController.dispose();
     _hometownController.dispose();
     _phoneController.dispose();
+    _studentCodeController.dispose();
+    _facultyController.dispose();
+    _majorController.dispose();
     super.dispose();
   }
 
@@ -31,52 +128,87 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Status bar and top app bar
-            _buildAppBar(context),
-            
-            // Form content (scrollable)
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Form(
-                  key: _formKey,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text(
+                          _error!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _fetchUserProfile,
+                          child: const Text('Thử lại'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : SafeArea(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 20),
+                      // Status bar and top app bar
+                      _buildAppBar(context),
                       
-                      // Name field
-                      _buildTextField(
-                        controller: _nameController,
-                        label: 'Tên',
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Vui lòng nhập tên';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 25),
-                      
-                      // Email field
-                      _buildTextField(
-                        controller: _emailController,
-                        label: 'Email',
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Vui lòng nhập email';
-                          }
-                          if (!value.contains('@')) {
-                            return 'Email không hợp lệ';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 25),
+                      // Form content (scrollable)
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 20),
+                                
+                                // Student Code (read-only)
+                                if (_studentCodeController.text.isNotEmpty)
+                                  _buildTextField(
+                                    controller: _studentCodeController,
+                                    label: 'Mã sinh viên',
+                                    enabled: false,
+                                  ),
+                                if (_studentCodeController.text.isNotEmpty)
+                                  const SizedBox(height: 25),
+                                
+                                // Name field
+                                _buildTextField(
+                                  controller: _nameController,
+                                  label: 'Tên',
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Vui lòng nhập tên';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 25),
+                                
+                                // Email field
+                                _buildTextField(
+                                  controller: _emailController,
+                                  label: 'Email',
+                                  keyboardType: TextInputType.emailAddress,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Vui lòng nhập email';
+                                    }
+                                    if (!value.contains('@')) {
+                                      return 'Email không hợp lệ';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 25),
                       
                       // Birthday field (date picker)
                       _buildDatePickerField(
@@ -159,6 +291,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     required String label,
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
+    bool enabled = true,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,9 +310,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           controller: controller,
           keyboardType: keyboardType,
           validator: validator,
+          enabled: enabled,
           decoration: InputDecoration(
             filled: true,
-            fillColor: const Color(0xFFF0F5FA),
+            fillColor: enabled ? const Color(0xFFF0F5FA) : const Color(0xFFE8E8E8),
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
@@ -189,12 +323,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               borderRadius: BorderRadius.circular(10),
               borderSide: const BorderSide(color: Color(0xFFE4E7EC), width: 1),
             ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFE4E7EC), width: 1),
+            ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: const BorderSide(color: Color(0xFF2196F3), width: 1),
             ),
           ),
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Sen',
             fontSize: 14,
             fontWeight: FontWeight.w400,

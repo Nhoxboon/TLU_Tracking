@@ -25,6 +25,27 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
   bool _isSearching = false;
   String? _error;
 
+  // Cache for dropdown data
+  List<Map<String, dynamic>> _classCodes = [];
+  List<Map<String, dynamic>> _teachers = [];
+  List<Map<String, dynamic>> _subjects = [];
+  List<Map<String, dynamic>> _faculties = [];
+  List<Map<String, dynamic>> _cohorts = [];
+
+  // Dropdown expansion states
+  String? _expandedFilter; // 'classCode', 'teacher', 'subject', 'faculty', 'cohort'
+  
+  // Pagination for dropdowns
+  final Map<String, int> _displayedCounts = {
+    'classCode': 5,
+    'teacher': 5,
+    'subject': 5,
+    'faculty': 5,
+    'cohort': 5,
+  };
+  
+  bool _isLoadingDropdown = false;
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -179,41 +200,113 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
 
             const SizedBox(height: 8),
 
-            // Filter chips
+            // Filter chips with inline dropdowns
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildFilterChip(
+                    filterKey: 'classCode',
                     label: 'Lọc theo mã lớp',
                     value: _selectedClassCode,
-                    onTap: () => _showClassCodePicker(),
+                    onTap: () => _toggleDropdown('classCode'),
                   ),
+                  if (_expandedFilter == 'classCode')
+                    _buildDropdownList(
+                      items: _classCodes,
+                      filterKey: 'classCode',
+                      displayField: 'code',
+                      onSelect: (value) {
+                        setState(() {
+                          _selectedClassCode = value;
+                          _expandedFilter = null;
+                        });
+                      },
+                    ),
                   const SizedBox(height: 8),
+                  
                   _buildFilterChip(
+                    filterKey: 'teacher',
                     label: 'Lọc theo giảng viên',
                     value: _selectedTeacher,
-                    onTap: () => _showTeacherPicker(),
+                    onTap: () => _toggleDropdown('teacher'),
                   ),
+                  if (_expandedFilter == 'teacher')
+                    _buildDropdownList(
+                      items: _teachers,
+                      filterKey: 'teacher',
+                      displayField: 'full_name',
+                      secondaryField: 'teacher_code',
+                      onSelect: (value) {
+                        setState(() {
+                          _selectedTeacher = value;
+                          _expandedFilter = null;
+                        });
+                      },
+                    ),
                   const SizedBox(height: 8),
+                  
                   _buildFilterChip(
+                    filterKey: 'subject',
                     label: 'Lọc theo môn học',
                     value: _selectedSubject,
-                    onTap: () => _showSubjectPicker(),
+                    onTap: () => _toggleDropdown('subject'),
                   ),
+                  if (_expandedFilter == 'subject')
+                    _buildDropdownList(
+                      items: _subjects,
+                      filterKey: 'subject',
+                      displayField: 'name',
+                      secondaryField: 'code',
+                      onSelect: (value) {
+                        setState(() {
+                          _selectedSubject = value;
+                          _expandedFilter = null;
+                        });
+                      },
+                    ),
                   const SizedBox(height: 8),
+                  
                   _buildFilterChip(
+                    filterKey: 'faculty',
                     label: 'Lọc theo khoa',
                     value: _selectedFaculty,
-                    onTap: () => _showFacultyPicker(),
+                    onTap: () => _toggleDropdown('faculty'),
                   ),
+                  if (_expandedFilter == 'faculty')
+                    _buildDropdownList(
+                      items: _faculties,
+                      filterKey: 'faculty',
+                      displayField: 'name',
+                      secondaryField: 'code',
+                      onSelect: (value) {
+                        setState(() {
+                          _selectedFaculty = value;
+                          _expandedFilter = null;
+                        });
+                      },
+                    ),
                   const SizedBox(height: 8),
+                  
                   _buildFilterChip(
+                    filterKey: 'cohort',
                     label: 'Lọc theo khóa',
                     value: _selectedCohort,
-                    onTap: () => _showCohortPicker(),
+                    onTap: () => _toggleDropdown('cohort'),
                   ),
+                  if (_expandedFilter == 'cohort')
+                    _buildDropdownList(
+                      items: _cohorts,
+                      filterKey: 'cohort',
+                      displayField: 'name',
+                      onSelect: (value) {
+                        setState(() {
+                          _selectedCohort = value;
+                          _expandedFilter = null;
+                        });
+                      },
+                    ),
                 ],
               ),
             ),
@@ -325,11 +418,234 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
     );
   }
 
+  void _toggleDropdown(String filterKey) async {
+    if (_expandedFilter == filterKey) {
+      setState(() => _expandedFilter = null);
+      return;
+    }
+
+    setState(() {
+      _expandedFilter = filterKey;
+      _isLoadingDropdown = true;
+      _displayedCounts[filterKey] = 5; // Reset to 5 items
+    });
+
+    // Fetch data if not cached
+    switch (filterKey) {
+      case 'classCode':
+        if (_classCodes.isEmpty) await _fetchClassCodes();
+        break;
+      case 'teacher':
+        if (_teachers.isEmpty) await _fetchTeachers();
+        break;
+      case 'subject':
+        if (_subjects.isEmpty) await _fetchSubjects();
+        break;
+      case 'faculty':
+        if (_faculties.isEmpty) await _fetchFaculties();
+        break;
+      case 'cohort':
+        if (_cohorts.isEmpty) await _fetchCohorts();
+        break;
+    }
+
+    if (mounted) {
+      setState(() => _isLoadingDropdown = false);
+    }
+  }
+
+  void _loadMoreItems(String filterKey) {
+    setState(() {
+      _displayedCounts[filterKey] = (_displayedCounts[filterKey] ?? 5) + 5;
+    });
+  }
+
+  Widget _buildDropdownList({
+    required List<Map<String, dynamic>> items,
+    required String filterKey,
+    required String displayField,
+    String? secondaryField,
+    required Function(String) onSelect,
+  }) {
+    final displayCount = _displayedCounts[filterKey] ?? 5;
+    final visibleItems = items.take(displayCount).toList();
+    final hasMore = items.length > displayCount;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFEAECF0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_isLoadingDropdown)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else ...[
+            // Clear filter button
+            Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: const Color(0xFFEAECF0)),
+                ),
+              ),
+              child: ListTile(
+                dense: true,
+                leading: const Icon(Icons.clear, size: 20, color: Colors.red),
+                title: const Text(
+                  'Xóa bộ lọc',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.red,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                onTap: () {
+                  setState(() {
+                    switch (filterKey) {
+                      case 'classCode':
+                        _selectedClassCode = null;
+                        break;
+                      case 'teacher':
+                        _selectedTeacher = null;
+                        break;
+                      case 'subject':
+                        _selectedSubject = null;
+                        break;
+                      case 'faculty':
+                        _selectedFaculty = null;
+                        break;
+                      case 'cohort':
+                        _selectedCohort = null;
+                        break;
+                    }
+                    _expandedFilter = null;
+                  });
+                },
+              ),
+            ),
+            
+            // Items list
+            if (visibleItems.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Không có dữ liệu',
+                  style: TextStyle(color: Colors.black54),
+                ),
+              )
+            else
+              ...visibleItems.map((item) {
+                final displayValue = item[displayField]?.toString() ?? '';
+                final secondaryValue = secondaryField != null 
+                    ? item[secondaryField]?.toString() 
+                    : null;
+                final fullText = secondaryValue != null 
+                    ? '$displayValue ($secondaryValue)' 
+                    : displayValue;
+                
+                String? selectedValue;
+                switch (filterKey) {
+                  case 'classCode':
+                    selectedValue = _selectedClassCode;
+                    break;
+                  case 'teacher':
+                    selectedValue = _selectedTeacher;
+                    break;
+                  case 'subject':
+                    selectedValue = _selectedSubject;
+                    break;
+                  case 'faculty':
+                    selectedValue = _selectedFaculty;
+                    break;
+                  case 'cohort':
+                    selectedValue = _selectedCohort;
+                    break;
+                }
+                
+                final isSelected = selectedValue == displayValue;
+                
+                return Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: const Color(0xFFEAECF0).withOpacity(0.5),
+                      ),
+                    ),
+                  ),
+                  child: ListTile(
+                    dense: true,
+                    title: Text(
+                      fullText,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isSelected ? const Color(0xFF2196F3) : Colors.black87,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? const Icon(Icons.check, color: Color(0xFF2196F3), size: 20)
+                        : null,
+                    onTap: () => onSelect(displayValue),
+                  ),
+                );
+              }).toList(),
+            
+            // Load more button
+            if (hasMore)
+              Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: const Color(0xFFEAECF0)),
+                  ),
+                ),
+                child: ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.expand_more, size: 20, color: Color(0xFF2196F3)),
+                  title: const Text(
+                    'Xem thêm',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF2196F3),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  trailing: Text(
+                    'Còn ${items.length - displayCount} mục',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black54,
+                    ),
+                  ),
+                  onTap: () => _loadMoreItems(filterKey),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildFilterChip({
+    required String filterKey,
     required String label,
     String? value,
     required VoidCallback onTap,
   }) {
+    final isExpanded = _expandedFilter == filterKey;
+    
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -361,127 +677,489 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.keyboard_arrow_down, size: 20, color: Colors.black),
+            Icon(
+              isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              size: 20,
+              color: Colors.black,
+            ),
           ],
         ),
       ),
     );
   }
 
-  void _showClassCodePicker() {
-    // For now, just a simple dialog - you can enhance with actual data
-    showDialog(
+  void _showClassCodePicker() async {
+    if (_classCodes.isEmpty) {
+      // Fetch all classes to get unique codes
+      await _fetchClassCodes();
+    }
+    
+    if (!mounted) return;
+    
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Chọn mã lớp'),
-        content: const Text('Chức năng đang phát triển'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() => _selectedClassCode = null);
-              Navigator.pop(context);
-            },
-            child: const Text('Xóa bộ lọc'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Đóng'),
-          ),
-        ],
+      builder: (context) => Container(
+        height: 400,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Chọn mã lớp',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() => _selectedClassCode = null);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Xóa bộ lọc'),
+                ),
+              ],
+            ),
+            const Divider(),
+            Expanded(
+              child: _classCodes.isEmpty
+                  ? const Center(child: Text('Không có dữ liệu'))
+                  : ListView.builder(
+                      itemCount: _classCodes.length,
+                      itemBuilder: (context, index) {
+                        final code = _classCodes[index]['code'] as String;
+                        return ListTile(
+                          title: Text(code),
+                          onTap: () {
+                            setState(() => _selectedClassCode = code);
+                            Navigator.pop(context);
+                          },
+                          trailing: _selectedClassCode == code
+                              ? const Icon(Icons.check, color: Color(0xFF2196F3))
+                              : null,
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showTeacherPicker() {
-    showDialog(
+  Future<void> _fetchClassCodes() async {
+    try {
+      final baseUrl = ApiService.baseUrl;
+      final url = Uri.parse('$baseUrl/classes?limit=100');
+
+      final headers = <String, String>{
+        'Accept': 'application/json',
+      };
+      final token = UserSession().accessToken;
+      final tokenType = UserSession().tokenType ?? 'Bearer';
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = '$tokenType $token';
+      }
+
+      final resp = await http.get(url, headers: headers);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final items = data['items'] as List? ?? [];
+        
+        // Extract unique class codes
+        final codes = <String>{};
+        for (var item in items) {
+          final code = item['code'] ?? item['class_code'];
+          if (code != null) codes.add(code.toString());
+        }
+        
+        setState(() {
+          _classCodes = codes.map((c) => {'code': c}).toList()..sort((a, b) => (a['code'] as String).compareTo(b['code'] as String));
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching class codes: $e');
+    }
+  }
+
+  void _showTeacherPicker() async {
+    if (_teachers.isEmpty) {
+      await _fetchTeachers();
+    }
+    
+    if (!mounted) return;
+    
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Chọn giảng viên'),
-        content: const Text('Chức năng đang phát triển'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() => _selectedTeacher = null);
-              Navigator.pop(context);
-            },
-            child: const Text('Xóa bộ lọc'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Đóng'),
-          ),
-        ],
+      builder: (context) => Container(
+        height: 400,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Chọn giảng viên',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() => _selectedTeacher = null);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Xóa bộ lọc'),
+                ),
+              ],
+            ),
+            const Divider(),
+            Expanded(
+              child: _teachers.isEmpty
+                  ? const Center(child: Text('Không có dữ liệu'))
+                  : ListView.builder(
+                      itemCount: _teachers.length,
+                      itemBuilder: (context, index) {
+                        final teacher = _teachers[index];
+                        final name = teacher['full_name'] as String;
+                        final code = teacher['teacher_code'] as String?;
+                        return ListTile(
+                          title: Text(name),
+                          subtitle: code != null ? Text(code) : null,
+                          onTap: () {
+                            setState(() => _selectedTeacher = name);
+                            Navigator.pop(context);
+                          },
+                          trailing: _selectedTeacher == name
+                              ? const Icon(Icons.check, color: Color(0xFF2196F3))
+                              : null,
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showSubjectPicker() {
-    showDialog(
+  Future<void> _fetchTeachers() async {
+    try {
+      final baseUrl = ApiService.baseUrl;
+      final url = Uri.parse('$baseUrl/users/teachers?limit=100');
+
+      final headers = <String, String>{
+        'Accept': 'application/json',
+      };
+      final token = UserSession().accessToken;
+      final tokenType = UserSession().tokenType ?? 'Bearer';
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = '$tokenType $token';
+      }
+
+      final resp = await http.get(url, headers: headers);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final items = data['items'] as List? ?? [];
+        
+        setState(() {
+          _teachers = items.map((item) => {
+            'full_name': item['full_name'] ?? 'Unknown',
+            'teacher_code': item['teacher_code'],
+          }).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching teachers: $e');
+    }
+  }
+
+  void _showSubjectPicker() async {
+    if (_subjects.isEmpty) {
+      await _fetchSubjects();
+    }
+    
+    if (!mounted) return;
+    
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Chọn môn học'),
-        content: const Text('Chức năng đang phát triển'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() => _selectedSubject = null);
-              Navigator.pop(context);
-            },
-            child: const Text('Xóa bộ lọc'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Đóng'),
-          ),
-        ],
+      builder: (context) => Container(
+        height: 400,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Chọn môn học',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() => _selectedSubject = null);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Xóa bộ lọc'),
+                ),
+              ],
+            ),
+            const Divider(),
+            Expanded(
+              child: _subjects.isEmpty
+                  ? const Center(child: Text('Không có dữ liệu'))
+                  : ListView.builder(
+                      itemCount: _subjects.length,
+                      itemBuilder: (context, index) {
+                        final subject = _subjects[index];
+                        final name = subject['name'] as String;
+                        final code = subject['code'] as String?;
+                        return ListTile(
+                          title: Text(name),
+                          subtitle: code != null ? Text(code) : null,
+                          onTap: () {
+                            setState(() => _selectedSubject = name);
+                            Navigator.pop(context);
+                          },
+                          trailing: _selectedSubject == name
+                              ? const Icon(Icons.check, color: Color(0xFF2196F3))
+                              : null,
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showFacultyPicker() {
-    showDialog(
+  Future<void> _fetchSubjects() async {
+    try {
+      final baseUrl = ApiService.baseUrl;
+      final url = Uri.parse('$baseUrl/academic/subjects?limit=100');
+
+      final headers = <String, String>{
+        'Accept': 'application/json',
+      };
+      final token = UserSession().accessToken;
+      final tokenType = UserSession().tokenType ?? 'Bearer';
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = '$tokenType $token';
+      }
+
+      final resp = await http.get(url, headers: headers);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final items = data['items'] as List? ?? [];
+        
+        setState(() {
+          _subjects = items.map((item) => {
+            'name': item['name'] ?? 'Unknown',
+            'code': item['code'],
+          }).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching subjects: $e');
+    }
+  }
+
+  void _showFacultyPicker() async {
+    if (_faculties.isEmpty) {
+      await _fetchFaculties();
+    }
+    
+    if (!mounted) return;
+    
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Chọn khoa'),
-        content: const Text('Chức năng đang phát triển'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() => _selectedFaculty = null);
-              Navigator.pop(context);
-            },
-            child: const Text('Xóa bộ lọc'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Đóng'),
-          ),
-        ],
+      builder: (context) => Container(
+        height: 400,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Chọn khoa',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() => _selectedFaculty = null);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Xóa bộ lọc'),
+                ),
+              ],
+            ),
+            const Divider(),
+            Expanded(
+              child: _faculties.isEmpty
+                  ? const Center(child: Text('Không có dữ liệu'))
+                  : ListView.builder(
+                      itemCount: _faculties.length,
+                      itemBuilder: (context, index) {
+                        final faculty = _faculties[index];
+                        final name = faculty['name'] as String;
+                        final code = faculty['code'] as String?;
+                        return ListTile(
+                          title: Text(name),
+                          subtitle: code != null ? Text(code) : null,
+                          onTap: () {
+                            setState(() => _selectedFaculty = name);
+                            Navigator.pop(context);
+                          },
+                          trailing: _selectedFaculty == name
+                              ? const Icon(Icons.check, color: Color(0xFF2196F3))
+                              : null,
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showCohortPicker() {
-    showDialog(
+  Future<void> _fetchFaculties() async {
+    try {
+      final baseUrl = ApiService.baseUrl;
+      final url = Uri.parse('$baseUrl/academic/faculties?limit=100');
+
+      final headers = <String, String>{
+        'Accept': 'application/json',
+      };
+      final token = UserSession().accessToken;
+      final tokenType = UserSession().tokenType ?? 'Bearer';
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = '$tokenType $token';
+      }
+
+      final resp = await http.get(url, headers: headers);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final items = data['items'] as List? ?? [];
+        
+        setState(() {
+          _faculties = items.map((item) => {
+            'name': item['name'] ?? 'Unknown',
+            'code': item['code'],
+          }).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching faculties: $e');
+    }
+  }
+
+  void _showCohortPicker() async {
+    if (_cohorts.isEmpty) {
+      await _fetchCohorts();
+    }
+    
+    if (!mounted) return;
+    
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Chọn khóa'),
-        content: const Text('Chức năng đang phát triển'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() => _selectedCohort = null);
-              Navigator.pop(context);
-            },
-            child: const Text('Xóa bộ lọc'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Đóng'),
-          ),
-        ],
+      builder: (context) => Container(
+        height: 400,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Chọn khóa',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() => _selectedCohort = null);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Xóa bộ lọc'),
+                ),
+              ],
+            ),
+            const Divider(),
+            Expanded(
+              child: _cohorts.isEmpty
+                  ? const Center(child: Text('Không có dữ liệu'))
+                  : ListView.builder(
+                      itemCount: _cohorts.length,
+                      itemBuilder: (context, index) {
+                        final cohort = _cohorts[index];
+                        final name = cohort['name'] as String;
+                        return ListTile(
+                          title: Text(name),
+                          onTap: () {
+                            setState(() => _selectedCohort = name);
+                            Navigator.pop(context);
+                          },
+                          trailing: _selectedCohort == name
+                              ? const Icon(Icons.check, color: Color(0xFF2196F3))
+                              : null,
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _fetchCohorts() async {
+    try {
+      final baseUrl = ApiService.baseUrl;
+      final url = Uri.parse('$baseUrl/academic/cohorts?limit=100');
+
+      final headers = <String, String>{
+        'Accept': 'application/json',
+      };
+      final token = UserSession().accessToken;
+      final tokenType = UserSession().tokenType ?? 'Bearer';
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = '$tokenType $token';
+      }
+
+      final resp = await http.get(url, headers: headers);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final items = data['items'] as List? ?? [];
+        
+        setState(() {
+          _cohorts = items.map((item) => {
+            'name': item['name'] ?? 'Unknown',
+          }).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching cohorts: $e');
+    }
   }
 }
 
