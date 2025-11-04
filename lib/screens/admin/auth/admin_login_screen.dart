@@ -245,27 +245,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                             const SizedBox(height: 40),
 
                             // Password field
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('Mật khẩu', style: AppTextStyles.bodyText),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const ForgotPasswordScreen(),
-                                      ),
-                                    );
-                                  },
-                                  child: const Text(
-                                    'Quên mật khẩu?',
-                                    style: AdditionalTextStyles.subtleText,
-                                  ),
-                                ),
-                              ],
-                            ),
+                            Text('Mật khẩu', style: AppTextStyles.bodyText),
                             const SizedBox(height: 15),
                             Container(
                               height: 56,
@@ -313,33 +293,57 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                             ),
                             const SizedBox(height: 20),
 
-                            // Remember password checkbox
+                            // Remember password checkbox and Forgot password link
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: Checkbox(
-                                    value: _rememberPassword,
-                                    activeColor: AppColors.primary,
-                                    side: const BorderSide(
-                                      color: AppColors.checkboxBorder,
-                                      width: 0.6,
+                                // Remember password checkbox
+                                Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: Checkbox(
+                                        value: _rememberPassword,
+                                        activeColor: AppColors.primary,
+                                        side: const BorderSide(
+                                          color: AppColors.checkboxBorder,
+                                          width: 0.6,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                        ),
+                                        onChanged: (bool? value) {
+                                          setState(() {
+                                            _rememberPassword = value ?? false;
+                                          });
+                                        },
+                                      ),
                                     ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(6),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Nhớ mật khẩu',
+                                      style: AdditionalTextStyles.subtleText,
                                     ),
-                                    onChanged: (bool? value) {
-                                      setState(() {
-                                        _rememberPassword = value ?? false;
-                                      });
-                                    },
-                                  ),
+                                  ],
                                 ),
-                                const SizedBox(width: 12),
-                                const Text(
-                                  'Nhớ mật khẩu',
-                                  style: AdditionalTextStyles.subtleText,
+                                // Forgot password link
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const ForgotPasswordScreen(),
+                                      ),
+                                    );
+                                  },
+                                  child: const Text(
+                                    'Quên mật khẩu?',
+                                    style: AdditionalTextStyles.subtleText,
+                                  ),
                                 ),
                               ],
                             ),
