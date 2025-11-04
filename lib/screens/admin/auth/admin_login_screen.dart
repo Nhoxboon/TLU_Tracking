@@ -79,15 +79,15 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     if (_isLoading) return;
 
     // Get input values
-    final username = _usernameController.text.trim();
+    final email = _usernameController.text.trim();
     final password = _passwordController.text;
 
-    if (username.isEmpty || password.isEmpty) {
-      _showLoginError('Vui lòng nhập đầy đủ tài khoản và mật khẩu');
+    if (email.isEmpty || password.isEmpty) {
+      _showLoginError('Vui lòng nhập đầy đủ email và mật khẩu');
       return;
     }
 
-    print("Login attempt with: $username"); // Debug log
+    print("Login attempt with: $email"); // Debug log
 
     setState(() {
       _isLoading = true;
@@ -95,11 +95,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
     try {
       // Use AuthService for authentication
-      final result = await _authService.login(username, password);
+      final result = await _authService.login(email, password);
 
       print("Authentication result: ${result['success']}"); // Debug log
 
       if (result['success'] == true) {
+        // Login successful and user is admin
         // Also update old systems for compatibility
         AdminUtils.updateAdminLastLogin();
 
@@ -116,7 +117,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     } catch (e) {
       print('Lỗi khi đăng nhập: $e');
       if (mounted) {
-        _showLoginError('Có lỗi xảy ra khi đăng nhập');
+        _showLoginError('Có lỗi xảy ra khi đăng nhập: ${e.toString()}');
       }
     } finally {
       if (mounted) {
@@ -214,8 +215,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                             Text('Đăng nhập', style: AppTextStyles.title),
                             const SizedBox(height: 40),
 
-                            // Username field
-                            Text('Tài khoản', style: AppTextStyles.bodyText),
+                            // Email field
+                            Text('Email', style: AppTextStyles.bodyText),
                             const SizedBox(height: 15),
                             Container(
                               height: 56,
@@ -232,10 +233,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                               child: TextField(
                                 controller: _usernameController,
                                 style: AppTextStyles.bodyText,
+                                keyboardType: TextInputType.emailAddress,
                                 onSubmitted: (_) => _handleLogin(),
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
-                                  hintText: '',
+                                  hintText: 'email@example.com',
                                   hintStyle: AppTextStyles.bodyTextLight,
                                 ),
                               ),
