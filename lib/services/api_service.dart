@@ -5,10 +5,9 @@ import 'mock_api_service.dart';
 import 'user_session.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.10.2:8000/api/v1';
-  // static const String baseUrl = 'http://10.0.2.2:8000'; //old address
+  // static const String baseUrl = 'http://192.168.10.2:8000/api/v1';
+  static const String baseUrl = 'http://localhost:8000/api/v1'; //old address
 
-  
   // Singleton pattern
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
@@ -34,11 +33,13 @@ class ApiService {
   // Login endpoint
   Future<ApiResponse<LoginResponse>> login(LoginRequest request) async {
     try {
-      final response = await _client.post(
-        Uri.parse('$baseUrl/auth/login'),
-        headers: _headers,
-        body: jsonEncode(request.toJson()),
-      ).timeout(const Duration(seconds: 5));
+      final response = await _client
+          .post(
+            Uri.parse('$baseUrl/auth/login'),
+            headers: _headers,
+            body: jsonEncode(request.toJson()),
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -69,10 +70,9 @@ class ApiService {
   // Get current user (requires Authorization)
   Future<ApiResponse<Map<String, dynamic>>> getCurrentUser() async {
     try {
-      final response = await _client.get(
-        Uri.parse('$baseUrl/auth/me'),
-        headers: _headers,
-      ).timeout(const Duration(seconds: 5));
+      final response = await _client
+          .get(Uri.parse('$baseUrl/auth/me'), headers: _headers)
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -95,10 +95,9 @@ class ApiService {
   // Get all students
   Future<ApiResponse<List<Student>>> getStudents() async {
     try {
-      final response = await _client.get(
-        Uri.parse('$baseUrl/students/'),
-        headers: _headers,
-      ).timeout(const Duration(seconds: 5));
+      final response = await _client
+          .get(Uri.parse('$baseUrl/students/'), headers: _headers)
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -162,7 +161,10 @@ class ApiService {
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         final createdStudent = Student.fromJson(data);
-        return ApiResponse.success(createdStudent, message: 'Student created successfully');
+        return ApiResponse.success(
+          createdStudent,
+          message: 'Student created successfully',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -176,7 +178,10 @@ class ApiService {
   }
 
   // Update student
-  Future<ApiResponse<Student>> updateStudent(String studentId, Student student) async {
+  Future<ApiResponse<Student>> updateStudent(
+    String studentId,
+    Student student,
+  ) async {
     try {
       final response = await _client.put(
         Uri.parse('$baseUrl/students/$studentId'),
@@ -187,7 +192,10 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final updatedStudent = Student.fromJson(data);
-        return ApiResponse.success(updatedStudent, message: 'Student updated successfully');
+        return ApiResponse.success(
+          updatedStudent,
+          message: 'Student updated successfully',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -209,7 +217,10 @@ class ApiService {
       );
 
       if (response.statusCode == 204) {
-        return ApiResponse.success(null, message: 'Student deleted successfully');
+        return ApiResponse.success(
+          null,
+          message: 'Student deleted successfully',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -225,10 +236,9 @@ class ApiService {
   // Get all teachers
   Future<ApiResponse<List<Teacher>>> getTeachers() async {
     try {
-      final response = await _client.get(
-        Uri.parse('$baseUrl/teachers/'),
-        headers: _headers,
-      ).timeout(const Duration(seconds: 5));
+      final response = await _client
+          .get(Uri.parse('$baseUrl/teachers/'), headers: _headers)
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -292,7 +302,10 @@ class ApiService {
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         final createdTeacher = Teacher.fromJson(data);
-        return ApiResponse.success(createdTeacher, message: 'Teacher created successfully');
+        return ApiResponse.success(
+          createdTeacher,
+          message: 'Teacher created successfully',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -306,7 +319,10 @@ class ApiService {
   }
 
   // Update teacher
-  Future<ApiResponse<Teacher>> updateTeacher(String teacherId, Teacher teacher) async {
+  Future<ApiResponse<Teacher>> updateTeacher(
+    String teacherId,
+    Teacher teacher,
+  ) async {
     try {
       final response = await _client.put(
         Uri.parse('$baseUrl/teachers/$teacherId'),
@@ -317,7 +333,10 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final updatedTeacher = Teacher.fromJson(data);
-        return ApiResponse.success(updatedTeacher, message: 'Teacher updated successfully');
+        return ApiResponse.success(
+          updatedTeacher,
+          message: 'Teacher updated successfully',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -339,7 +358,10 @@ class ApiService {
       );
 
       if (response.statusCode == 204) {
-        return ApiResponse.success(null, message: 'Teacher deleted successfully');
+        return ApiResponse.success(
+          null,
+          message: 'Teacher deleted successfully',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -355,10 +377,9 @@ class ApiService {
   // Get all subjects
   Future<ApiResponse<List<Subject>>> getSubjects() async {
     try {
-      final response = await _client.get(
-        Uri.parse('$baseUrl/subjects/'),
-        headers: _headers,
-      ).timeout(const Duration(seconds: 5));
+      final response = await _client
+          .get(Uri.parse('$baseUrl/subjects/'), headers: _headers)
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -422,7 +443,10 @@ class ApiService {
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         final createdSubject = Subject.fromJson(data);
-        return ApiResponse.success(createdSubject, message: 'Subject created successfully');
+        return ApiResponse.success(
+          createdSubject,
+          message: 'Subject created successfully',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -436,7 +460,10 @@ class ApiService {
   }
 
   // Update subject
-  Future<ApiResponse<Subject>> updateSubject(String subjectId, Subject subject) async {
+  Future<ApiResponse<Subject>> updateSubject(
+    String subjectId,
+    Subject subject,
+  ) async {
     try {
       final response = await _client.put(
         Uri.parse('$baseUrl/subjects/$subjectId'),
@@ -447,7 +474,10 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final updatedSubject = Subject.fromJson(data);
-        return ApiResponse.success(updatedSubject, message: 'Subject updated successfully');
+        return ApiResponse.success(
+          updatedSubject,
+          message: 'Subject updated successfully',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -469,7 +499,10 @@ class ApiService {
       );
 
       if (response.statusCode == 204) {
-        return ApiResponse.success(null, message: 'Subject deleted successfully');
+        return ApiResponse.success(
+          null,
+          message: 'Subject deleted successfully',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -485,14 +518,15 @@ class ApiService {
   // Get all teaching sessions
   Future<ApiResponse<List<TeachingSession>>> getTeachingSessions() async {
     try {
-      final response = await _client.get(
-        Uri.parse('$baseUrl/sessions/'),
-        headers: _headers,
-      ).timeout(const Duration(seconds: 5));
+      final response = await _client
+          .get(Uri.parse('$baseUrl/sessions/'), headers: _headers)
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        final sessions = data.map((json) => TeachingSession.fromJson(json)).toList();
+        final sessions = data
+            .map((json) => TeachingSession.fromJson(json))
+            .toList();
         return ApiResponse.success(sessions);
       } else {
         final error = jsonDecode(response.body);
@@ -509,7 +543,9 @@ class ApiService {
   }
 
   // Get teaching session by ID
-  Future<ApiResponse<TeachingSession>> getTeachingSession(String sessionId) async {
+  Future<ApiResponse<TeachingSession>> getTeachingSession(
+    String sessionId,
+  ) async {
     try {
       final response = await _client.get(
         Uri.parse('$baseUrl/sessions/$sessionId'),
@@ -541,7 +577,9 @@ class ApiService {
   }
 
   // Create teaching session
-  Future<ApiResponse<TeachingSession>> createTeachingSession(Map<String, dynamic> sessionData) async {
+  Future<ApiResponse<TeachingSession>> createTeachingSession(
+    Map<String, dynamic> sessionData,
+  ) async {
     try {
       final response = await _client.post(
         Uri.parse('$baseUrl/sessions/'),
@@ -552,7 +590,10 @@ class ApiService {
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         final session = TeachingSession.fromJson(data);
-        return ApiResponse.success(session, message: 'Teaching session created successfully');
+        return ApiResponse.success(
+          session,
+          message: 'Teaching session created successfully',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -561,12 +602,17 @@ class ApiService {
         );
       }
     } catch (e) {
-      return ApiResponse.error('Failed to create teaching session: ${e.toString()}');
+      return ApiResponse.error(
+        'Failed to create teaching session: ${e.toString()}',
+      );
     }
   }
 
   // Update teaching session
-  Future<ApiResponse<TeachingSession>> updateTeachingSession(String sessionId, Map<String, dynamic> sessionData) async {
+  Future<ApiResponse<TeachingSession>> updateTeachingSession(
+    String sessionId,
+    Map<String, dynamic> sessionData,
+  ) async {
     try {
       final response = await _client.put(
         Uri.parse('$baseUrl/sessions/$sessionId'),
@@ -577,7 +623,10 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final session = TeachingSession.fromJson(data);
-        return ApiResponse.success(session, message: 'Teaching session updated successfully');
+        return ApiResponse.success(
+          session,
+          message: 'Teaching session updated successfully',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -586,7 +635,9 @@ class ApiService {
         );
       }
     } catch (e) {
-      return ApiResponse.error('Failed to update teaching session: ${e.toString()}');
+      return ApiResponse.error(
+        'Failed to update teaching session: ${e.toString()}',
+      );
     }
   }
 
@@ -599,7 +650,10 @@ class ApiService {
       );
 
       if (response.statusCode == 204) {
-        return ApiResponse.success(null, message: 'Teaching session deleted successfully');
+        return ApiResponse.success(
+          null,
+          message: 'Teaching session deleted successfully',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -608,7 +662,9 @@ class ApiService {
         );
       }
     } catch (e) {
-      return ApiResponse.error('Failed to delete teaching session: ${e.toString()}');
+      return ApiResponse.error(
+        'Failed to delete teaching session: ${e.toString()}',
+      );
     }
   }
 
