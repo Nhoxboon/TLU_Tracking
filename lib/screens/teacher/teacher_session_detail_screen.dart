@@ -1,12 +1,115 @@
 import 'package:flutter/material.dart';
 import '../../models/teaching_session.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../../services/api_service.dart';
+import '../../services/user_session.dart';
 
-class TeacherSessionDetailScreen extends StatelessWidget {
+class AttendanceRecord {
+  final int id;
+  final String studentName;
+  final String studentCode;
+  final String status;
+  final DateTime? attendanceTime;
+
+  AttendanceRecord({
+    required this.id,
+    required this.studentName,
+    required this.studentCode,
+    required this.status,
+    this.attendanceTime,
+  });
+
+  factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
+    return AttendanceRecord(
+      id: json['id'] ?? 0,
+      studentName: json['student_name'] ?? '',
+      studentCode: json['student_code'] ?? '',
+      status: json['status'] ?? 'absent',
+      attendanceTime: json['attendance_time'] != null 
+          ? DateTime.tryParse(json['attendance_time']) 
+          : null,
+    );
+  }
+}
+
+class TeacherSessionDetailScreen extends StatefulWidget {
   final TeachingSession session;
 
   const TeacherSessionDetailScreen({Key? key, required this.session})
     : super(key: key);
+
+  @override
+  State<TeacherSessionDetailScreen> createState() => _TeacherSessionDetailScreenState();
+}
+
+class _TeacherSessionDetailScreenState extends State<TeacherSessionDetailScreen> {
+  List<AttendanceRecord> _attendanceList = [];
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAttendance();
+  }
+
+  Future<void> _fetchAttendance() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final baseUrl = ApiService.baseUrl;
+      final url = Uri.parse('$baseUrl/classes/sessions/${widget.session.id}/attendance');
+      
+      print('DEBUG - Fetching attendance from: $url');
+      
+      // Build headers with Authorization
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      final token = UserSession().accessToken;
+      final tokenType = UserSession().tokenType ?? 'Bearer';
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = '$tokenType $token';
+      }
+      
+      final response = await http.get(url, headers: headers);
+      
+      print('DEBUG - Response status: ${response.statusCode}');
+      print('DEBUG - Response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final List<AttendanceRecord> loaded = data
+            .map((item) => AttendanceRecord.fromJson(item))
+            .toList();
+        
+        print('DEBUG - Loaded ${loaded.length} attendance records');
+        
+        setState(() {
+          _attendanceList = loaded;
+        });
+      } else {
+        setState(() {
+          _error = 'Lỗi lấy dữ liệu điểm danh';
+        });
+      }
+    } catch (e) {
+      print('DEBUG - Error fetching attendance: $e');
+      setState(() {
+        _error = 'Lỗi kết nối: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +203,7 @@ class TeacherSessionDetailScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => QRCodeScreen(session: session),
+                        builder: (context) => QRCodeScreen(session: widget.session),
                       ),
                     );
                   },
@@ -118,7 +221,7 @@ class TeacherSessionDetailScreen extends StatelessWidget {
                   Icon(Icons.people, color: const Color(0xFF667085), size: 16),
                   const SizedBox(width: 4),
                   Text(
-                    '${session.attendanceCount}/${session.totalStudents} Sinh viên',
+                    '${_attendanceList.where((a) => a.status.toLowerCase() == 'present').length}/${_attendanceList.length} Sinh viên',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
@@ -131,16 +234,47 @@ class TeacherSessionDetailScreen extends StatelessWidget {
 
             // Attendance list
             Expanded(
-              child: Container(
-                color: Colors.white,
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: 20, // Using mock data for demonstration
-                  itemBuilder: (context, index) {
-                    return _buildStudentCard('Nguyễn Sơn', '2251171235');
-                  },
-                ),
-              ),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(_error!, style: const TextStyle(color: Colors.red)),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: _fetchAttendance,
+                                child: const Text('Thử lại'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Container(
+                          color: Colors.white,
+                          child: _attendanceList.isEmpty
+                              ? const Center(
+                                  child: Text(
+                                    'Chưa có sinh viên điểm danh',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF667085),
+                                    ),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  padding: const EdgeInsets.all(16),
+                                  itemCount: _attendanceList.length,
+                                  itemBuilder: (context, index) {
+                                    final attendance = _attendanceList[index];
+                                    return _buildStudentCard(
+                                      attendance.studentName,
+                                      attendance.studentCode,
+                                      attendance.status,
+                                    );
+                                  },
+                                ),
+                        ),
             ),
           ],
         ),
@@ -179,7 +313,22 @@ class TeacherSessionDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStudentCard(String name, String studentId) {
+  Widget _buildStudentCard(String name, String studentId, String status) {
+    // Map status từ API sang text hiển thị
+    String statusText = 'Vắng mặt';
+    Color statusColor = const Color(0xFFFF4444);
+    
+    if (status.toLowerCase() == 'present') {
+      statusText = 'Có mặt';
+      statusColor = const Color(0xFF00FF40);
+    } else if (status.toLowerCase() == 'late') {
+      statusText = 'Muộn';
+      statusColor = const Color(0xFFFFAA00);
+    } else if (status.toLowerCase() == 'excused') {
+      statusText = 'Có phép';
+      statusColor = const Color(0xFF00AAFF);
+    }
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
@@ -238,12 +387,12 @@ class TeacherSessionDetailScreen extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00FF40),
+                    color: statusColor,
                     borderRadius: BorderRadius.circular(29),
                   ),
-                  child: const Text(
-                    'Có mặt',
-                    style: TextStyle(
+                  child: Text(
+                    statusText,
+                    style: const TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 14,
                       fontWeight: FontWeight.w400,

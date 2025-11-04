@@ -3,184 +3,292 @@ import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../services/user_session.dart';
 import '../utils/auth_manager.dart';
+import '../services/api_service.dart';
 
-class StudentSettingsScreen extends StatelessWidget {
+class StudentSettingsScreen extends StatefulWidget {
   const StudentSettingsScreen({super.key});
+
+  @override
+  State<StudentSettingsScreen> createState() => _StudentSettingsScreenState();
+}
+
+class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
+  bool _isLoading = true;
+  String? _error;
+  
+  // User data fields
+  String _fullName = '';
+  String _email = '';
+  String _phone = '';
+  String _birthDate = '';
+  String _hometown = '';
+  String _studentCode = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserProfile();
+  }
+
+  Future<void> _fetchUserProfile() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final response = await ApiService().getCurrentUser();
+      
+      if (response.success && response.data != null) {
+        final userData = response.data!;
+        final profile = userData['profile'] as Map<String, dynamic>?;
+        
+        if (profile != null) {
+          setState(() {
+            _fullName = profile['full_name'] ?? '';
+            _email = userData['email'] ?? '';
+            _phone = profile['phone'] ?? '';
+            _hometown = profile['hometown'] ?? '';
+            
+            // Format birth date from yyyy-MM-dd to dd/MM/yyyy
+            final birthDateStr = profile['birth_date'] as String?;
+            if (birthDateStr != null && birthDateStr.isNotEmpty) {
+              try {
+                final parts = birthDateStr.split('-');
+                if (parts.length == 3) {
+                  _birthDate = '${parts[2]}/${parts[1]}/${parts[0]}';
+                } else {
+                  _birthDate = birthDateStr;
+                }
+              } catch (_) {
+                _birthDate = birthDateStr;
+              }
+            }
+            
+            // Get student code
+            _studentCode = profile['student_code'] ?? '';
+          });
+        }
+      } else {
+        setState(() {
+          _error = 'Không thể lấy thông tin người dùng';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Lỗi kết nối: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          // Reserve space at the bottom so content doesn't overflow under
-          // the shared bottom navigation bar.
-          padding: const EdgeInsets.only(bottom: 80),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 32),
-
-                // Header with back button and title
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Icon(
-                        Icons.arrow_back,
-                        color: Color(0xFF1E1E1E),
-                        size: 24,
-                      ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _error!,
+                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _fetchUserProfile,
+                          child: const Text('Thử lại'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 31),
-                    const Text(
-                      'Cài đặt',
-                      style: TextStyle(
-                        fontFamily: 'Sen',
-                        fontSize: 17,
-                        fontWeight: FontWeight.w400,
-                        color: Color(0xFF181C2E),
-                        height: 1.29,
-                      ),
-                    ),
-                  ],
-                ),
+                  )
+                : SingleChildScrollView(
+                    // Reserve space at the bottom so content doesn't overflow under
+                    // the shared bottom navigation bar.
+                    padding: const EdgeInsets.only(bottom: 80),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 32),
 
-                const SizedBox(height: 31),
+                          // Header with back button and title
+                          Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () => Navigator.pop(context),
+                                child: const Icon(
+                                  Icons.arrow_back,
+                                  color: Color(0xFF1E1E1E),
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 31),
+                              const Text(
+                                'Cài đặt',
+                                style: TextStyle(
+                                  fontFamily: 'Sen',
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w400,
+                                  color: Color(0xFF181C2E),
+                                  height: 1.29,
+                                ),
+                              ),
+                            ],
+                          ),
 
-                // Profile name
-                const Text(
-                  'Vishal Khadok',
-                  style: TextStyle(
-                    fontFamily: 'Sen',
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF32343E),
-                    height: 1.2,
-                  ),
-                ),
+                          const SizedBox(height: 31),
 
-                const SizedBox(height: 31),
-
-                // Personal Information Card
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF6F8FA),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Edit information link
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: GestureDetector(
-                          onTap: () {
-                            // Navigate to edit profile
-                          },
-                          child: const Text(
-                            'SỬA THÔNG TIN',
-                            style: TextStyle(
+                          // Profile name
+                          Text(
+                            _fullName.isNotEmpty ? _fullName : (UserSession().username ?? 'Sinh viên'),
+                            style: const TextStyle(
                               fontFamily: 'Sen',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xFF2196F3),
-                              decoration: TextDecoration.underline,
-                              height: 2.0,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF32343E),
+                              height: 1.2,
                             ),
                           ),
-                        ),
+
+                          const SizedBox(height: 31),
+
+                          // Personal Information Card
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF6F8FA),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Edit information link
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      // Navigate to edit profile
+                                    },
+                                    child: const Text(
+                                      'SỬA THÔNG TIN',
+                                      style: TextStyle(
+                                        fontFamily: 'Sen',
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w400,
+                                        color: Color(0xFF2196F3),
+                                        decoration: TextDecoration.underline,
+                                        height: 2.0,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(height: 10),
+
+                                // Student Code (if available)
+                                if (_studentCode.isNotEmpty) ...[
+                                  _buildPersonalInfoItem(
+                                    icon: Icons.badge_outlined,
+                                    label: 'MÃ SINH VIÊN',
+                                    value: _studentCode,
+                                  ),
+                                  const SizedBox(height: 20),
+                                ],
+
+                                // Name field
+                                _buildPersonalInfoItem(
+                                  icon: Icons.person_outline,
+                                  label: 'TÊN',
+                                  value: _fullName.isNotEmpty ? _fullName : 'Chưa cập nhật',
+                                ),
+
+                                const SizedBox(height: 20),
+
+                                // Email field
+                                _buildPersonalInfoItem(
+                                  icon: Icons.email_outlined,
+                                  label: 'EMAIL',
+                                  value: _email.isNotEmpty ? _email : 'Chưa cập nhật',
+                                ),
+
+                                const SizedBox(height: 20),
+
+                                // Birthday field
+                                _buildPersonalInfoItem(
+                                  icon: Icons.favorite_border,
+                                  label: 'NGÀY SINH',
+                                  value: _birthDate.isNotEmpty ? _birthDate : 'Chưa cập nhật',
+                                ),
+
+                                const SizedBox(height: 20),
+
+                                // Hometown field
+                                _buildPersonalInfoItem(
+                                  icon: Icons.home_outlined,
+                                  label: 'QUÊ QUÁN',
+                                  value: _hometown.isNotEmpty ? _hometown : 'Chưa cập nhật',
+                                ),
+
+                                const SizedBox(height: 20),
+
+                                // Phone field
+                                _buildPersonalInfoItem(
+                                  icon: Icons.phone_outlined,
+                                  label: 'SỐ ĐIỆN THOẠI',
+                                  value: _phone.isNotEmpty ? _phone : 'Chưa cập nhật',
+                                ),
+                              ],
+                            ),
+                                    ),
+
+                          const SizedBox(height: 20),
+
+                          // Change Password Button
+                          _buildSettingsButton(
+                            icon: Icons.key_outlined,
+                            title: 'Đổi mật khẩu',
+                            onTap: () {
+                              Navigator.pushNamed(context, '/change/password');
+                            },
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Face Registration Button
+                          _buildSettingsButton(
+                            icon: Icons.camera_alt_outlined,
+                            title: 'Đăng ký khuôn mặt',
+                            onTap: () {
+                              Navigator.pushNamed(context, '/face/registration');
+                            },
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Logout Button
+                          _buildSettingsButton(
+                            icon: Icons.logout_outlined,
+                            title: 'Đăng xuất',
+                            showArrow: true,
+                            onTap: () {
+                              _showLogoutDialog(context);
+                            },
+                          ),
+                        ],
                       ),
-
-                      const SizedBox(height: 10),
-
-                      // Name field
-                      _buildPersonalInfoItem(
-                        icon: Icons.person_outline,
-                        label: 'TÊN',
-                        value: 'Vishal Khadok',
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Email field
-                      _buildPersonalInfoItem(
-                        icon: Icons.email_outlined,
-                        label: 'EMAIL',
-                        value: 'hello@halallab.co',
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Birthday field
-                      _buildPersonalInfoItem(
-                        icon: Icons.favorite_border,
-                        label: 'NGÀY SINH',
-                        value: '15/02/1984',
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Hometown field
-                      _buildPersonalInfoItem(
-                        icon: Icons.home_outlined,
-                        label: 'QUÊ QUÁN',
-                        value: 'Hải Dương',
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Phone field
-                      _buildPersonalInfoItem(
-                        icon: Icons.phone_outlined,
-                        label: 'SỐ ĐIỆN THOẠI',
-                        value: '408-841-0926',
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Change Password Button
-                _buildSettingsButton(
-                  icon: Icons.key_outlined,
-                  title: 'Đổi mật khẩu',
-                  onTap: () {
-                    Navigator.pushNamed(context, '/change/password');
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Face Registration Button
-                _buildSettingsButton(
-                  icon: Icons.camera_alt_outlined,
-                  title: 'Đăng ký khuôn mặt',
-                  onTap: () {
-                    Navigator.pushNamed(context, '/face/registration');
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Logout Button
-                _buildSettingsButton(
-                  icon: Icons.logout_outlined,
-                  title: 'Đăng xuất',
-                  showArrow: true,
-                  onTap: () {
-                    _showLogoutDialog(context);
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
