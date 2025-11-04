@@ -354,6 +354,7 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) => StudentClassDetailScreen(
+                                          classId: item.id,
                                           classCode: item.code,
                                           className: item.title,
                                         ),

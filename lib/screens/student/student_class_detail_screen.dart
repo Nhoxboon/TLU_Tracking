@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../../services/api_service.dart';
+import '../../services/user_session.dart';
 
 class StudentClassDetailScreen extends StatefulWidget {
+  final int classId;
   final String classCode;
   final String className;
 
   const StudentClassDetailScreen({
     Key? key,
+    required this.classId,
     required this.classCode,
     required this.className,
   }) : super(key: key);
@@ -16,38 +22,168 @@ class StudentClassDetailScreen extends StatefulWidget {
 }
 
 class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
-  final List<_SessionItem> _sessions = [
-    _SessionItem(
-      date: 'T5 4/9/2025',
-      time: '7AM - 8:15AM',
-      sessionStatus: SessionStatus.open,
-      attendanceStatus: AttendanceStatus.present,
-    ),
-    _SessionItem(
-      date: 'T5 11/9/2025',
-      time: '7AM - 8:15AM',
-      sessionStatus: SessionStatus.closed,
-      attendanceStatus: AttendanceStatus.present,
-    ),
-    _SessionItem(
-      date: 'T5 18/9/2025',
-      time: '7AM - 8:15AM',
-      sessionStatus: SessionStatus.closed,
-      attendanceStatus: AttendanceStatus.present,
-    ),
-    _SessionItem(
-      date: 'T5 25/9/2025',
-      time: '7AM - 8:15AM',
-      sessionStatus: SessionStatus.closed,
-      attendanceStatus: AttendanceStatus.absent,
-    ),
-    _SessionItem(
-      date: 'T5 2/10/2025',
-      time: '7AM - 8:15AM',
-      sessionStatus: SessionStatus.closed,
-      attendanceStatus: AttendanceStatus.late,
-    ),
-  ];
+  final List<_SessionItem> _sessions = [];
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchSessionsWithAttendance();
+  }
+
+  Future<void> _fetchSessionsWithAttendance() async {
+    final studentId = UserSession().profileId;
+    if (studentId == null) {
+      setState(() {
+        _error = 'Không xác định được student_id. Vui lòng đăng nhập lại.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final baseUrl = ApiService.baseUrl;
+      // 1) Lấy danh sách buổi học của lớp
+      final sessionsUrl = Uri.parse('$baseUrl/classes/${widget.classId}/sessions');
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      final token = UserSession().accessToken;
+      final tokenType = UserSession().tokenType ?? 'Bearer';
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = '$tokenType $token';
+      }
+
+      final resp = await http.get(sessionsUrl, headers: headers);
+      if (resp.statusCode != 200) {
+        setState(() {
+          _error = 'Lỗi tải danh sách buổi học (${resp.statusCode})';
+        });
+        return;
+      }
+
+      final List<dynamic> sessionList = jsonDecode(resp.body);
+      final sessionIds = <int>[];
+      final baseSessions = <int, Map<String, dynamic>>{}; // id -> session map
+      for (final s in sessionList) {
+        final m = s as Map<String, dynamic>;
+        final sid = (m['id'] ?? 0) is int ? m['id'] as int : int.tryParse('${m['id']}') ?? 0;
+        if (sid > 0) {
+          sessionIds.add(sid);
+          baseSessions[sid] = m;
+        }
+      }
+
+      if (sessionIds.isEmpty) {
+        setState(() {
+          _sessions.clear();
+        });
+        return;
+      }
+
+      // 2) Lấy trạng thái điểm danh của SV cho nhiều buổi
+      final attUrl = Uri.parse('$baseUrl/classes/sessions/student/$studentId/attendance');
+      final attResp = await http.post(
+        attUrl,
+        headers: headers,
+        body: jsonEncode({'session_ids': sessionIds}),
+      );
+
+      if (attResp.statusCode != 200) {
+        setState(() {
+          _error = 'Lỗi tải điểm danh (${attResp.statusCode})';
+        });
+        return;
+      }
+
+      final attData = jsonDecode(attResp.body) as Map<String, dynamic>;
+      final List<dynamic> sessionsData = attData['sessions_data'] as List<dynamic>? ?? [];
+
+      // Map: sessionId -> attendanceStatus
+      final attendanceBySession = <int, String>{};
+      for (final e in sessionsData) {
+        final em = e as Map<String, dynamic>;
+        final session = em['session'] as Map<String, dynamic>?;
+        final sid = (session?['id'] ?? 0) is int ? session!['id'] as int : int.tryParse('${session?['id']}') ?? 0;
+        final studentAttendance = em['student_attendance'] as List<dynamic>?;
+        if (sid > 0) {
+          if (studentAttendance != null && studentAttendance.isNotEmpty) {
+            final a = studentAttendance.first as Map<String, dynamic>;
+            final status = (a['status'] ?? '').toString().toLowerCase();
+            attendanceBySession[sid] = status; // present/late/absent
+          } else {
+            attendanceBySession[sid] = 'absent';
+          }
+        }
+      }
+
+      // Build UI list
+      final loaded = <_SessionItem>[];
+      for (final sid in sessionIds) {
+        final m = baseSessions[sid] ?? {};
+        final sessionDate = (m['session_date'] ?? '').toString();
+        final startTime = (m['start_time'] ?? '').toString();
+        final endTime = (m['end_time'] ?? '').toString();
+        final statusStr = (m['status'] ?? '').toString(); // "Open" / "Closed"
+
+        // Format date: e.g., T2 1/11/2025
+        String formattedDate = sessionDate;
+        try {
+          final date = DateTime.parse(sessionDate);
+          final weekday = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][date.weekday % 7];
+          formattedDate = '$weekday ${date.day}/${date.month}/${date.year}';
+        } catch (_) {}
+
+        // Format time slot HH:mm - HH:mm
+        String timeSlot = '$startTime - $endTime';
+        try {
+          final start = startTime.split(':');
+          final end = endTime.split(':');
+          if (start.length >= 2 && end.length >= 2) {
+            timeSlot = '${start[0]}:${start[1]} - ${end[0]}:${end[1]}';
+          }
+        } catch (_) {}
+
+        // Map statuses
+        final sessionStatus = statusStr.toLowerCase() == 'open' ? SessionStatus.open : SessionStatus.closed;
+        final att = attendanceBySession[sid] ?? 'absent';
+        final attendanceStatus = att == 'present'
+            ? AttendanceStatus.present
+            : att == 'late'
+                ? AttendanceStatus.late
+                : AttendanceStatus.absent;
+
+        loaded.add(_SessionItem(
+          date: formattedDate,
+          time: timeSlot,
+          sessionStatus: sessionStatus,
+          attendanceStatus: attendanceStatus,
+        ));
+      }
+
+      setState(() {
+        _sessions
+          ..clear()
+          ..addAll(loaded);
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Lỗi kết nối: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -128,29 +264,48 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
 
             // Sessions list
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 100),
-                itemCount: _sessions.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final session = _sessions[index];
-                  return _SessionCard(
-                    session: session,
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/session/detail',
-                        arguments: {
-                          'classCode': widget.classCode,
-                          'sessionDate': session.date,
-                          'sessionTime': session.time,
-                          'status': session.sessionStatus == SessionStatus.open ? 'Mở' : 'Đóng',
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(_error!, textAlign: TextAlign.center),
+                                const SizedBox(height: 12),
+                                ElevatedButton(
+                                  onPressed: _fetchSessionsWithAttendance,
+                                  child: const Text('Thử lại'),
+                                )
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(14, 0, 14, 100),
+                          itemCount: _sessions.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final session = _sessions[index];
+                            return _SessionCard(
+                              session: session,
+                              onTap: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/session/detail',
+                                  arguments: {
+                                    'classCode': widget.classCode,
+                                    'sessionDate': session.date,
+                                    'sessionTime': session.time,
+                                    'status': session.sessionStatus == SessionStatus.open ? 'Mở' : 'Đóng',
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        ),
             ),
           ],
         ),

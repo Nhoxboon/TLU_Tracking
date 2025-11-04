@@ -498,8 +498,7 @@ class QRCodeScreen extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: QrImageView(
-                  data:
-                      'TLU_ATTENDANCE:${session.id}_${session.date}_${session.timeSlot}',
+                  data: '${session.id}',
                   version: QrVersions.auto,
                   size: 200.0,
                   backgroundColor: Colors.white,

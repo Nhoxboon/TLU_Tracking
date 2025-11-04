@@ -246,6 +246,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> with RouteAware {
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => StudentClassDetailScreen(
+                                      classId: item.id,
                                       classCode: item.code,
                                       className: item.title,
                                     ),
