@@ -1,6 +1,14 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+
+enum ScanStatus {
+  scanning,
+  success,
+  failed,
+}
 
 class FaceScannerScreen extends StatefulWidget {
   const FaceScannerScreen({super.key});
@@ -11,21 +19,25 @@ class FaceScannerScreen extends StatefulWidget {
 
 class _FaceScannerScreenState extends State<FaceScannerScreen>
     with TickerProviderStateMixin {
-  bool _isScanning = true;
-  bool _scanSuccess = false;
+  ScanStatus _scanStatus = ScanStatus.scanning;
   late AnimationController _animationController;
   late AnimationController _pulseController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _pulseAnimation;
-  
+
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
   List<CameraDescription>? _cameras;
+  bool _isDetecting = false;
+  int _consecutiveFaceFrames = 0;
+  int _consecutiveNoFaceFrames = 0;
+  late FaceDetector _faceDetector;
+  DateTime? _scanStartTime;
 
   @override
   void initState() {
     super.initState();
-    
+
     // Scale animation for success state
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -55,13 +67,29 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
     // Start pulse animation
     _pulseController.repeat(reverse: true);
 
+    // Initialize face detector
+    _faceDetector = FaceDetector(
+      options: FaceDetectorOptions(
+        enableContours: false,
+        enableClassification: false,
+        performanceMode: FaceDetectorMode.fast,
+        minFaceSize: 0.3,
+      ),
+    );
+
     // Initialize camera
     _initializeCamera();
-
-    // Simulate face scan success after 4 seconds (for demo)
-    Future.delayed(const Duration(seconds: 4), () {
-      if (mounted) {
-        _onFaceScanned();
+    
+    // Set scan start time
+    _scanStartTime = DateTime.now();
+    
+    // Check for timeout after 15 seconds
+    Future.delayed(const Duration(seconds: 15), () {
+      if (mounted && _scanStatus == ScanStatus.scanning) {
+        setState(() {
+          _scanStatus = ScanStatus.failed;
+        });
+        _pulseController.stop();
       }
     });
   }
@@ -70,111 +98,248 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
     try {
       _cameras = await availableCameras();
       debugPrint('Available cameras: ${_cameras?.length}');
-      
+
       if (_cameras != null && _cameras!.isNotEmpty) {
         // Use front camera for face detection
         final frontCamera = _cameras!.firstWhere(
-          (camera) {
-            debugPrint('Camera: ${camera.name}, Direction: ${camera.lensDirection}');
-            return camera.lensDirection == CameraLensDirection.front;
-          },
+          (camera) => camera.lensDirection == CameraLensDirection.front,
           orElse: () => _cameras!.first,
         );
-        
+
         debugPrint('Selected camera: ${frontCamera.name}');
-        
+
         _cameraController = CameraController(
           frontCamera,
-          ResolutionPreset.medium,  // Changed to medium for better performance
+          ResolutionPreset.medium,
           enableAudio: false,
           imageFormatGroup: ImageFormatGroup.yuv420,
         );
 
         await _cameraController!.initialize();
         debugPrint('Camera initialized successfully');
-        
+
         if (mounted) {
           setState(() {
             _isCameraInitialized = true;
           });
         }
+
+        // Start image stream for face detection
+        if (_cameraController != null &&
+            !_cameraController!.value.isStreamingImages) {
+          await _cameraController!.startImageStream(_processCameraImage);
+        }
       } else {
         debugPrint('No cameras available');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Không tìm thấy camera trên thiết bị'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          setState(() {
+            _scanStatus = ScanStatus.failed;
+          });
+          _showErrorMessage('Không tìm thấy camera trên thiết bị');
         }
       }
     } catch (e) {
       debugPrint('Error initializing camera: $e');
-      // Show error dialog
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Không thể truy cập camera: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
+        setState(() {
+          _scanStatus = ScanStatus.failed;
+        });
+        _showErrorMessage('Không thể truy cập camera: $e');
       }
     }
   }
 
-  void _onFaceScanned() {
-    setState(() {
-      _isScanning = false;
-      _scanSuccess = true;
-    });
-    _pulseController.stop();
-    _animationController.forward();
-    
-    // Provide haptic feedback
-    HapticFeedback.mediumImpact();
-    
-    // Navigate back after success with result
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        // Navigate back to session detail with success result
-        Navigator.pushNamedAndRemoveUntil(
-          context, 
-          '/session/detail', 
-          (route) => route.settings.name == '/session/detail' || route.isFirst,
-          arguments: {'attendanceSuccess': true}
-        );
+  Future<void> _processCameraImage(CameraImage image) async {
+    if (_isDetecting || _scanStatus != ScanStatus.scanning) return;
+    _isDetecting = true;
+
+    try {
+      final camera = _cameraController;
+      if (camera == null || !camera.value.isInitialized) return;
+
+      final inputImage = _inputImageFromCameraImage(image, camera.description);
+
+      if (inputImage == null) {
+        _isDetecting = false;
+        return;
       }
-    });
+
+      final faces = await _faceDetector.processImage(inputImage);
+
+      if (!mounted || _scanStatus != ScanStatus.scanning) {
+        _isDetecting = false;
+        return;
+      }
+
+      if (faces.isNotEmpty) {
+        _consecutiveFaceFrames += 1;
+        _consecutiveNoFaceFrames = 0;
+
+        // Face detected steadily for 10 frames (about 1 second at 30fps)
+        if (_consecutiveFaceFrames >= 10) {
+          _consecutiveFaceFrames = 0;
+          _onFaceDetectedSuccess();
+        }
+      } else {
+        _consecutiveFaceFrames = 0;
+        _consecutiveNoFaceFrames += 1;
+
+        // If no face detected for too long, show failed state
+        if (_consecutiveNoFaceFrames >= 300) { // ~10 seconds at 30fps
+          if (mounted && _scanStatus == ScanStatus.scanning) {
+            setState(() {
+              _scanStatus = ScanStatus.failed;
+            });
+            _pulseController.stop();
+            try {
+              if (_cameraController != null &&
+                  _cameraController!.value.isStreamingImages) {
+                await _cameraController!.stopImageStream();
+              }
+            } catch (e) {
+              debugPrint('Error stopping stream: $e');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Face detection error: $e');
+    } finally {
+      _isDetecting = false;
+    }
+  }
+
+  InputImage? _inputImageFromCameraImage(
+    CameraImage image,
+    CameraDescription camera,
+  ) {
+    try {
+      final WriteBuffer allBytes = WriteBuffer();
+      for (final Plane plane in image.planes) {
+        allBytes.putUint8List(plane.bytes);
+      }
+      final bytes = allBytes.done().buffer.asUint8List();
+
+      // Convert sensor orientation to InputImageRotation
+      InputImageRotation rotation;
+      switch (camera.sensorOrientation) {
+        case 0:
+          rotation = InputImageRotation.rotation0deg;
+          break;
+        case 90:
+          rotation = InputImageRotation.rotation90deg;
+          break;
+        case 180:
+          rotation = InputImageRotation.rotation180deg;
+          break;
+        case 270:
+          rotation = InputImageRotation.rotation270deg;
+          break;
+        default:
+          rotation = InputImageRotation.rotation0deg;
+      }
+
+      final inputImageData = InputImageMetadata(
+        size: Size(image.width.toDouble(), image.height.toDouble()),
+        rotation: rotation,
+        format: InputImageFormatValue.fromRawValue(image.format.raw) ??
+            InputImageFormat.nv21,
+        bytesPerRow: image.planes.first.bytesPerRow,
+      );
+
+      return InputImage.fromBytes(
+        bytes: bytes,
+        metadata: inputImageData,
+      );
+    } catch (e) {
+      debugPrint('Error creating InputImage: $e');
+      return null;
+    }
+  }
+
+  Future<void> _onFaceDetectedSuccess() async {
+    try {
+      if (_cameraController != null &&
+          _cameraController!.value.isStreamingImages) {
+        await _cameraController!.stopImageStream();
+      }
+    } catch (e) {
+      debugPrint('Error stopping image stream: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        _scanStatus = ScanStatus.success;
+      });
+      _pulseController.stop();
+      _animationController.forward();
+      HapticFeedback.mediumImpact();
+
+      // Navigate back after success
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          Navigator.pop(context, {'attendanceSuccess': true});
+        }
+      });
+    }
   }
 
   void _scanAgain() {
     setState(() {
-      _isScanning = true;
-      _scanSuccess = false;
+      _scanStatus = ScanStatus.scanning;
+      _consecutiveFaceFrames = 0;
+      _consecutiveNoFaceFrames = 0;
     });
+    _scanStartTime = DateTime.now();
     _animationController.reset();
     _pulseController.repeat(reverse: true);
-    
-    // Restart camera if needed
-    if (!_isCameraInitialized) {
+
+    // Restart camera stream if needed
+    if (_cameraController != null &&
+        _cameraController!.value.isInitialized &&
+        !_cameraController!.value.isStreamingImages) {
+      _cameraController!.startImageStream(_processCameraImage);
+    } else if (!_isCameraInitialized) {
       _initializeCamera();
     }
     
-    // Simulate face scan again after 4 seconds
-    Future.delayed(const Duration(seconds: 4), () {
-      if (mounted) {
-        _onFaceScanned();
+    // Check for timeout after 15 seconds
+    Future.delayed(const Duration(seconds: 15), () {
+      if (mounted && _scanStatus == ScanStatus.scanning) {
+        setState(() {
+          _scanStatus = ScanStatus.failed;
+        });
+        _pulseController.stop();
       }
     });
+  }
+
+  void _showErrorMessage(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     _pulseController.dispose();
+    try {
+      if (_cameraController != null &&
+          _cameraController!.value.isStreamingImages) {
+        _cameraController!.stopImageStream();
+      }
+    } catch (e) {
+      debugPrint('Error stopping stream in dispose: $e');
+    }
     _cameraController?.dispose();
+    _faceDetector.close();
     super.dispose();
   }
 
@@ -196,23 +361,21 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
         child: SafeArea(
           child: Stack(
             children: [
-              // Camera view simulation
+              // Camera view
               _buildCameraView(),
-              
+
               // Face detection overlay
-              if (_isScanning) _buildFaceDetectionOverlay(),
-              
+              if (_scanStatus == ScanStatus.scanning)
+                _buildFaceDetectionOverlay(),
+
               // Success state
-              if (_scanSuccess) _buildSuccessState(),
-              
+              if (_scanStatus == ScanStatus.success) _buildSuccessState(),
+
               // Status message
               _buildStatusMessage(),
-              
+
               // Scan again button
-              _buildScanAgainButton(),
-              
-              // Status bar
-              _buildStatusBar(),
+              if (_scanStatus != ScanStatus.scanning) _buildScanAgainButton(),
             ],
           ),
         ),
@@ -224,7 +387,7 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
     return Positioned.fill(
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.8),
+          color: Colors.black.withOpacity(0.7),
         ),
         child: Center(
           child: Container(
@@ -244,9 +407,9 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: _isCameraInitialized && 
-                     _cameraController != null && 
-                     _cameraController!.value.isInitialized
+              child: _isCameraInitialized &&
+                      _cameraController != null &&
+                      _cameraController!.value.isInitialized
                   ? AspectRatio(
                       aspectRatio: _cameraController!.value.aspectRatio,
                       child: CameraPreview(_cameraController!),
@@ -271,9 +434,9 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              _cameraController == null 
-                                ? 'Đang khởi động camera...' 
-                                : 'Đang tải...',
+                              _cameraController == null
+                                  ? 'Đang khởi động camera...'
+                                  : 'Đang tải...',
                               style: const TextStyle(
                                 color: Colors.black54,
                                 fontSize: 14,
@@ -345,24 +508,46 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
   }
 
   Widget _buildStatusMessage() {
+    String message;
+    Color textColor;
+    List<Shadow>? shadows;
+
+    switch (_scanStatus) {
+      case ScanStatus.scanning:
+        message = 'Đang quét...';
+        textColor = const Color(0xFF8F99AD);
+        shadows = null;
+        break;
+      case ScanStatus.success:
+        message = 'Điểm danh thành công';
+        textColor = const Color(0xFF4CAF50);
+        shadows = [
+          const Shadow(
+            color: Color(0xFF4CAF50),
+            blurRadius: 8,
+          ),
+        ];
+        break;
+      case ScanStatus.failed:
+        message = 'Thất bại, vui lòng thử lại';
+        textColor = Colors.red;
+        shadows = null;
+        break;
+    }
+
     return Positioned(
       bottom: 230,
       left: 0,
       right: 0,
       child: Center(
         child: Text(
-          _scanSuccess ? 'Nhận diện thành công!' : 'Đang quét...',
+          message,
           style: TextStyle(
             fontFamily: 'Roboto',
             fontSize: 20,
             fontWeight: FontWeight.w500,
-            color: _scanSuccess ? const Color(0xFF4CAF50) : const Color(0xFF8F99AD),
-            shadows: _scanSuccess ? [
-              const Shadow(
-                color: Color(0xFF4CAF50),
-                blurRadius: 8,
-              ),
-            ] : null,
+            color: textColor,
+            shadows: shadows,
           ),
         ),
       ),
@@ -421,49 +606,6 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBar() {
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: Container(
-        height: 24,
-        color: Colors.white,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Padding(
-              padding: EdgeInsets.only(left: 16.0),
-              child: Text(
-                '09:30 PM',
-                style: TextStyle(
-                  fontFamily: 'Roboto',
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(right: 16.0),
-              child: Row(
-                children: const [
-                  Icon(Icons.bluetooth, size: 14, color: Colors.black),
-                  SizedBox(width: 4),
-                  Icon(Icons.wifi, size: 14, color: Colors.black),
-                  SizedBox(width: 4),
-                  Icon(Icons.signal_cellular_4_bar, size: 14, color: Colors.black),
-                  SizedBox(width: 4),
-                  Icon(Icons.battery_full, size: 14, color: Colors.black),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -550,3 +692,4 @@ class FaceDetectionPainter extends CustomPainter {
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
+

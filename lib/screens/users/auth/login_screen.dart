@@ -77,22 +77,55 @@ class _LoginScreenState extends State<LoginScreen> {
         if (response.success && response.data != null) {
           final loginResponse = response.data!;
           
-          // Store user session
-          UserSession().setUser(
-            role: loginResponse.role,
-            userData: loginResponse.user,
-            username: _emailController.text.trim(),
-            accessToken: loginResponse.accessToken,
-            tokenType: loginResponse.tokenType,
-          );
-
           // Sau khi đăng nhập, gọi API lấy thông tin user hiện tại
-          final meResponse = await ApiService().getCurrentUser();
-          if (meResponse.success && meResponse.data != null) {
-            // Cập nhật lại userData với thông tin từ /auth/me
+          try {
+            final meResponse = await ApiService().getCurrentUser();
+            if (meResponse.success && meResponse.data != null) {
+              final currentUserData = meResponse.data!;
+              
+              // Tạo userData phù hợp với cấu trúc mới từ /auth/me
+              // Response: { id, email, user_type, profile: { teacher_code, full_name, ... } }
+              final profile = currentUserData['profile'] as Map<String, dynamic>?;
+              
+              Map<String, dynamic> userData = {};
+              if (profile != null) {
+                // Copy tất cả fields từ profile
+                userData = Map<String, dynamic>.from(profile);
+                // Thêm profile_id từ profile.id
+                userData['profile_id'] = profile['id'];
+                // Thêm email từ root level
+                userData['email'] = currentUserData['email'];
+                // Thêm user_type
+                userData['user_type'] = currentUserData['user_type'];
+              } else {
+                // Fallback nếu không có profile
+                userData = currentUserData;
+              }
+              
+              // Store user session với data đã được xử lý
+              UserSession().setUser(
+                role: loginResponse.role,
+                userData: userData,
+                username: _emailController.text.trim(),
+                accessToken: loginResponse.accessToken,
+                tokenType: loginResponse.tokenType,
+              );
+            } else {
+              // Nếu không lấy được /auth/me, dùng data từ login
+              UserSession().setUser(
+                role: loginResponse.role,
+                userData: loginResponse.user,
+                username: _emailController.text.trim(),
+                accessToken: loginResponse.accessToken,
+                tokenType: loginResponse.tokenType,
+              );
+            }
+          } catch (e) {
+            debugPrint('Error fetching current user: $e');
+            // Fallback: dùng data từ login response
             UserSession().setUser(
               role: loginResponse.role,
-              userData: meResponse.data!,
+              userData: loginResponse.user,
               username: _emailController.text.trim(),
               accessToken: loginResponse.accessToken,
               tokenType: loginResponse.tokenType,
