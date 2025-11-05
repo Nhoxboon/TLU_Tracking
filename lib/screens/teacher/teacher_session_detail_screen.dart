@@ -8,6 +8,7 @@ import '../../services/user_session.dart';
 
 class AttendanceRecord {
   final int id;
+  final int studentId;
   final String studentName;
   final String studentCode;
   final String status;
@@ -15,6 +16,7 @@ class AttendanceRecord {
 
   AttendanceRecord({
     required this.id,
+    required this.studentId,
     required this.studentName,
     required this.studentCode,
     required this.status,
@@ -24,6 +26,7 @@ class AttendanceRecord {
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
     return AttendanceRecord(
       id: json['id'] ?? 0,
+      studentId: json['student_id'] ?? 0,
       studentName: json['student_name'] ?? '',
       studentCode: json['student_code'] ?? '',
       status: json['status'] ?? 'absent',
@@ -36,15 +39,32 @@ class AttendanceRecord {
 
 class TeacherSessionDetailScreen extends StatefulWidget {
   final TeachingSession session;
+  final int classId;
 
-  const TeacherSessionDetailScreen({Key? key, required this.session})
-    : super(key: key);
+  const TeacherSessionDetailScreen({
+    Key? key,
+    required this.session,
+    required this.classId,
+  }) : super(key: key);
 
   @override
   State<TeacherSessionDetailScreen> createState() => _TeacherSessionDetailScreenState();
 }
 
+class Student {
+  final int id;
+  final String name;
+  final String code;
+
+  Student({
+    required this.id,
+    required this.name,
+    required this.code,
+  });
+}
+
 class _TeacherSessionDetailScreenState extends State<TeacherSessionDetailScreen> {
+  List<Student> _allStudents = [];
   List<AttendanceRecord> _attendanceList = [];
   bool _isLoading = false;
   String? _error;
@@ -52,10 +72,10 @@ class _TeacherSessionDetailScreenState extends State<TeacherSessionDetailScreen>
   @override
   void initState() {
     super.initState();
-    _fetchAttendance();
+    _fetchData();
   }
 
-  Future<void> _fetchAttendance() async {
+  Future<void> _fetchData() async {
     setState(() {
       _isLoading = true;
       _error = null;
@@ -63,11 +83,6 @@ class _TeacherSessionDetailScreenState extends State<TeacherSessionDetailScreen>
 
     try {
       final baseUrl = ApiService.baseUrl;
-      final url = Uri.parse('$baseUrl/classes/sessions/${widget.session.id}/attendance');
-      
-      print('DEBUG - Fetching attendance from: $url');
-      
-      // Build headers with Authorization
       final headers = <String, String>{
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -77,30 +92,42 @@ class _TeacherSessionDetailScreenState extends State<TeacherSessionDetailScreen>
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = '$tokenType $token';
       }
-      
-      final response = await http.get(url, headers: headers);
-      
-      print('DEBUG - Response status: ${response.statusCode}');
-      print('DEBUG - Response body: ${response.body}');
-      
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        final List<AttendanceRecord> loaded = data
-            .map((item) => AttendanceRecord.fromJson(item))
-            .toList();
-        
-        print('DEBUG - Loaded ${loaded.length} attendance records');
-        
+
+      // Fetch all students in class
+      final studentsUrl = Uri.parse('$baseUrl/classes/${widget.classId}/students?active_only=true');
+      final studentsResponse = await http.get(studentsUrl, headers: headers);
+
+      // Fetch attendance records for session
+      final attendanceUrl = Uri.parse('$baseUrl/classes/sessions/${widget.session.id}/attendance');
+      final attendanceResponse = await http.get(attendanceUrl, headers: headers);
+
+      if (studentsResponse.statusCode == 200 && attendanceResponse.statusCode == 200) {
+        // Parse all students
+        final List<dynamic> studentsData = jsonDecode(studentsResponse.body);
+        final List<Student> allStudents = studentsData.map((item) {
+          return Student(
+            id: item['student_id'] ?? 0,
+            name: item['student_name'] ?? '',
+            code: item['student_code'] ?? '',
+          );
+        }).toList();
+
+        // Parse attendance records
+        final List<dynamic> attendanceData = jsonDecode(attendanceResponse.body);
+        final List<AttendanceRecord> attendanceRecords = attendanceData.map((item) {
+          return AttendanceRecord.fromJson(item);
+        }).toList();
+
         setState(() {
-          _attendanceList = loaded;
+          _allStudents = allStudents;
+          _attendanceList = attendanceRecords;
         });
       } else {
         setState(() {
-          _error = 'Lỗi lấy dữ liệu điểm danh';
+          _error = 'Lỗi lấy dữ liệu: ${studentsResponse.statusCode} / ${attendanceResponse.statusCode}';
         });
       }
     } catch (e) {
-      print('DEBUG - Error fetching attendance: $e');
       setState(() {
         _error = 'Lỗi kết nối: $e';
       });
@@ -163,13 +190,13 @@ class _TeacherSessionDetailScreenState extends State<TeacherSessionDetailScreen>
 
             const SizedBox(height: 12),
 
-            // Attendance list header (left aligned)
+            // Student list header (left aligned)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Danh sách điểm danh',
+                  'Danh sách sinh viên',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -221,7 +248,9 @@ class _TeacherSessionDetailScreenState extends State<TeacherSessionDetailScreen>
                   Icon(Icons.people, color: const Color(0xFF667085), size: 16),
                   const SizedBox(width: 4),
                   Text(
-                    '${_attendanceList.where((a) => a.status.toLowerCase() == 'present').length}/${_attendanceList.length} Sinh viên',
+                    _allStudents.isNotEmpty
+                        ? '${_attendanceList.where((a) => a.status.toLowerCase() == 'present' || a.status.toLowerCase() == 'late').length}/${_allStudents.length} Sinh viên'
+                        : '0/0 Sinh viên',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
@@ -232,7 +261,7 @@ class _TeacherSessionDetailScreenState extends State<TeacherSessionDetailScreen>
               ),
             ),
 
-            // Attendance list
+            // Attendance list - show all students with attendance status
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -244,7 +273,7 @@ class _TeacherSessionDetailScreenState extends State<TeacherSessionDetailScreen>
                               Text(_error!, style: const TextStyle(color: Colors.red)),
                               const SizedBox(height: 16),
                               ElevatedButton(
-                                onPressed: _fetchAttendance,
+                                onPressed: _fetchData,
                                 child: const Text('Thử lại'),
                               ),
                             ],
@@ -252,10 +281,10 @@ class _TeacherSessionDetailScreenState extends State<TeacherSessionDetailScreen>
                         )
                       : Container(
                           color: Colors.white,
-                          child: _attendanceList.isEmpty
+                          child: _allStudents.isEmpty
                               ? const Center(
                                   child: Text(
-                                    'Chưa có sinh viên điểm danh',
+                                    'Chưa có sinh viên trong lớp',
                                     style: TextStyle(
                                       fontSize: 16,
                                       color: Color(0xFF667085),
@@ -264,9 +293,20 @@ class _TeacherSessionDetailScreenState extends State<TeacherSessionDetailScreen>
                                 )
                               : ListView.builder(
                                   padding: const EdgeInsets.all(16),
-                                  itemCount: _attendanceList.length,
+                                  itemCount: _allStudents.length,
                                   itemBuilder: (context, index) {
-                                    final attendance = _attendanceList[index];
+                                    final student = _allStudents[index];
+                                    // Find attendance record for this student
+                                    final attendance = _attendanceList.firstWhere(
+                                      (a) => a.studentId == student.id,
+                                      orElse: () => AttendanceRecord(
+                                        id: 0,
+                                        studentId: student.id,
+                                        studentName: student.name,
+                                        studentCode: student.code,
+                                        status: 'absent',
+                                      ),
+                                    );
                                     return _buildStudentCard(
                                       attendance.studentName,
                                       attendance.studentCode,

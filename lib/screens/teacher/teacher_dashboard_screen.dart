@@ -10,7 +10,9 @@ import 'teacher_class_search_screen.dart';
 import '../../services/user_session.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
-  const TeacherDashboardScreen({Key? key}) : super(key: key);
+  final int initialTab;
+  
+  const TeacherDashboardScreen({Key? key, this.initialTab = 0}) : super(key: key);
 
   @override
   State<TeacherDashboardScreen> createState() => _TeacherDashboardScreenState();
@@ -113,7 +115,13 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     }
   }
 
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialTab;
+  }
 
   @override
   Widget build(BuildContext context) {

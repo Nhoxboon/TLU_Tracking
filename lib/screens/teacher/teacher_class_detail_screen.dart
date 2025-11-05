@@ -6,7 +6,6 @@ import '../../widgets/swipe_instructions.dart';
 import '../../models/teaching_session.dart';
 import '../../services/api_service.dart';
 import '../../services/user_session.dart';
-import '../settings_screen.dart';
 import '../users/add_session_screen.dart';
 import '../users/edit_session_screen.dart';
 import 'teacher_session_detail_screen.dart'; // Import teacher screen
@@ -258,6 +257,7 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
                                     MaterialPageRoute(
                                       builder: (context) => TeacherSessionDetailScreen(
                                         session: sessions[sessionIndex],
+                                        classId: widget.classId,
                                       ),
                                     ),
                                   );
@@ -296,17 +296,26 @@ class _TeacherClassDetailScreenState extends State<TeacherClassDetailScreen> {
             IconButton(
               icon: const Icon(Icons.home_outlined, size: 25),
               color: const Color(0xFF2196F3),
-              onPressed: () {},
+              onPressed: () {
+                // Navigate back to teacher dashboard (home tab - danh sách lớp)
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/teacher/dashboard',
+                  arguments: {'initialTab': 0},
+                  (route) => false,
+                );
+              },
             ),
             IconButton(
               icon: const Icon(Icons.person_outline, size: 25),
               color: Colors.black.withOpacity(0.7),
               onPressed: () {
-                Navigator.push(
+                // Navigate back to teacher dashboard (settings tab - cài đặt)
+                Navigator.pushNamedAndRemoveUntil(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
+                  '/teacher/dashboard',
+                  arguments: {'initialTab': 1},
+                  (route) => false,
                 );
               },
             ),
