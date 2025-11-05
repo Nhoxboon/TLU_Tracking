@@ -1,19 +1,19 @@
 // API Models based on OpenAPI specification
 
+// Export models for easier access
+export 'student.dart' show StudentModel;
+export 'teacher.dart';
+export 'subject.dart';
+export 'teaching_session.dart';
+
 class LoginRequest {
   final String email;
   final String password;
 
-  LoginRequest({
-    required this.email,
-    required this.password,
-  });
+  LoginRequest({required this.email, required this.password});
 
   Map<String, dynamic> toJson() {
-    return {
-      'email': email,
-      'password': password,
-    };
+    return {'email': email, 'password': password};
   }
 }
 
@@ -27,7 +27,8 @@ class LoginResponse {
     required this.accessToken,
     required this.tokenType,
     required this.role,
-    required this.user, required String message,
+    required this.user,
+    required String message,
   });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
@@ -36,7 +37,8 @@ class LoginResponse {
       accessToken: json['access_token'] ?? '',
       tokenType: json['token_type'] ?? 'bearer',
       role: UserRole.fromString(userMap['user_type'] ?? 'student'),
-      user: userMap, message: '',
+      user: userMap,
+      message: '',
     );
   }
 }
@@ -104,10 +106,40 @@ class BaseResponse {
   BaseResponse({required this.success, required this.message, this.data});
 
   factory BaseResponse.fromJson(Map<String, dynamic> json) => BaseResponse(
-        success: json['success'] ?? true,
-        message: json['message'] ?? 'Operation successful',
-        data: json['data'] is Map<String, dynamic> ? (json['data'] as Map<String, dynamic>) : null,
-      );
+    success: json['success'] ?? true,
+    message: json['message'] ?? 'Operation successful',
+    data: json['data'] is Map<String, dynamic>
+        ? (json['data'] as Map<String, dynamic>)
+        : null,
+  );
+}
+
+class PaginatedResponse {
+  final List<Map<String, dynamic>> items;
+  final int total;
+  final int page;
+  final int limit;
+  final int totalPages;
+
+  PaginatedResponse({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.limit,
+    required this.totalPages,
+  });
+
+  factory PaginatedResponse.fromJson(Map<String, dynamic> json) {
+    return PaginatedResponse(
+      items: (json['items'] as List<dynamic>)
+          .map((item) => item as Map<String, dynamic>)
+          .toList(),
+      total: json['total'] as int,
+      page: json['page'] as int,
+      limit: json['limit'] as int,
+      totalPages: json['total_pages'] as int,
+    );
+  }
 }
 
 class Faculty {
@@ -117,15 +149,21 @@ class Faculty {
   final String? createdAt;
   final String? updatedAt;
 
-  Faculty({required this.id, required this.name, required this.code, this.createdAt, this.updatedAt});
+  Faculty({
+    required this.id,
+    required this.name,
+    required this.code,
+    this.createdAt,
+    this.updatedAt,
+  });
 
   factory Faculty.fromJson(Map<String, dynamic> json) => Faculty(
-        id: json['id'] is int ? json['id'] : int.tryParse('${json['id']}') ?? 0,
-        name: json['name'] ?? '',
-        code: json['code'] ?? '',
-        createdAt: json['created_at'],
-        updatedAt: json['updated_at'],
-      );
+    id: json['id'] is int ? json['id'] : int.tryParse('${json['id']}') ?? 0,
+    name: json['name'] ?? '',
+    code: json['code'] ?? '',
+    createdAt: json['created_at'],
+    updatedAt: json['updated_at'],
+  );
 }
 
 class FacultyPage {
@@ -135,15 +173,23 @@ class FacultyPage {
   final int limit;
   final int totalPages;
 
-  FacultyPage({required this.items, required this.total, required this.page, required this.limit, required this.totalPages});
+  FacultyPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.limit,
+    required this.totalPages,
+  });
 
   factory FacultyPage.fromJson(Map<String, dynamic> json) => FacultyPage(
-        items: (json['items'] as List<dynamic>? ?? const []).map((e) => Faculty.fromJson(e as Map<String, dynamic>)).toList(),
-        total: json['total'] ?? 0,
-        page: json['page'] ?? 1,
-        limit: json['limit'] ?? 10,
-        totalPages: json['total_pages'] ?? 1,
-      );
+    items: (json['items'] as List<dynamic>? ?? const [])
+        .map((e) => Faculty.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    total: json['total'] ?? 0,
+    page: json['page'] ?? 1,
+    limit: json['limit'] ?? 10,
+    totalPages: json['total_pages'] ?? 1,
+  );
 }
 
 class Student {
@@ -281,12 +327,7 @@ class Subject {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'code': code,
-      'credits': credits,
-    };
+    return {'id': id, 'name': name, 'code': code, 'credits': credits};
   }
 }
 
@@ -362,18 +403,18 @@ class ClassCreate {
   });
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'code': code,
-        'subject_id': subjectId,
-        'teacher_id': teacherId,
-        'faculty_id': facultyId,
-        'department_id': departmentId,
-        'major_id': majorId,
-        'cohort_id': cohortId,
-        'academic_year_id': academicYearId,
-        'semester_id': semesterId,
-        'study_phase_id': studyPhaseId,
-      };
+    'name': name,
+    'code': code,
+    'subject_id': subjectId,
+    'teacher_id': teacherId,
+    'faculty_id': facultyId,
+    'department_id': departmentId,
+    'major_id': majorId,
+    'cohort_id': cohortId,
+    'academic_year_id': academicYearId,
+    'semester_id': semesterId,
+    'study_phase_id': studyPhaseId,
+  };
 }
 
 class ClassItem {
@@ -412,22 +453,22 @@ class ClassItem {
   });
 
   factory ClassItem.fromJson(Map<String, dynamic> json) => ClassItem(
-        id: json['id'] is int ? json['id'] : int.tryParse('${json['id']}') ?? 0,
-        name: json['name'] ?? '',
-        code: json['code'] ?? '',
-        subjectId: json['subject_id'],
-        teacherId: json['teacher_id'],
-        facultyId: json['faculty_id'],
-        departmentId: json['department_id'],
-        majorId: json['major_id'],
-        cohortId: json['cohort_id'],
-        academicYearId: json['academic_year_id'],
-        semesterId: json['semester_id'],
-        studyPhaseId: json['study_phase_id'],
-        status: json['status'],
-        createdAt: json['created_at'],
-        updatedAt: json['updated_at'],
-      );
+    id: json['id'] is int ? json['id'] : int.tryParse('${json['id']}') ?? 0,
+    name: json['name'] ?? '',
+    code: json['code'] ?? '',
+    subjectId: json['subject_id'],
+    teacherId: json['teacher_id'],
+    facultyId: json['faculty_id'],
+    departmentId: json['department_id'],
+    majorId: json['major_id'],
+    cohortId: json['cohort_id'],
+    academicYearId: json['academic_year_id'],
+    semesterId: json['semester_id'],
+    studyPhaseId: json['study_phase_id'],
+    status: json['status'],
+    createdAt: json['created_at'],
+    updatedAt: json['updated_at'],
+  );
 }
 
 class ClassPage {
@@ -437,14 +478,21 @@ class ClassPage {
   final int limit;
   final int totalPages;
 
-  ClassPage({required this.items, required this.total, required this.page, required this.limit, required this.totalPages});
+  ClassPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.limit,
+    required this.totalPages,
+  });
 
   factory ClassPage.fromJson(Map<String, dynamic> json) => ClassPage(
-        items: (json['items'] as List<dynamic>? ?? const []).map((e) => ClassItem.fromJson(e as Map<String, dynamic>)).toList(),
-        total: json['total'] ?? 0,
-        page: json['page'] ?? 1,
-        limit: json['limit'] ?? 10,
-        totalPages: json['total_pages'] ?? 1,
-      );
+    items: (json['items'] as List<dynamic>? ?? const [])
+        .map((e) => ClassItem.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    total: json['total'] ?? 0,
+    page: json['page'] ?? 1,
+    limit: json['limit'] ?? 10,
+    totalPages: json['total_pages'] ?? 1,
+  );
 }
-
