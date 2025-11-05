@@ -69,7 +69,10 @@ class MyApp extends StatelessWidget {
         '/student/login': (context) => const LoginScreen(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/reset-password': (context) => const ResetPasswordScreen(),
-        '/teacher/dashboard': (context) => const TeacherDashboardScreen(),
+        '/teacher/dashboard': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+          return TeacherDashboardScreen(initialTab: args?['initialTab'] as int? ?? 0);
+        },
         // Student routes
         '/student/home': (context) => const StudentHomeScreen(),
         '/student/settings': (context) => const StudentSettingsScreen(),

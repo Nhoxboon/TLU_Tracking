@@ -15,11 +15,11 @@ class ClassSearchScreen extends StatefulWidget {
 class _ClassSearchScreenState extends State<ClassSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
 
-  String? _selectedClassCode;
-  String? _selectedTeacher;
-  String? _selectedSubject;
-  String? _selectedFaculty;
-  String? _selectedCohort;
+  String? _selectedClassCode; // Keep as string for class code
+  int? _selectedSubjectId;
+  int? _selectedFacultyId;
+  int? _selectedCohortId;
+  int? _selectedSemesterId;
 
   List<_ClassItem> _searchResults = [];
   bool _isSearching = false;
@@ -27,21 +27,21 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
 
   // Cache for dropdown data
   List<Map<String, dynamic>> _classCodes = [];
-  List<Map<String, dynamic>> _teachers = [];
   List<Map<String, dynamic>> _subjects = [];
   List<Map<String, dynamic>> _faculties = [];
   List<Map<String, dynamic>> _cohorts = [];
+  List<Map<String, dynamic>> _semesters = [];
 
   // Dropdown expansion states
-  String? _expandedFilter; // 'classCode', 'teacher', 'subject', 'faculty', 'cohort'
+  String? _expandedFilter; // 'classCode', 'subject', 'faculty', 'cohort', 'semester'
   
   // Pagination for dropdowns
   final Map<String, int> _displayedCounts = {
     'classCode': 5,
-    'teacher': 5,
     'subject': 5,
     'faculty': 5,
     'cohort': 5,
+    'semester': 5,
   };
   
   bool _isLoadingDropdown = false;
@@ -53,14 +53,6 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
   }
 
   Future<void> _performSearch() async {
-    final studentId = UserSession().profileId;
-    if (studentId == null) {
-      setState(() {
-        _error = 'Không xác định được student_id. Vui lòng đăng nhập lại.';
-      });
-      return;
-    }
-
     setState(() {
       _isSearching = true;
       _error = null;
@@ -68,14 +60,28 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
 
     try {
       final baseUrl = ApiService.baseUrl;
-      // Build query params
-      final params = <String, String>{'active_only': 'true'};
       
-      // Add filters if selected
-      // Note: Backend might not support all these filters on student endpoint
-      // This is a placeholder - adjust based on actual API capabilities
+      // Build query parameters with filters
+      final params = <String, String>{
+        'active_only': 'true',
+        'limit': '100',
+      };
       
-      final url = Uri.parse('$baseUrl/classes/student/$studentId').replace(queryParameters: params);
+      // Add filter IDs if selected
+      if (_selectedSubjectId != null) {
+        params['subject_id'] = _selectedSubjectId.toString();
+      }
+      if (_selectedFacultyId != null) {
+        params['faculty_id'] = _selectedFacultyId.toString();
+      }
+      if (_selectedCohortId != null) {
+        params['cohort_id'] = _selectedCohortId.toString();
+      }
+      if (_selectedSemesterId != null) {
+        params['semester_id'] = _selectedSemesterId.toString();
+      }
+      
+      final url = Uri.parse('$baseUrl/classes').replace(queryParameters: params);
 
       final headers = <String, String>{
         'Accept': 'application/json',
@@ -93,16 +99,19 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
       debugPrint('DEBUG - Search Body: ${resp.body}');
 
       if (resp.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(resp.body);
+        final data = jsonDecode(resp.body);
+        final List<dynamic> items = data['items'] ?? [];
         
-        // Client-side filtering based on selections
-        final allResults = data.map((e) {
+        // Parse results
+        final allResults = items.map((e) {
           final m = e as Map<String, dynamic>;
           return _ClassItem(
             id: (m['id'] ?? 0) is int ? m['id'] as int : int.tryParse('${m['id']}') ?? 0,
             title: (m['name'] ?? m['class_name'] ?? 'Chưa rõ').toString(),
             code: (m['code'] ?? m['class_code'] ?? '—').toString(),
-            students: (m['student_count'] ?? m['students_count'] ?? 0) as int,
+            students: (m['student_count'] ?? m['students_count'] ?? 0) is int 
+                ? (m['student_count'] ?? m['students_count'] ?? 0) as int
+                : int.tryParse('${m['student_count'] ?? m['students_count'] ?? 0}') ?? 0,
             teacherName: (m['teacher_name'] ?? '').toString(),
             subjectName: (m['subject_name'] ?? '').toString(),
             facultyName: (m['faculty_name'] ?? '').toString(),
@@ -110,7 +119,7 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
           );
         }).toList();
 
-        // Apply client-side filters
+        // Apply client-side filters for class code and search text
         final filtered = allResults.where((item) {
           if (_searchController.text.isNotEmpty) {
             final q = _searchController.text.toLowerCase();
@@ -120,10 +129,6 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
             }
           }
           if (_selectedClassCode != null && item.code != _selectedClassCode) return false;
-          if (_selectedTeacher != null && item.teacherName != _selectedTeacher) return false;
-          if (_selectedSubject != null && item.subjectName != _selectedSubject) return false;
-          if (_selectedFaculty != null && item.facultyName != _selectedFaculty) return false;
-          if (_selectedCohort != null && item.cohortName != _selectedCohort) return false;
           return true;
         }).toList();
 
@@ -217,30 +222,9 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                       items: _classCodes,
                       filterKey: 'classCode',
                       displayField: 'code',
-                      onSelect: (value) {
+                      onSelect: (item) {
                         setState(() {
-                          _selectedClassCode = value;
-                          _expandedFilter = null;
-                        });
-                      },
-                    ),
-                  const SizedBox(height: 8),
-                  
-                  _buildFilterChip(
-                    filterKey: 'teacher',
-                    label: 'Lọc theo giảng viên',
-                    value: _selectedTeacher,
-                    onTap: () => _toggleDropdown('teacher'),
-                  ),
-                  if (_expandedFilter == 'teacher')
-                    _buildDropdownList(
-                      items: _teachers,
-                      filterKey: 'teacher',
-                      displayField: 'full_name',
-                      secondaryField: 'teacher_code',
-                      onSelect: (value) {
-                        setState(() {
-                          _selectedTeacher = value;
+                          _selectedClassCode = item['code']?.toString();
                           _expandedFilter = null;
                         });
                       },
@@ -250,7 +234,9 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                   _buildFilterChip(
                     filterKey: 'subject',
                     label: 'Lọc theo môn học',
-                    value: _selectedSubject,
+                    value: _selectedSubjectId != null 
+                        ? _subjects.firstWhere((s) => s['id'] == _selectedSubjectId, orElse: () => {})['name']?.toString()
+                        : null,
                     onTap: () => _toggleDropdown('subject'),
                   ),
                   if (_expandedFilter == 'subject')
@@ -259,9 +245,9 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                       filterKey: 'subject',
                       displayField: 'name',
                       secondaryField: 'code',
-                      onSelect: (value) {
+                      onSelect: (item) {
                         setState(() {
-                          _selectedSubject = value;
+                          _selectedSubjectId = item['id'] as int?;
                           _expandedFilter = null;
                         });
                       },
@@ -271,7 +257,9 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                   _buildFilterChip(
                     filterKey: 'faculty',
                     label: 'Lọc theo khoa',
-                    value: _selectedFaculty,
+                    value: _selectedFacultyId != null
+                        ? _faculties.firstWhere((f) => f['id'] == _selectedFacultyId, orElse: () => {})['name']?.toString()
+                        : null,
                     onTap: () => _toggleDropdown('faculty'),
                   ),
                   if (_expandedFilter == 'faculty')
@@ -280,9 +268,9 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                       filterKey: 'faculty',
                       displayField: 'name',
                       secondaryField: 'code',
-                      onSelect: (value) {
+                      onSelect: (item) {
                         setState(() {
-                          _selectedFaculty = value;
+                          _selectedFacultyId = item['id'] as int?;
                           _expandedFilter = null;
                         });
                       },
@@ -292,7 +280,9 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                   _buildFilterChip(
                     filterKey: 'cohort',
                     label: 'Lọc theo khóa',
-                    value: _selectedCohort,
+                    value: _selectedCohortId != null
+                        ? _cohorts.firstWhere((c) => c['id'] == _selectedCohortId, orElse: () => {})['name']?.toString()
+                        : null,
                     onTap: () => _toggleDropdown('cohort'),
                   ),
                   if (_expandedFilter == 'cohort')
@@ -300,9 +290,31 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                       items: _cohorts,
                       filterKey: 'cohort',
                       displayField: 'name',
-                      onSelect: (value) {
+                      onSelect: (item) {
                         setState(() {
-                          _selectedCohort = value;
+                          _selectedCohortId = item['id'] as int?;
+                          _expandedFilter = null;
+                        });
+                      },
+                    ),
+                  const SizedBox(height: 8),
+                  
+                  _buildFilterChip(
+                    filterKey: 'semester',
+                    label: 'Lọc theo học kỳ',
+                    value: _selectedSemesterId != null
+                        ? _semesters.firstWhere((s) => s['id'] == _selectedSemesterId, orElse: () => {})['name']?.toString()
+                        : null,
+                    onTap: () => _toggleDropdown('semester'),
+                  ),
+                  if (_expandedFilter == 'semester')
+                    _buildDropdownList(
+                      items: _semesters,
+                      filterKey: 'semester',
+                      displayField: 'name',
+                      onSelect: (item) {
+                        setState(() {
+                          _selectedSemesterId = item['id'] as int?;
                           _expandedFilter = null;
                         });
                       },
@@ -436,9 +448,6 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
       case 'classCode':
         if (_classCodes.isEmpty) await _fetchClassCodes();
         break;
-      case 'teacher':
-        if (_teachers.isEmpty) await _fetchTeachers();
-        break;
       case 'subject':
         if (_subjects.isEmpty) await _fetchSubjects();
         break;
@@ -447,6 +456,9 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
         break;
       case 'cohort':
         if (_cohorts.isEmpty) await _fetchCohorts();
+        break;
+      case 'semester':
+        if (_semesters.isEmpty) await _fetchSemesters();
         break;
     }
 
@@ -466,7 +478,7 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
     required String filterKey,
     required String displayField,
     String? secondaryField,
-    required Function(String) onSelect,
+    required Function(Map<String, dynamic>) onSelect,
   }) {
     final displayCount = _displayedCounts[filterKey] ?? 5;
     final visibleItems = items.take(displayCount).toList();
@@ -519,17 +531,17 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                       case 'classCode':
                         _selectedClassCode = null;
                         break;
-                      case 'teacher':
-                        _selectedTeacher = null;
-                        break;
                       case 'subject':
-                        _selectedSubject = null;
+                        _selectedSubjectId = null;
                         break;
                       case 'faculty':
-                        _selectedFaculty = null;
+                        _selectedFacultyId = null;
                         break;
                       case 'cohort':
-                        _selectedCohort = null;
+                        _selectedCohortId = null;
+                        break;
+                      case 'semester':
+                        _selectedSemesterId = null;
                         break;
                     }
                     _expandedFilter = null;
@@ -557,26 +569,50 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                     ? '$displayValue ($secondaryValue)' 
                     : displayValue;
                 
-                String? selectedValue;
+                int? selectedId;
                 switch (filterKey) {
                   case 'classCode':
-                    selectedValue = _selectedClassCode;
-                    break;
-                  case 'teacher':
-                    selectedValue = _selectedTeacher;
-                    break;
+                    // For class code, compare by string
+                    final isSelectedCode = _selectedClassCode == displayValue;
+                    return Container(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: const Color(0xFFEAECF0).withOpacity(0.5),
+                          ),
+                        ),
+                      ),
+                      child: ListTile(
+                        dense: true,
+                        title: Text(
+                          displayValue,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isSelectedCode ? const Color(0xFF2196F3) : Colors.black87,
+                            fontWeight: isSelectedCode ? FontWeight.w600 : FontWeight.w400,
+                          ),
+                        ),
+                        trailing: isSelectedCode
+                            ? const Icon(Icons.check, color: Color(0xFF2196F3), size: 20)
+                            : null,
+                        onTap: () => onSelect(item),
+                      ),
+                    );
                   case 'subject':
-                    selectedValue = _selectedSubject;
+                    selectedId = _selectedSubjectId;
                     break;
                   case 'faculty':
-                    selectedValue = _selectedFaculty;
+                    selectedId = _selectedFacultyId;
                     break;
                   case 'cohort':
-                    selectedValue = _selectedCohort;
+                    selectedId = _selectedCohortId;
+                    break;
+                  case 'semester':
+                    selectedId = _selectedSemesterId;
                     break;
                 }
                 
-                final isSelected = selectedValue == displayValue;
+                final isSelected = selectedId != null && item['id'] == selectedId;
                 
                 return Container(
                   decoration: BoxDecoration(
@@ -599,7 +635,7 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                     trailing: isSelected
                         ? const Icon(Icons.check, color: Color(0xFF2196F3), size: 20)
                         : null,
-                    onTap: () => onSelect(displayValue),
+                    onTap: () => onSelect(item),
                   ),
                 );
               }).toList(),
@@ -689,67 +725,6 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
     );
   }
 
-  void _showClassCodePicker() async {
-    if (_classCodes.isEmpty) {
-      // Fetch all classes to get unique codes
-      await _fetchClassCodes();
-    }
-    
-    if (!mounted) return;
-    
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        height: 400,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Chọn mã lớp',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() => _selectedClassCode = null);
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Xóa bộ lọc'),
-                ),
-              ],
-            ),
-            const Divider(),
-            Expanded(
-              child: _classCodes.isEmpty
-                  ? const Center(child: Text('Không có dữ liệu'))
-                  : ListView.builder(
-                      itemCount: _classCodes.length,
-                      itemBuilder: (context, index) {
-                        final code = _classCodes[index]['code'] as String;
-                        return ListTile(
-                          title: Text(code),
-                          onTap: () {
-                            setState(() => _selectedClassCode = code);
-                            Navigator.pop(context);
-                          },
-                          trailing: _selectedClassCode == code
-                              ? const Icon(Icons.check, color: Color(0xFF2196F3))
-                              : null,
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Future<void> _fetchClassCodes() async {
     try {
@@ -786,164 +761,6 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
     }
   }
 
-  void _showTeacherPicker() async {
-    if (_teachers.isEmpty) {
-      await _fetchTeachers();
-    }
-    
-    if (!mounted) return;
-    
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        height: 400,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Chọn giảng viên',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() => _selectedTeacher = null);
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Xóa bộ lọc'),
-                ),
-              ],
-            ),
-            const Divider(),
-            Expanded(
-              child: _teachers.isEmpty
-                  ? const Center(child: Text('Không có dữ liệu'))
-                  : ListView.builder(
-                      itemCount: _teachers.length,
-                      itemBuilder: (context, index) {
-                        final teacher = _teachers[index];
-                        final name = teacher['full_name'] as String;
-                        final code = teacher['teacher_code'] as String?;
-                        return ListTile(
-                          title: Text(name),
-                          subtitle: code != null ? Text(code) : null,
-                          onTap: () {
-                            setState(() => _selectedTeacher = name);
-                            Navigator.pop(context);
-                          },
-                          trailing: _selectedTeacher == name
-                              ? const Icon(Icons.check, color: Color(0xFF2196F3))
-                              : null,
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _fetchTeachers() async {
-    try {
-      final baseUrl = ApiService.baseUrl;
-      final url = Uri.parse('$baseUrl/users/teachers?limit=100');
-
-      final headers = <String, String>{
-        'Accept': 'application/json',
-      };
-      final token = UserSession().accessToken;
-      final tokenType = UserSession().tokenType ?? 'Bearer';
-      if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = '$tokenType $token';
-      }
-
-      final resp = await http.get(url, headers: headers);
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body);
-        final items = data['items'] as List? ?? [];
-        
-        setState(() {
-          _teachers = items.map((item) => {
-            'full_name': item['full_name'] ?? 'Unknown',
-            'teacher_code': item['teacher_code'],
-          }).toList();
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching teachers: $e');
-    }
-  }
-
-  void _showSubjectPicker() async {
-    if (_subjects.isEmpty) {
-      await _fetchSubjects();
-    }
-    
-    if (!mounted) return;
-    
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        height: 400,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Chọn môn học',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() => _selectedSubject = null);
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Xóa bộ lọc'),
-                ),
-              ],
-            ),
-            const Divider(),
-            Expanded(
-              child: _subjects.isEmpty
-                  ? const Center(child: Text('Không có dữ liệu'))
-                  : ListView.builder(
-                      itemCount: _subjects.length,
-                      itemBuilder: (context, index) {
-                        final subject = _subjects[index];
-                        final name = subject['name'] as String;
-                        final code = subject['code'] as String?;
-                        return ListTile(
-                          title: Text(name),
-                          subtitle: code != null ? Text(code) : null,
-                          onTap: () {
-                            setState(() => _selectedSubject = name);
-                            Navigator.pop(context);
-                          },
-                          trailing: _selectedSubject == name
-                              ? const Icon(Icons.check, color: Color(0xFF2196F3))
-                              : null,
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Future<void> _fetchSubjects() async {
     try {
@@ -966,6 +783,7 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
         
         setState(() {
           _subjects = items.map((item) => {
+            'id': item['id'],
             'name': item['name'] ?? 'Unknown',
             'code': item['code'],
           }).toList();
@@ -976,69 +794,6 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
     }
   }
 
-  void _showFacultyPicker() async {
-    if (_faculties.isEmpty) {
-      await _fetchFaculties();
-    }
-    
-    if (!mounted) return;
-    
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        height: 400,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Chọn khoa',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() => _selectedFaculty = null);
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Xóa bộ lọc'),
-                ),
-              ],
-            ),
-            const Divider(),
-            Expanded(
-              child: _faculties.isEmpty
-                  ? const Center(child: Text('Không có dữ liệu'))
-                  : ListView.builder(
-                      itemCount: _faculties.length,
-                      itemBuilder: (context, index) {
-                        final faculty = _faculties[index];
-                        final name = faculty['name'] as String;
-                        final code = faculty['code'] as String?;
-                        return ListTile(
-                          title: Text(name),
-                          subtitle: code != null ? Text(code) : null,
-                          onTap: () {
-                            setState(() => _selectedFaculty = name);
-                            Navigator.pop(context);
-                          },
-                          trailing: _selectedFaculty == name
-                              ? const Icon(Icons.check, color: Color(0xFF2196F3))
-                              : null,
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Future<void> _fetchFaculties() async {
     try {
@@ -1061,6 +816,7 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
         
         setState(() {
           _faculties = items.map((item) => {
+            'id': item['id'],
             'name': item['name'] ?? 'Unknown',
             'code': item['code'],
           }).toList();
@@ -1071,67 +827,6 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
     }
   }
 
-  void _showCohortPicker() async {
-    if (_cohorts.isEmpty) {
-      await _fetchCohorts();
-    }
-    
-    if (!mounted) return;
-    
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        height: 400,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Chọn khóa',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() => _selectedCohort = null);
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Xóa bộ lọc'),
-                ),
-              ],
-            ),
-            const Divider(),
-            Expanded(
-              child: _cohorts.isEmpty
-                  ? const Center(child: Text('Không có dữ liệu'))
-                  : ListView.builder(
-                      itemCount: _cohorts.length,
-                      itemBuilder: (context, index) {
-                        final cohort = _cohorts[index];
-                        final name = cohort['name'] as String;
-                        return ListTile(
-                          title: Text(name),
-                          onTap: () {
-                            setState(() => _selectedCohort = name);
-                            Navigator.pop(context);
-                          },
-                          trailing: _selectedCohort == name
-                              ? const Icon(Icons.check, color: Color(0xFF2196F3))
-                              : null,
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Future<void> _fetchCohorts() async {
     try {
@@ -1154,12 +849,44 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
         
         setState(() {
           _cohorts = items.map((item) => {
+            'id': item['id'],
             'name': item['name'] ?? 'Unknown',
           }).toList();
         });
       }
     } catch (e) {
       debugPrint('Error fetching cohorts: $e');
+    }
+  }
+
+  Future<void> _fetchSemesters() async {
+    try {
+      final baseUrl = ApiService.baseUrl;
+      final url = Uri.parse('$baseUrl/academic/semesters?limit=100');
+
+      final headers = <String, String>{
+        'Accept': 'application/json',
+      };
+      final token = UserSession().accessToken;
+      final tokenType = UserSession().tokenType ?? 'Bearer';
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = '$tokenType $token';
+      }
+
+      final resp = await http.get(url, headers: headers);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final items = data['items'] as List? ?? [];
+        
+        setState(() {
+          _semesters = items.map((item) => {
+            'id': item['id'],
+            'name': item['name'] ?? 'Unknown',
+          }).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching semesters: $e');
     }
   }
 }

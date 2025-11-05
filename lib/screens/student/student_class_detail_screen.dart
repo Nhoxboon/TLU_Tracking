@@ -160,6 +160,7 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                 : AttendanceStatus.absent;
 
         loaded.add(_SessionItem(
+          id: sid,
           date: formattedDate,
           time: timeSlot,
           sessionStatus: sessionStatus,
@@ -296,7 +297,9 @@ class _StudentClassDetailScreenState extends State<StudentClassDetailScreen> {
                                   context,
                                   '/session/detail',
                                   arguments: {
+                                    'classId': widget.classId,
                                     'classCode': widget.classCode,
+                                    'sessionId': session.id,
                                     'sessionDate': session.date,
                                     'sessionTime': session.time,
                                     'status': session.sessionStatus == SessionStatus.open ? 'Mở' : 'Đóng',
@@ -365,12 +368,14 @@ enum SessionStatus { open, closed }
 enum AttendanceStatus { present, absent, late }
 
 class _SessionItem {
+  final int id;
   final String date;
   final String time;
   final SessionStatus sessionStatus;
   final AttendanceStatus attendanceStatus;
 
   const _SessionItem({
+    required this.id,
     required this.date,
     required this.time,
     required this.sessionStatus,

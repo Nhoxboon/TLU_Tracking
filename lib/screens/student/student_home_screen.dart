@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import '../../services/api_service.dart';
 import '../../services/user_session.dart';
 import '../../utils/navigation.dart';
-import '../settings_screen.dart';
+import '../student_settings_screen.dart';
 import 'student_class_detail_screen.dart';
 import 'class_search_screen.dart';
 
@@ -300,10 +300,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> with RouteAware {
                 color: Colors.black.withOpacity(0.7),
               ),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                );
+                Navigator.pushNamed(context, '/student/settings');
               },
             ),
           ],

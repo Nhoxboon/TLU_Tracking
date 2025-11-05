@@ -15,11 +15,11 @@ class TeacherClassSearchScreen extends StatefulWidget {
 class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
 
-  String? _selectedClassCode;
-  String? _selectedSubject;
-  String? _selectedFaculty;
-  String? _selectedCohort;
-  String? _selectedSemester;
+  String? _selectedClassCode; // Keep as string for class code
+  int? _selectedSubjectId;
+  int? _selectedFacultyId;
+  int? _selectedCohortId;
+  int? _selectedSemesterId;
 
   List<_ClassItem> _searchResults = [];
   bool _isSearching = false;
@@ -74,7 +74,29 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
 
     try {
       final baseUrl = ApiService.baseUrl;
-      final url = Uri.parse('$baseUrl/classes?teacher_id=$teacherId');
+      
+      // Build query parameters with filters
+      final params = <String, String>{
+        'teacher_id': teacherId.toString(),
+        'active_only': 'true',
+        'limit': '100',
+      };
+      
+      // Add filter IDs if selected
+      if (_selectedSubjectId != null) {
+        params['subject_id'] = _selectedSubjectId.toString();
+      }
+      if (_selectedFacultyId != null) {
+        params['faculty_id'] = _selectedFacultyId.toString();
+      }
+      if (_selectedCohortId != null) {
+        params['cohort_id'] = _selectedCohortId.toString();
+      }
+      if (_selectedSemesterId != null) {
+        params['semester_id'] = _selectedSemesterId.toString();
+      }
+      
+      final url = Uri.parse('$baseUrl/classes').replace(queryParameters: params);
 
       final headers = <String, String>{
         'Accept': 'application/json',
@@ -93,29 +115,26 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
+        final List<dynamic> items = data['items'] ?? [];
         
-        final allResults = <_ClassItem>[];
-        for (var item in (data['items'] ?? [])) {
+        final allResults = items.map((item) {
           final rawId = item['id'] ?? item['class_id'];
           final classId = (rawId is int) ? rawId : (rawId is String ? int.tryParse(rawId) ?? 0 : 0);
-          
-          final title = item['name'] ?? item['class_name'] ?? '';
-          final code = item['code'] ?? item['class_code'] ?? '';
           final studentsCount = item['student_count'] ?? item['students_count'] ?? 0;
-
-          allResults.add(_ClassItem(
+          
+          return _ClassItem(
             id: classId,
-            title: title,
-            code: code,
+            title: (item['name'] ?? item['class_name'] ?? '').toString(),
+            code: (item['code'] ?? item['class_code'] ?? '').toString(),
             students: studentsCount is int ? studentsCount : (studentsCount is String ? int.tryParse(studentsCount) ?? 0 : 0),
             subjectName: (item['subject_name'] ?? '').toString(),
             facultyName: (item['faculty_name'] ?? '').toString(),
             cohortName: (item['cohort_name'] ?? '').toString(),
             semesterName: (item['semester_name'] ?? '').toString(),
-          ));
-        }
+          );
+        }).toList();
 
-        // Client-side filtering
+        // Apply client-side filters for class code and search text only
         final filtered = allResults.where((item) {
           if (_searchController.text.isNotEmpty) {
             final q = _searchController.text.toLowerCase();
@@ -125,10 +144,6 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
             }
           }
           if (_selectedClassCode != null && item.code != _selectedClassCode) return false;
-          if (_selectedSubject != null && item.subjectName != _selectedSubject) return false;
-          if (_selectedFaculty != null && item.facultyName != _selectedFaculty) return false;
-          if (_selectedCohort != null && item.cohortName != _selectedCohort) return false;
-          if (_selectedSemester != null && item.semesterName != _selectedSemester) return false;
           return true;
         }).toList();
 
@@ -216,9 +231,9 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
                       items: _classCodes,
                       filterKey: 'classCode',
                       displayField: 'code',
-                      onSelect: (value) {
+                      onSelect: (item) {
                         setState(() {
-                          _selectedClassCode = value;
+                          _selectedClassCode = item['code']?.toString();
                           _expandedFilter = null;
                         });
                       },
@@ -228,7 +243,9 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
                   _buildFilterChip(
                     filterKey: 'subject',
                     label: 'Lọc theo môn học',
-                    value: _selectedSubject,
+                    value: _selectedSubjectId != null 
+                        ? _subjects.firstWhere((s) => s['id'] == _selectedSubjectId, orElse: () => {})['name']?.toString()
+                        : null,
                     onTap: () => _toggleDropdown('subject'),
                   ),
                   if (_expandedFilter == 'subject')
@@ -237,9 +254,9 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
                       filterKey: 'subject',
                       displayField: 'name',
                       secondaryField: 'code',
-                      onSelect: (value) {
+                      onSelect: (item) {
                         setState(() {
-                          _selectedSubject = value;
+                          _selectedSubjectId = item['id'] as int?;
                           _expandedFilter = null;
                         });
                       },
@@ -249,7 +266,9 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
                   _buildFilterChip(
                     filterKey: 'faculty',
                     label: 'Lọc theo khoa',
-                    value: _selectedFaculty,
+                    value: _selectedFacultyId != null
+                        ? _faculties.firstWhere((f) => f['id'] == _selectedFacultyId, orElse: () => {})['name']?.toString()
+                        : null,
                     onTap: () => _toggleDropdown('faculty'),
                   ),
                   if (_expandedFilter == 'faculty')
@@ -258,9 +277,9 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
                       filterKey: 'faculty',
                       displayField: 'name',
                       secondaryField: 'code',
-                      onSelect: (value) {
+                      onSelect: (item) {
                         setState(() {
-                          _selectedFaculty = value;
+                          _selectedFacultyId = item['id'] as int?;
                           _expandedFilter = null;
                         });
                       },
@@ -270,7 +289,9 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
                   _buildFilterChip(
                     filterKey: 'cohort',
                     label: 'Lọc theo khóa',
-                    value: _selectedCohort,
+                    value: _selectedCohortId != null
+                        ? _cohorts.firstWhere((c) => c['id'] == _selectedCohortId, orElse: () => {})['name']?.toString()
+                        : null,
                     onTap: () => _toggleDropdown('cohort'),
                   ),
                   if (_expandedFilter == 'cohort')
@@ -278,9 +299,9 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
                       items: _cohorts,
                       filterKey: 'cohort',
                       displayField: 'name',
-                      onSelect: (value) {
+                      onSelect: (item) {
                         setState(() {
-                          _selectedCohort = value;
+                          _selectedCohortId = item['id'] as int?;
                           _expandedFilter = null;
                         });
                       },
@@ -290,7 +311,9 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
                   _buildFilterChip(
                     filterKey: 'semester',
                     label: 'Lọc theo học kỳ',
-                    value: _selectedSemester,
+                    value: _selectedSemesterId != null
+                        ? _semesters.firstWhere((s) => s['id'] == _selectedSemesterId, orElse: () => {})['name']?.toString()
+                        : null,
                     onTap: () => _toggleDropdown('semester'),
                   ),
                   if (_expandedFilter == 'semester')
@@ -298,9 +321,9 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
                       items: _semesters,
                       filterKey: 'semester',
                       displayField: 'name',
-                      onSelect: (value) {
+                      onSelect: (item) {
                         setState(() {
-                          _selectedSemester = value;
+                          _selectedSemesterId = item['id'] as int?;
                           _expandedFilter = null;
                         });
                       },
@@ -470,7 +493,7 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
     required String filterKey,
     required String displayField,
     String? secondaryField,
-    required Function(String) onSelect,
+    required Function(Map<String, dynamic>) onSelect,
   }) {
     final displayCount = _displayedCounts[filterKey] ?? 5;
     final visibleItems = items.take(displayCount).toList();
@@ -523,16 +546,16 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
                         _selectedClassCode = null;
                         break;
                       case 'subject':
-                        _selectedSubject = null;
+                        _selectedSubjectId = null;
                         break;
                       case 'faculty':
-                        _selectedFaculty = null;
+                        _selectedFacultyId = null;
                         break;
                       case 'cohort':
-                        _selectedCohort = null;
+                        _selectedCohortId = null;
                         break;
                       case 'semester':
-                        _selectedSemester = null;
+                        _selectedSemesterId = null;
                         break;
                     }
                     _expandedFilter = null;
@@ -559,26 +582,50 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
                     ? '$displayValue ($secondaryValue)' 
                     : displayValue;
                 
-                String? selectedValue;
+                int? selectedId;
                 switch (filterKey) {
                   case 'classCode':
-                    selectedValue = _selectedClassCode;
-                    break;
+                    // For class code, compare by string
+                    final isSelectedCode = _selectedClassCode == displayValue;
+                    return Container(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: const Color(0xFFEAECF0).withOpacity(0.5),
+                          ),
+                        ),
+                      ),
+                      child: ListTile(
+                        dense: true,
+                        title: Text(
+                          displayValue,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isSelectedCode ? const Color(0xFF2196F3) : Colors.black87,
+                            fontWeight: isSelectedCode ? FontWeight.w600 : FontWeight.w400,
+                          ),
+                        ),
+                        trailing: isSelectedCode
+                            ? const Icon(Icons.check, color: Color(0xFF2196F3), size: 20)
+                            : null,
+                        onTap: () => onSelect(item),
+                      ),
+                    );
                   case 'subject':
-                    selectedValue = _selectedSubject;
+                    selectedId = _selectedSubjectId;
                     break;
                   case 'faculty':
-                    selectedValue = _selectedFaculty;
+                    selectedId = _selectedFacultyId;
                     break;
                   case 'cohort':
-                    selectedValue = _selectedCohort;
+                    selectedId = _selectedCohortId;
                     break;
                   case 'semester':
-                    selectedValue = _selectedSemester;
+                    selectedId = _selectedSemesterId;
                     break;
                 }
                 
-                final isSelected = selectedValue == displayValue;
+                final isSelected = selectedId != null && item['id'] == selectedId;
                 
                 return Container(
                   decoration: BoxDecoration(
@@ -601,7 +648,7 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
                     trailing: isSelected
                         ? const Icon(Icons.check, color: Color(0xFF2196F3), size: 20)
                         : null,
-                    onTap: () => onSelect(displayValue),
+                    onTap: () => onSelect(item),
                   ),
                 );
               }).toList(),
@@ -743,6 +790,7 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
         
         setState(() {
           _subjects = items.map((item) => {
+            'id': item['id'],
             'name': item['name'] as String,
             'code': item['code'] as String?,
           }).toList();
@@ -772,6 +820,7 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
         
         setState(() {
           _faculties = items.map((item) => {
+            'id': item['id'],
             'name': item['name'] as String,
             'code': item['code'] as String?,
           }).toList();
@@ -801,6 +850,7 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
         
         setState(() {
           _cohorts = items.map((item) => {
+            'id': item['id'],
             'name': item['name'] as String,
           }).toList();
         });
@@ -829,6 +879,7 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
         
         setState(() {
           _semesters = items.map((item) => {
+            'id': item['id'],
             'name': item['name'] as String,
           }).toList();
         });
@@ -901,261 +952,9 @@ class _TeacherClassSearchScreenState extends State<TeacherClassSearchScreen> {
     );
   }
 
-  void _showSubjectPicker() async {
-    await _fetchSubjects();
-    
-    if (!mounted) return;
-    
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Chọn môn học',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() => _selectedSubject = null);
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Xóa bộ lọc'),
-                ),
-              ],
-            ),
-            const Divider(),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _subjects.length,
-                itemBuilder: (context, index) {
-                  final subject = _subjects[index];
-                  final name = subject['name'] as String;
-                  final code = subject['code'] as String?;
-                  final displayText = code != null ? '$name ($code)' : name;
-                  final isSelected = _selectedSubject == name;
-                  
-                  return ListTile(
-                    title: Text(displayText),
-                    trailing: isSelected
-                        ? const Icon(Icons.check, color: Colors.blue)
-                        : null,
-                    onTap: () {
-                      setState(() => _selectedSubject = name);
-                      Navigator.pop(context);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  void _showFacultyPicker() async {
-    await _fetchFaculties();
-    
-    if (!mounted) return;
-    
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Chọn khoa',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() => _selectedFaculty = null);
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Xóa bộ lọc'),
-                ),
-              ],
-            ),
-            const Divider(),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _faculties.length,
-                itemBuilder: (context, index) {
-                  final faculty = _faculties[index];
-                  final name = faculty['name'] as String;
-                  final code = faculty['code'] as String?;
-                  final displayText = code != null ? '$name ($code)' : name;
-                  final isSelected = _selectedFaculty == name;
-                  
-                  return ListTile(
-                    title: Text(displayText),
-                    trailing: isSelected
-                        ? const Icon(Icons.check, color: Colors.blue)
-                        : null,
-                    onTap: () {
-                      setState(() => _selectedFaculty = name);
-                      Navigator.pop(context);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  void _showCohortPicker() async {
-    await _fetchCohorts();
-    
-    if (!mounted) return;
-    
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Chọn khóa',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() => _selectedCohort = null);
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Xóa bộ lọc'),
-                ),
-              ],
-            ),
-            const Divider(),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _cohorts.length,
-                itemBuilder: (context, index) {
-                  final cohort = _cohorts[index];
-                  final name = cohort['name'] as String;
-                  final isSelected = _selectedCohort == name;
-                  
-                  return ListTile(
-                    title: Text(name),
-                    trailing: isSelected
-                        ? const Icon(Icons.check, color: Colors.blue)
-                        : null,
-                    onTap: () {
-                      setState(() => _selectedCohort = name);
-                      Navigator.pop(context);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  void _showSemesterPicker() async {
-    await _fetchSemesters();
-    
-    if (!mounted) return;
-    
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Chọn học kỳ',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() => _selectedSemester = null);
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Xóa bộ lọc'),
-                ),
-              ],
-            ),
-            const Divider(),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _semesters.length,
-                itemBuilder: (context, index) {
-                  final semester = _semesters[index];
-                  final name = semester['name'] as String;
-                  final isSelected = _selectedSemester == name;
-                  
-                  return ListTile(
-                    title: Text(name),
-                    trailing: isSelected
-                        ? const Icon(Icons.check, color: Colors.blue)
-                        : null,
-                    onTap: () {
-                      setState(() => _selectedSemester = name);
-                      Navigator.pop(context);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _ClassItem {
