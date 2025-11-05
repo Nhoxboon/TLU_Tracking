@@ -1,34 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../../services/api_service.dart';
-import '../../services/user_session.dart';
+// Removed imports for fetching attendance list; student role doesn't load list
 
-class Student {
-  final int id;
-  final String name;
-  final String code;
-
-  Student({
-    required this.id,
-    required this.name,
-    required this.code,
-  });
-}
-
-class AttendanceRecord {
-  final int studentId;
-  final String studentName;
-  final String studentCode;
-  final String status; // present, absent, late, excused
-
-  AttendanceRecord({
-    required this.studentId,
-    required this.studentName,
-    required this.studentCode,
-    required this.status,
-  });
-}
+// Student list/attendance detail is not shown for student role
 
 class StudentSessionDetailScreen extends StatefulWidget {
   const StudentSessionDetailScreen({super.key});
@@ -38,10 +11,6 @@ class StudentSessionDetailScreen extends StatefulWidget {
 }
 
 class _StudentSessionDetailScreenState extends State<StudentSessionDetailScreen> {
-  List<Student> _allStudents = [];
-  List<AttendanceRecord> _attendanceRecords = [];
-  bool _isLoading = false;
-  String? _error;
   int? _classId;
   int? _sessionId;
 
@@ -58,9 +27,6 @@ class _StudentSessionDetailScreenState extends State<StudentSessionDetailScreen>
       _sessionId = args?['sessionId'] as int?;
       
       if (_classId != null && _sessionId != null) {
-        _fetchData();
-        
-        // If returning from successful attendance, show message and refresh
         if (args?['attendanceSuccess'] == true) {
           Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted) {
@@ -71,83 +37,11 @@ class _StudentSessionDetailScreenState extends State<StudentSessionDetailScreen>
                   duration: Duration(seconds: 3),
                 ),
               );
-              // Refresh data after successful attendance
-              _fetchData();
             }
           });
         }
       }
     });
-  }
-
-  Future<void> _fetchData() async {
-    if (_classId == null || _sessionId == null) return;
-    
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final baseUrl = ApiService.baseUrl;
-      final headers = <String, String>{
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      };
-      final token = UserSession().accessToken;
-      final tokenType = UserSession().tokenType ?? 'Bearer';
-      if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = '$tokenType $token';
-      }
-
-      // Fetch all students in class
-      final studentsUrl = Uri.parse('$baseUrl/classes/$_classId/students?active_only=true');
-      final studentsResponse = await http.get(studentsUrl, headers: headers);
-
-      // Fetch attendance records for session
-      final attendanceUrl = Uri.parse('$baseUrl/classes/sessions/$_sessionId/attendance');
-      final attendanceResponse = await http.get(attendanceUrl, headers: headers);
-
-      if (studentsResponse.statusCode == 200 && attendanceResponse.statusCode == 200) {
-        // Parse all students
-        final List<dynamic> studentsData = jsonDecode(studentsResponse.body);
-        final List<Student> allStudents = studentsData.map((item) {
-          return Student(
-            id: item['student_id'] ?? 0,
-            name: item['student_name'] ?? '',
-            code: item['student_code'] ?? '',
-          );
-        }).toList();
-
-        // Parse attendance records
-        final List<dynamic> attendanceData = jsonDecode(attendanceResponse.body);
-        final List<AttendanceRecord> attendanceRecords = attendanceData.map((item) {
-          return AttendanceRecord(
-            studentId: item['student_id'] ?? 0,
-            studentName: item['student_name'] ?? '',
-            studentCode: item['student_code'] ?? '',
-            status: (item['status'] ?? 'absent').toString().toLowerCase(),
-          );
-        }).toList();
-
-        setState(() {
-          _allStudents = allStudents;
-          _attendanceRecords = attendanceRecords;
-        });
-      } else {
-        setState(() {
-          _error = 'Lỗi lấy dữ liệu: ${studentsResponse.statusCode} / ${attendanceResponse.statusCode}';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Lỗi kết nối: $e';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
   }
 
   @override
@@ -159,6 +53,7 @@ class _StudentSessionDetailScreenState extends State<StudentSessionDetailScreen>
     final String sessionDate = args?['sessionDate'] ?? 'Thứ 5\n4/9/2025';
     final String sessionTime = args?['sessionTime'] ?? '7AM - 8:15AM';
     final String status = args?['status'] ?? 'Mở';
+    final bool isOpen = status == 'Mở';
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -288,124 +183,75 @@ class _StudentSessionDetailScreenState extends State<StudentSessionDetailScreen>
             
             const SizedBox(height: 40),
             
-            // Student attendance list header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  const Text(
-                    'Danh sách sinh viên',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2196F3),
-                      letterSpacing: -0.02,
-                    ),
+            // Student list is hidden for student role
+            const Spacer(),
+            
+            const SizedBox(height: 16),
+            
+            // State-specific content
+            if (!isOpen) ...[
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFEAECF0)),
                   ),
-                  const Spacer(),
-                  if (_allStudents.isNotEmpty)
-                    Text(
-                      '${_attendanceRecords.where((a) => a.status == 'present' || a.status == 'late').length}/${_allStudents.length}',
-                      style: const TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF667085),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Student list
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                _error!,
-                                style: const TextStyle(color: Colors.red),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: _fetchData,
-                                child: const Text('Thử lại'),
-                              ),
-                            ],
+                  child: Row(
+                    children: const [
+                      Icon(Icons.lock_outline, color: Color(0xFF667085)),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Phiên điểm danh đã đóng. Vui lòng liên hệ giảng viên nếu cần hỗ trợ.',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF667085),
                           ),
-                        )
-                      : _allStudents.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'Chưa có sinh viên trong lớp',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Color(0xFF667085),
-                                ),
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              itemCount: _allStudents.length,
-                              itemBuilder: (context, index) {
-                                final student = _allStudents[index];
-                                // Find attendance record for this student
-                                final attendance = _attendanceRecords.firstWhere(
-                                  (a) => a.studentId == student.id,
-                                  orElse: () => AttendanceRecord(
-                                    studentId: student.id,
-                                    studentName: student.name,
-                                    studentCode: student.code,
-                                    status: 'absent',
-                                  ),
-                                );
-                                return _buildStudentCard(student.name, student.code, attendance.status);
-                              },
-                            ),
-            ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             
-            const SizedBox(height: 16),
-            
-            // Attendance button
+            // Attendance button (enabled when open, disabled when closed)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16.0),
               child: ElevatedButton(
-                onPressed: () {
-                  // Check if session is open before allowing attendance
-                  if (status == 'Mở') {
-                    // Navigate to QR scanner for attendance
-                    Navigator.pushNamed(context, '/qr/scanner');
-                  } else {
-                    // Show message that session is closed
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Phiên điểm danh đã đóng'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1FB445),
-                  foregroundColor: Colors.white,
-                  elevation: 2,
-                  shadowColor: Colors.black.withOpacity(0.14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 27,
-                    vertical: 6,
-                  ),
-                  minimumSize: const Size(double.infinity, 50),
+                onPressed: isOpen
+                    ? () {
+                        Navigator.pushNamed(context, '/qr/scanner');
+                      }
+                    : null,
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.resolveWith((states) {
+                    if (states.contains(MaterialState.disabled)) return const Color(0xFFE5E7EB);
+                    if (states.contains(MaterialState.pressed)) return const Color(0xFF17923A);
+                    return const Color(0xFF1FB445);
+                  }),
+                  foregroundColor: MaterialStateProperty.resolveWith((states) {
+                    if (states.contains(MaterialState.disabled)) return const Color(0xFF9CA3AF);
+                    return Colors.white;
+                  }),
+                  overlayColor: MaterialStateProperty.resolveWith((states) {
+                    if (states.contains(MaterialState.pressed)) return const Color(0x331FB445);
+                    if (states.contains(MaterialState.hovered)) return const Color(0x1A1FB445);
+                    return null;
+                  }),
+                  elevation: MaterialStateProperty.resolveWith((states) => states.contains(MaterialState.disabled) ? 0 : 2),
+                  shadowColor: MaterialStateProperty.all(Colors.black.withOpacity(0.14)),
+                  shape: MaterialStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
+                  padding: MaterialStateProperty.all(const EdgeInsets.symmetric(horizontal: 27, vertical: 6)),
+                  minimumSize: MaterialStateProperty.all(const Size(double.infinity, 50)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -415,22 +261,23 @@ class _StudentSessionDetailScreenState extends State<StudentSessionDetailScreen>
                       height: 50,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(4),
-                        color: Colors.white.withOpacity(0.2),
+                        color: isOpen ? Colors.white.withOpacity(0.2) : const Color(0xFFF3F4F6),
                       ),
-                      child: const Icon(
-                        Icons.qr_code_scanner,
-                        color: Colors.white,
+                      child: Icon(
+                        isOpen ? Icons.qr_code_scanner : Icons.lock_outline,
+                        color: isOpen ? Colors.white : const Color(0xFF9CA3AF),
                         size: 30,
                       ),
                     ),
                     const SizedBox(width: 18),
-                    const Text(
-                      'Điểm danh',
+                    Text(
+                      isOpen ? 'Điểm danh' : 'Đã đóng',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 24,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.48,
+                        color: isOpen ? Colors.white : const Color(0xFF9CA3AF),
                       ),
                     ),
                   ],
@@ -486,99 +333,5 @@ class _StudentSessionDetailScreenState extends State<StudentSessionDetailScreen>
     );
   }
 
-  Widget _buildStudentCard(String name, String studentCode, String attendanceStatus) {
-    // Map status từ API sang text hiển thị
-    String statusText = 'Vắng mặt';
-    Color statusColor = const Color(0xFFFF4444);
-    
-    if (attendanceStatus == 'present') {
-      statusText = 'Có mặt';
-      statusColor = const Color(0xFF00FF40);
-    } else if (attendanceStatus == 'late') {
-      statusText = 'Muộn';
-      statusColor = const Color(0xFFFFAA00);
-    } else if (attendanceStatus == 'excused') {
-      statusText = 'Có phép';
-      statusColor = const Color(0xFF00AAFF);
-    }
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      color: const Color(0xFFEAECF0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFEAECF0)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              name,
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF344054),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Student code
-                Row(
-                  children: [
-                    Container(
-                      width: 16,
-                      height: 16,
-                      margin: const EdgeInsets.only(right: 4),
-                      child: const Icon(
-                        Icons.badge_outlined,
-                        size: 16,
-                        color: Color(0xFF667085),
-                      ),
-                    ),
-                    Text(
-                      studentCode,
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF667085),
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Attendance status
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    statusText,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // No student list card for student role
 }
