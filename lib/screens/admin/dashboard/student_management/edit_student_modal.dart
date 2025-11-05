@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/screens/admin/dashboard/student_management/students_management_view.dart';
+import 'package:android_app/services/api_service.dart';
 
 class EditStudentModal extends StatefulWidget {
   final StudentData student;
@@ -16,34 +17,48 @@ class _EditStudentModalState extends State<EditStudentModal> {
   late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
+  late final TextEditingController _studentCodeController;
+  late final TextEditingController _classNameController;
+  late final TextEditingController _hometownController;
 
   DateTime? _selectedBirthDate;
-  String _selectedMajor = 'Lorem ipsum';
-  String _selectedCourse = 'K65';
+  String _selectedMajor = '';
+  String _selectedCourse = '';
 
-  // Static data for dropdowns
-  final List<String> _majors = [
-    'Lorem ipsum',
-    'Công nghệ thông tin',
-    'Kỹ thuật phần mềm',
-    'An toàn thông tin',
-    'Khoa học máy tính',
-  ];
+  // API service and data for dropdowns
+  final ApiService _apiService = ApiService();
+  List<Map<String, dynamic>> _majors = [];
+  List<Map<String, dynamic>> _cohorts = [];
+  List<Map<String, dynamic>> _faculties = [];
+  bool _isLoadingData = false;
+  bool _isLoading = false;
 
-  final List<String> _courses = ['K65', 'K66', 'K67', 'K68', 'K69'];
+  // Dropdown selections
+  Map<String, dynamic>? _selectedFaculty;
 
   @override
   void initState() {
     super.initState();
+
     // Initialize controllers with existing student data
     _nameController = TextEditingController(text: widget.student.name);
     _phoneController = TextEditingController(text: widget.student.phone);
     _emailController = TextEditingController(text: widget.student.email);
     _passwordController = TextEditingController();
+    _studentCodeController = TextEditingController(text: widget.student.code);
+    _classNameController = TextEditingController(
+      text: widget.student.className,
+    );
+    _hometownController = TextEditingController(
+      text: widget.student.hometown ?? '',
+    );
 
-    // Initialize dropdowns with existing data
+    // Set initial values
     _selectedMajor = widget.student.major;
     _selectedCourse = widget.student.course;
+
+    // Load API data for dropdowns
+    _loadDropdownData();
 
     // Parse birth date from string format (DD/MM/YYYY)
     try {
@@ -61,12 +76,87 @@ class _EditStudentModalState extends State<EditStudentModal> {
     }
   }
 
+  Future<void> _loadDropdownData() async {
+    setState(() {
+      _isLoadingData = true;
+    });
+
+    try {
+      // Load faculties, majors and cohorts concurrently
+      final results = await Future.wait([
+        _apiService.getFacultiesPaginated(limit: 100),
+        _apiService.getMajorsPaginated(limit: 100),
+        _apiService.getCohortsPaginated(limit: 100),
+      ]);
+
+      final facultyResult = results[0];
+      final majorResult = results[1];
+      final cohortResult = results[2];
+
+      // Load faculties
+      if (facultyResult.success && facultyResult.data != null) {
+        setState(() {
+          _faculties = facultyResult.data!.items;
+          // Find and set current faculty based on student's facultyId
+          if (widget.student.facultyId != null) {
+            _selectedFaculty = _faculties.firstWhere(
+              (faculty) => faculty['id'] == widget.student.facultyId,
+              orElse: () => <String, dynamic>{},
+            );
+            if (_selectedFaculty!.isEmpty) _selectedFaculty = null;
+          }
+        });
+      }
+
+      if (majorResult.success && majorResult.data != null) {
+        final majors = majorResult.data!.items;
+        // Check if current student major exists in API data
+        final currentMajorExists = majors.any(
+          (major) => major['name'] == _selectedMajor,
+        );
+        if (!currentMajorExists && _selectedMajor.isNotEmpty) {
+          // Add current major as temporary entry if not found in API
+          majors.insert(0, {'id': -1, 'name': _selectedMajor});
+        }
+        setState(() {
+          _majors = majors;
+        });
+      }
+
+      if (cohortResult.success && cohortResult.data != null) {
+        final cohorts = cohortResult.data!.items;
+        // Check if current student cohort exists in API data
+        final currentCohortExists = cohorts.any(
+          (cohort) =>
+              (cohort['name'] ?? cohort['year']?.toString() ?? '') ==
+              _selectedCourse,
+        );
+        if (!currentCohortExists && _selectedCourse.isNotEmpty) {
+          // Add current cohort as temporary entry if not found in API
+          cohorts.insert(0, {'id': -1, 'name': _selectedCourse});
+        }
+        setState(() {
+          _cohorts = cohorts;
+        });
+      }
+    } catch (e) {
+      // Handle error silently or show snackbar
+    } finally {
+      setState(() {
+        _isLoadingData = false;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _studentCodeController.dispose();
+    _classNameController.dispose();
+    _hometownController.dispose();
     super.dispose();
   }
 
@@ -98,26 +188,100 @@ class _EditStudentModalState extends State<EditStudentModal> {
     return '${_selectedBirthDate!.day.toString().padLeft(2, '0')}/${_selectedBirthDate!.month.toString().padLeft(2, '0')}/${_selectedBirthDate!.year}';
   }
 
-  void _handleConfirm() {
+  Future<void> _handleConfirm() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: Implement actual student update logic here
-      // This is where the real logic for updating the student should be implemented
-      // - Validate all form fields
-      // - Update student object with new data
-      // - Update in database/API
-      // - Update the students list in parent widget
-      // - Show success message
-      // - Close the modal
+      setState(() {
+        _isLoading = true;
+      });
 
-      Navigator.of(context).pop();
+      try {
+        // Get major_id - handle temporary entries (-1) by using original student's majorId
+        final majorId = _majors.firstWhere(
+          (major) => major['name'] == _selectedMajor,
+          orElse: () => <String, dynamic>{'id': -1},
+        )['id'];
+        final finalMajorId = (majorId == -1) ? widget.student.majorId : majorId;
 
-      // For now, just show a placeholder message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('TODO: Implement student update logic'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+        // Get cohort_id - handle temporary entries (-1) by using original student's cohortId
+        final cohortId = _cohorts.firstWhere(
+          (cohort) =>
+              (cohort['name'] ?? cohort['year']?.toString() ?? '') ==
+              _selectedCourse,
+          orElse: () => <String, dynamic>{'id': -1},
+        )['id'];
+        final finalCohortId = (cohortId == -1)
+            ? widget.student.cohortId
+            : cohortId;
+
+        // Prepare student data for API update (matching the API schema exactly)
+        final studentData = <String, dynamic>{
+          'faculty_id':
+              _selectedFaculty?['id'] ?? widget.student.facultyId ?? 0,
+          'major_id': finalMajorId ?? 0,
+          'cohort_id': finalCohortId ?? 0,
+          'class_name': _classNameController.text.trim(),
+          'full_name': _nameController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'birth_date':
+              _selectedBirthDate?.toIso8601String().split('T')[0] ??
+              DateTime.now().toIso8601String().split(
+                'T',
+              )[0], // Format as YYYY-MM-DD
+          'hometown': _hometownController.text.trim(),
+          'email': _emailController.text.trim(),
+        };
+
+        // Only include password if it's not empty
+        if (_passwordController.text.isNotEmpty) {
+          studentData['password'] = _passwordController.text;
+        }
+
+        final result = await _apiService.updateStudentData(
+          widget.student.apiId, // Use the API ID
+          studentData,
+        );
+
+        if (!mounted) return;
+
+        if (result.success) {
+          Navigator.of(context).pop(true); // Return true to indicate success
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cập nhật sinh viên thành công!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result.message.isNotEmpty
+                    ? result.message
+                    : 'Cập nhật sinh viên thất bại',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi kết nối: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -125,36 +289,43 @@ class _EditStudentModalState extends State<EditStudentModal> {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: 640,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0A0D12).withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 8),
-            ),
-            BoxShadow(
-              color: const Color(0xFF0A0D12).withValues(alpha: 0.1),
-              blurRadius: 24,
-              offset: const Offset(0, 20),
-            ),
-          ],
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+          maxWidth: 640,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Modal Header
-            _buildModalHeader(),
+        child: SingleChildScrollView(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0A0D12).withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 8),
+                ),
+                BoxShadow(
+                  color: const Color(0xFF0A0D12).withValues(alpha: 0.1),
+                  blurRadius: 24,
+                  offset: const Offset(0, 20),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Modal Header
+                _buildModalHeader(),
 
-            // Modal Content
-            _buildModalContent(),
+                // Modal Content
+                _buildModalContent(),
 
-            // Modal Actions
-            _buildModalActions(),
-          ],
+                // Modal Actions
+                _buildModalActions(),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -224,8 +395,39 @@ class _EditStudentModalState extends State<EditStudentModal> {
             ),
             const SizedBox(height: 16),
 
-            // Major Field (Dropdown)
-            _buildMajorDropdown(),
+            // Student Code and Class Name Row
+            Row(
+              children: [
+                // Student Code Field
+                Expanded(
+                  child: _buildInputField(
+                    label: 'Mã sinh viên*',
+                    controller: _studentCodeController,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Vui lòng nhập mã sinh viên';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Class Name Field
+                Expanded(
+                  child: _buildInputField(
+                    label: 'Lớp*',
+                    controller: _classNameController,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Vui lòng nhập tên lớp';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
 
             // Phone and Birth Date Row
@@ -255,12 +457,27 @@ class _EditStudentModalState extends State<EditStudentModal> {
             ),
             const SizedBox(height: 16),
 
+            // Faculty Dropdown
+            _buildFacultyDropdown(),
+            const SizedBox(height: 16),
+
+            // Major Field (Dropdown)
+            _buildMajorDropdown(),
+            const SizedBox(height: 16),
+
             // Course Field (Dropdown)
             Row(
               children: [
                 SizedBox(width: 189, child: _buildCourseDropdown()),
                 const Spacer(),
               ],
+            ),
+            const SizedBox(height: 16),
+
+            // Hometown Field
+            _buildInputField(
+              label: 'Quê quán',
+              controller: _hometownController,
             ),
             const SizedBox(height: 16),
 
@@ -363,20 +580,22 @@ class _EditStudentModalState extends State<EditStudentModal> {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: _selectedMajor,
+          initialValue: _selectedMajor.isNotEmpty ? _selectedMajor : null,
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Vui lòng chọn ngành';
             }
             return null;
           },
-          onChanged: (String? newValue) {
-            if (newValue != null) {
-              setState(() {
-                _selectedMajor = newValue;
-              });
-            }
-          },
+          onChanged: _isLoadingData
+              ? null
+              : (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _selectedMajor = newValue;
+                    });
+                  }
+                },
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
@@ -401,20 +620,25 @@ class _EditStudentModalState extends State<EditStudentModal> {
             fillColor: Colors.white,
             filled: true,
           ),
-          items: _majors.map<DropdownMenuItem<String>>((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(
-                value,
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF000000),
-                ),
-              ),
-            );
-          }).toList(),
+          items: _isLoadingData
+              ? []
+              : _majors.map<DropdownMenuItem<String>>((
+                  Map<String, dynamic> major,
+                ) {
+                  final majorName = major['name'] ?? 'Không xác định';
+                  return DropdownMenuItem<String>(
+                    value: majorName,
+                    child: Text(
+                      majorName,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                        color: Color(0xFF000000),
+                      ),
+                    ),
+                  );
+                }).toList(),
           style: const TextStyle(
             fontFamily: 'Inter',
             fontSize: 16,
@@ -447,20 +671,22 @@ class _EditStudentModalState extends State<EditStudentModal> {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: _selectedCourse,
+          initialValue: _selectedCourse.isNotEmpty ? _selectedCourse : null,
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Vui lòng chọn khóa';
             }
             return null;
           },
-          onChanged: (String? newValue) {
-            if (newValue != null) {
-              setState(() {
-                _selectedCourse = newValue;
-              });
-            }
-          },
+          onChanged: _isLoadingData
+              ? null
+              : (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _selectedCourse = newValue;
+                    });
+                  }
+                },
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
@@ -485,20 +711,28 @@ class _EditStudentModalState extends State<EditStudentModal> {
             fillColor: Colors.white,
             filled: true,
           ),
-          items: _courses.map<DropdownMenuItem<String>>((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(
-                value,
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF000000),
-                ),
-              ),
-            );
-          }).toList(),
+          items: _isLoadingData
+              ? []
+              : _cohorts.map<DropdownMenuItem<String>>((
+                  Map<String, dynamic> cohort,
+                ) {
+                  final cohortName =
+                      cohort['name'] ??
+                      cohort['year']?.toString() ??
+                      'Không xác định';
+                  return DropdownMenuItem<String>(
+                    value: cohortName,
+                    child: Text(
+                      cohortName,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                        color: Color(0xFF000000),
+                      ),
+                    ),
+                  );
+                }).toList(),
           style: const TextStyle(
             fontFamily: 'Inter',
             fontSize: 16,
@@ -685,14 +919,16 @@ class _EditStudentModalState extends State<EditStudentModal> {
           // Confirm Button
           Expanded(
             child: InkWell(
-              onTap: _handleConfirm,
+              onTap: _isLoading ? null : _handleConfirm,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 18,
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2264E5),
+                  color: _isLoading
+                      ? const Color(0xFF2264E5).withValues(alpha: 0.6)
+                      : const Color(0xFF2264E5),
                   border: Border.all(color: const Color(0xFF7F56D9)),
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
@@ -703,22 +939,122 @@ class _EditStudentModalState extends State<EditStudentModal> {
                     ),
                   ],
                 ),
-                child: const Center(
-                  child: Text(
-                    'Xác nhận',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
+                child: Center(
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text(
+                          'Xác nhận',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFacultyDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Khoa*',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            height: 1.43,
+            color: Color(0xFF414651),
+          ),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<Map<String, dynamic>>(
+          value: _selectedFaculty,
+          validator: (value) {
+            if (value == null) {
+              return 'Vui lòng chọn khoa';
+            }
+            return null;
+          },
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF2264E5)),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            fillColor: Colors.white,
+            filled: true,
+          ),
+          items: _isLoadingData
+              ? []
+              : _faculties.map<DropdownMenuItem<Map<String, dynamic>>>((
+                  Map<String, dynamic> faculty,
+                ) {
+                  return DropdownMenuItem<Map<String, dynamic>>(
+                    value: faculty,
+                    child: Text(
+                      faculty['name'] ?? 'Không xác định',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                        color: Color(0xFF000000),
+                      ),
+                    ),
+                  );
+                }).toList(),
+          onChanged: _isLoadingData
+              ? null
+              : (Map<String, dynamic>? newValue) {
+                  setState(() {
+                    _selectedFaculty = newValue;
+                    // Reset major when faculty changes - will be handled by existing major dropdown logic
+                  });
+                },
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+            color: Color(0xFF000000),
+          ),
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            size: 20,
+            color: Color(0xFF717680),
+          ),
+        ),
+      ],
     );
   }
 }
