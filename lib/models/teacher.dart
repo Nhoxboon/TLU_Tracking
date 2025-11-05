@@ -6,6 +6,10 @@ class Teacher extends User {
   final String hometown;
   final String phoneNumber;
   final DateTime dateOfBirth;
+  final int? facultyId;
+  final int? departmentId;
+  final String? authId;
+  final int? apiId; // Real API ID for operations
 
   Teacher({
     required this.teacherId, // Mã giảng viên (khác với id của hệ thống)
@@ -15,6 +19,10 @@ class Teacher extends User {
     required this.hometown,
     required this.phoneNumber,
     required this.dateOfBirth,
+    this.facultyId,
+    this.departmentId,
+    this.authId,
+    this.apiId,
   }) : super(
          id: IdGenerator.generateId('teacher'),
          username: email,
@@ -29,10 +37,17 @@ class Teacher extends User {
       password: '', // Password not included in API response
       fullName: json['full_name'] ?? json['fullName'] ?? '',
       hometown: json['hometown'] ?? '',
-      phoneNumber: json['phone_number'] ?? json['phoneNumber'] ?? '',
-      dateOfBirth: json['date_of_birth'] != null 
-          ? DateTime.parse(json['date_of_birth']) 
-          : DateTime.now(),
+      phoneNumber:
+          json['phone'] ?? json['phone_number'] ?? json['phoneNumber'] ?? '',
+      dateOfBirth: json['birth_date'] != null
+          ? DateTime.parse(json['birth_date'])
+          : (json['date_of_birth'] != null
+                ? DateTime.parse(json['date_of_birth'])
+                : DateTime.now()),
+      facultyId: json['faculty_id'],
+      departmentId: json['department_id'],
+      authId: json['auth_id'],
+      apiId: json['id'], // Store API ID for operations
     );
   }
 

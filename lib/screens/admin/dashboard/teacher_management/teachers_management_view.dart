@@ -4,6 +4,9 @@ import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
 import 'package:android_app/screens/admin/dashboard/teacher_management/add_teacher_modal.dart';
 import 'package:android_app/screens/admin/dashboard/teacher_management/edit_teacher_modal.dart';
+import 'package:android_app/screens/admin/dashboard/teacher_management/import_excel_modal.dart';
+import 'package:android_app/services/api_service.dart';
+import 'package:android_app/models/teacher.dart' as teacher_model;
 
 class TeachersManagementView extends StatefulWidget {
   const TeachersManagementView({super.key});
@@ -14,124 +17,220 @@ class TeachersManagementView extends StatefulWidget {
 
 class _TeachersManagementViewState extends State<TeachersManagementView> {
   final TextEditingController _searchController = TextEditingController();
+  final ApiService _apiService = ApiService();
 
   // Pagination variables
   int _currentPage = 1;
   final int _itemsPerPage = 10;
 
-  // Sample data for teachers
-  final List<TeacherData> _teachers = [
-    TeacherData(
-      id: 1,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Khoa học máy tính',
-    ),
-    TeacherData(
-      id: 2,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Công nghệ thông tin',
-    ),
-    TeacherData(
-      id: 3,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Hệ thống thông tin',
-    ),
-    TeacherData(
-      id: 4,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Kỹ thuật phần mềm',
-    ),
-    TeacherData(
-      id: 5,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Khoa học máy tính',
-    ),
-    TeacherData(
-      id: 6,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Công nghệ thông tin',
-    ),
-    TeacherData(
-      id: 7,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Hệ thống thông tin',
-    ),
-    TeacherData(
-      id: 8,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Kỹ thuật phần mềm',
-    ),
-    TeacherData(
-      id: 9,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Khoa học máy tính',
-    ),
-    TeacherData(
-      id: 10,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Công nghệ thông tin',
-    ),
-    TeacherData(
-      id: 11,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Hệ thống thông tin',
-    ),
-    TeacherData(
-      id: 12,
-      code: '0000',
-      name: 'Ann Culhane',
-      phone: '11111111111',
-      email: 'Lorem ipsum',
-      birthDate: '12/05/2004',
-      department: 'Kỹ thuật phần mềm',
-    ),
-  ];
+  // API data for teachers
+  List<teacher_model.Teacher> _teachers = [];
+  bool _isLoading = false;
+  int _totalTeachers = 0;
+  int _totalPages = 0;
+  String? _errorMessage;
+
+  // Cache for department names
+  final Map<int, String> _departmentCache = {};
+
+  // Mapping from uniqueId to original teacher ID for API operations
+  final Map<int, String> _teacherIdMapping = {};
 
   final Set<int> _selectedTeachers = <int>{};
+
+  // Filter data
+  List<Map<String, dynamic>> _faculties = [];
+  List<Map<String, dynamic>> _departments = [];
+  Map<String, dynamic>? _selectedFaculty;
+  Map<String, dynamic>? _selectedDepartment;
+  bool _isLoadingFilters = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTeachers();
+    _loadFaculties();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    // Debounce search
+    if (_searchController.text.length >= 3 || _searchController.text.isEmpty) {
+      setState(() {
+        _currentPage = 1; // Reset to first page when searching
+      });
+      _loadTeachers();
+    }
+  }
+
+  Future<void> _loadTeachers() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _apiService.getTeachersPaginated(
+        page: _currentPage,
+        limit: _itemsPerPage,
+        facultyId: _selectedFaculty?['id'],
+        departmentId: _selectedDepartment?['id'],
+        search: _searchController.text.isNotEmpty
+            ? _searchController.text
+            : null,
+      );
+
+      if (result.success && result.data != null) {
+        // Convert Map<String, dynamic> to Teacher objects
+        final teachers = result.data!.items
+            .map((item) => teacher_model.Teacher.fromJson(item))
+            .toList();
+
+        // Load department names for teachers that have department_id
+        await _loadDepartmentNames(teachers);
+
+        setState(() {
+          _teachers = teachers;
+          _totalTeachers = result.data!.total;
+          _totalPages = result.data!.totalPages;
+          _isLoading = false;
+          // Clear selections and mappings when loading new data (search/pagination)
+          _selectedTeachers.clear();
+          _teacherIdMapping.clear();
+        });
+      } else {
+        setState(() {
+          _errorMessage = result.message;
+          _isLoading = false;
+          _teachers = [];
+          _selectedTeachers.clear();
+          _teacherIdMapping.clear();
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Lỗi kết nối: ${e.toString()}';
+        _isLoading = false;
+        _teachers = [];
+        _selectedTeachers.clear();
+        _teacherIdMapping.clear();
+      });
+    }
+  }
+
+  Future<void> _loadDepartmentNames(
+    List<teacher_model.Teacher> teachers,
+  ) async {
+    // Get unique department IDs that we haven't cached yet
+    final departmentIds = teachers
+        .where((teacher) => teacher.departmentId != null)
+        .map((teacher) => teacher.departmentId!)
+        .where((id) => !_departmentCache.containsKey(id))
+        .toSet();
+
+    // Load department names concurrently
+    final futures = departmentIds.map((id) async {
+      try {
+        final result = await _apiService.getDepartment(id);
+        if (result.success && result.data != null) {
+          _departmentCache[id] = result.data!['name'] ?? 'Không xác định';
+        } else {
+          _departmentCache[id] = 'Lỗi tải thông tin';
+        }
+      } catch (e) {
+        _departmentCache[id] = 'Lỗi kết nối';
+      }
+    });
+
+    await Future.wait(futures);
+  }
+
+  Future<void> _loadFaculties() async {
+    setState(() {
+      _isLoadingFilters = true;
+    });
+
+    try {
+      final result = await _apiService.getFacultiesPaginated(limit: 100);
+      if (result.success && result.data != null) {
+        setState(() {
+          _faculties = result.data!.items;
+          _isLoadingFilters = false;
+        });
+        // Load departments for the first faculty if exists
+        if (_faculties.isNotEmpty) {
+          _loadDepartments();
+        }
+      } else {
+        setState(() {
+          _isLoadingFilters = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingFilters = false;
+      });
+    }
+  }
+
+  Future<void> _loadDepartments({int? facultyId}) async {
+    try {
+      final result = await _apiService.getDepartmentsPaginated(
+        limit: 100,
+        facultyId: facultyId,
+      );
+      if (result.success && result.data != null) {
+        setState(() {
+          _departments = result.data!.items;
+          // Reset selected department when faculty changes
+          if (facultyId != null) {
+            _selectedDepartment = null;
+          }
+        });
+      }
+    } catch (e) {
+      // Handle error
+    }
+  }
+
+  String _getDepartmentName(int? departmentId) {
+    if (departmentId == null) return 'Chưa phân bộ môn';
+    final cachedName = _departmentCache[departmentId];
+    if (cachedName != null) return cachedName;
+
+    // If not cached, start loading in background
+    _loadSingleDepartment(departmentId);
+    return 'Đang tải...';
+  }
+
+  Future<void> _loadSingleDepartment(int departmentId) async {
+    if (_departmentCache.containsKey(departmentId)) return;
+
+    try {
+      final result = await _apiService.getDepartment(departmentId);
+      if (result.success && result.data != null) {
+        setState(() {
+          _departmentCache[departmentId] =
+              result.data!['name'] ?? 'Không xác định';
+        });
+      } else {
+        setState(() {
+          _departmentCache[departmentId] = 'Lỗi tải thông tin';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _departmentCache[departmentId] = 'Lỗi kết nối';
+      });
+    }
+  }
 
   // Column configuration for teachers table
   static const List<TableColumn> _teacherColumns = [
@@ -181,15 +280,25 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
   ];
 
   // Pagination getters and methods
-  int get totalPages => (_teachers.length / _itemsPerPage).ceil();
+  int get totalPages => _totalPages;
 
-  List<TeacherData> get currentPageTeachers {
-    final startIndex = (_currentPage - 1) * _itemsPerPage;
-    final endIndex = startIndex + _itemsPerPage;
-    return _teachers.sublist(
-      startIndex,
-      endIndex > _teachers.length ? _teachers.length : endIndex,
-    );
+  // Since we're getting paginated data from API, just return current page data
+  List<teacher_model.Teacher> get currentPageTeachers => _teachers;
+
+  // Get current page as TeacherData objects with sequential IDs
+  List<TeacherData> get currentPageTeacherData {
+    return _teachers.asMap().entries.map((entry) {
+      final index = entry.key;
+      final teacher = entry.value;
+      final sequentialNumber = (_currentPage - 1) * _itemsPerPage + (index + 1);
+      // Use global unique ID based on page and index (starting from 1000 to avoid conflicts)
+      final uniqueApiId = 1000 + (_currentPage - 1) * _itemsPerPage + index;
+      return _teacherToTeacherDataWithUniqueId(
+        teacher,
+        sequentialNumber,
+        uniqueApiId,
+      );
+    }).toList();
   }
 
   void _goToPreviousPage() {
@@ -197,6 +306,7 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
       setState(() {
         _currentPage--;
       });
+      _loadTeachers();
     }
   }
 
@@ -205,6 +315,129 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
       setState(() {
         _currentPage++;
       });
+      _loadTeachers();
+    }
+  }
+
+  // Convert Teacher model to TeacherData for UI
+
+  // Convert Teacher model to TeacherData with unique ID for UI
+  TeacherData _teacherToTeacherDataWithUniqueId(
+    teacher_model.Teacher teacher,
+    int sequentialId,
+    int uniqueId,
+  ) {
+    // Store mapping from uniqueId to real API teacher ID for API operations
+    if (teacher.apiId != null) {
+      _teacherIdMapping[uniqueId] = teacher.apiId.toString();
+    }
+    return TeacherData(
+      id: sequentialId, // Use sequential number for display
+      code: teacher.teacherId,
+      name: teacher.fullName,
+      phone: teacher.phoneNumber,
+      email: teacher.email,
+      birthDate:
+          '${teacher.dateOfBirth.day.toString().padLeft(2, '0')}/${teacher.dateOfBirth.month.toString().padLeft(2, '0')}/${teacher.dateOfBirth.year}', // Format as DD/MM/YYYY
+      department: _getDepartmentName(teacher.departmentId),
+      apiId: uniqueId, // Use unique ID for selection
+      hometown: teacher.hometown,
+      facultyId: teacher.facultyId,
+      departmentId: teacher.departmentId,
+    );
+  }
+
+  Future<void> _handleDeleteSelectedTeachers() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Get the real API IDs for selected teachers
+      final selectedApiIds = _selectedTeachers
+          .map((uniqueId) => _teacherIdMapping[uniqueId])
+          .where((id) => id != null)
+          .cast<String>()
+          .toList();
+
+      // Delete teachers concurrently
+      final futures = selectedApiIds.map((id) {
+        final teacherIdToDelete = int.tryParse(id) ?? 0;
+        print(
+          'Bulk deleting teacher with ID: $teacherIdToDelete (original: $id)',
+        );
+        return _apiService.deleteTeacherById(teacherIdToDelete);
+      });
+      final results = await Future.wait(futures);
+
+      // Check if all deletions were successful
+      final failedDeletions = results
+          .where((result) => !result.success)
+          .toList();
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (failedDeletions.isEmpty) {
+        // All deletions successful
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Đã xóa ${selectedApiIds.length} giảng viên thành công!',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+
+        // Clear selections and reload data
+        setState(() {
+          _selectedTeachers.clear();
+        });
+
+        // Reload current page
+        await _loadTeachers();
+
+        // If current page is empty, go to previous page
+        if (_teachers.isEmpty && _currentPage > 1) {
+          setState(() {
+            _currentPage--;
+          });
+          await _loadTeachers();
+        }
+      } else {
+        // Some deletions failed
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Xóa thành công ${selectedApiIds.length - failedDeletions.length}/${selectedApiIds.length} giảng viên. '
+                'Một số giảng viên không thể xóa được.',
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+
+        // Reload data to reflect changes
+        await _loadTeachers();
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Lỗi khi xóa giảng viên: ${e.toString()}';
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi khi xóa: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -247,19 +480,10 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
               ),
             ),
             ElevatedButton(
-              onPressed: () {
-                // Handle delete action
-                setState(() {
-                  _teachers.removeWhere(
-                    (teacher) => _selectedTeachers.contains(teacher.id),
-                  );
-                  _selectedTeachers.clear();
-                  // Reset to first page if current page is empty
-                  if (currentPageTeachers.isEmpty && _currentPage > 1) {
-                    _currentPage = 1;
-                  }
-                });
+              onPressed: () async {
+                // Handle delete action using API
                 Navigator.of(context).pop();
+                await _handleDeleteSelectedTeachers();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFEF4444),
@@ -362,18 +586,27 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                                   ),
                                   const SizedBox(width: 16),
 
-                                  // Filter buttons
-                                  _buildFilterButton('Lọc theo bộ môn'),
+                                  // Filter dropdowns
+                                  _buildFacultyDropdown(),
                                   const SizedBox(width: 16),
-                                  _buildFilterButton('Lọc theo khoa'),
+                                  _buildDepartmentDropdown(),
                                   const Spacer(),
 
                                   // Import excel button
                                   SizedBox(
                                     height: 38,
                                     child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        // Handle import excel
+                                      onPressed: () async {
+                                        final result = await showDialog(
+                                          context: context,
+                                          builder: (context) =>
+                                              const ImportExcelModal(),
+                                        );
+
+                                        // Refresh data if import was successful
+                                        if (result == true) {
+                                          _loadTeachers();
+                                        }
                                       },
                                       icon: const Icon(
                                         Icons.upload_file,
@@ -412,13 +645,18 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                                   SizedBox(
                                     height: 38,
                                     child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        showDialog(
+                                      onPressed: () async {
+                                        final result = await showDialog(
                                           context: context,
                                           builder: (BuildContext context) {
                                             return const AddTeacherModal();
                                           },
                                         );
+
+                                        // Refresh data if teacher was added
+                                        if (result == true) {
+                                          _loadTeachers();
+                                        }
                                       },
                                       icon: const Icon(Icons.add, size: 16),
                                       label: const Text(
@@ -518,28 +756,88 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
 
                         // Table rows - using Flexible to prevent overflow
                         Flexible(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                // Table rows
-                                ...List.generate(_itemsPerPage, (index) {
-                                  if (index < currentPageTeachers.length) {
-                                    final teacher = currentPageTeachers[index];
-                                    final isEven = index % 2 == 0;
-                                    return _buildTableRow(teacher, isEven);
-                                  } else {
-                                    // Empty row to maintain consistent height
-                                    return Container(
-                                      height: 64,
-                                      color: index % 2 == 0
-                                          ? Colors.white
-                                          : const Color(0xFFF9FAFC),
-                                    );
-                                  }
-                                }),
-                              ],
-                            ),
-                          ),
+                          child: _isLoading
+                              ? const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(40.0),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                )
+                              : _errorMessage != null
+                              ? Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(40.0),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.error_outline,
+                                          size: 48,
+                                          color: Colors.red.shade400,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          _errorMessage!,
+                                          style: TextStyle(
+                                            color: Colors.red.shade700,
+                                            fontSize: 16,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        ElevatedButton(
+                                          onPressed: _loadTeachers,
+                                          child: const Text('Thử lại'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              : SingleChildScrollView(
+                                  child: Column(
+                                    children: [
+                                      // Table rows
+                                      ...List.generate(_itemsPerPage, (index) {
+                                        if (index <
+                                            currentPageTeachers.length) {
+                                          final teacher =
+                                              currentPageTeachers[index];
+                                          // Calculate sequential number: (currentPage - 1) * itemsPerPage + (index + 1)
+                                          final sequentialNumber =
+                                              (_currentPage - 1) *
+                                                  _itemsPerPage +
+                                              (index + 1);
+                                          // Use global unique ID based on page and index (starting from 1000 to avoid conflicts)
+                                          final uniqueApiId =
+                                              1000 +
+                                              (_currentPage - 1) *
+                                                  _itemsPerPage +
+                                              index;
+                                          final teacherData =
+                                              _teacherToTeacherDataWithUniqueId(
+                                                teacher,
+                                                sequentialNumber,
+                                                uniqueApiId,
+                                              );
+                                          final isEven = index % 2 == 0;
+                                          return _buildTableRow(
+                                            teacherData,
+                                            isEven,
+                                          );
+                                        } else {
+                                          // Empty row to maintain consistent height
+                                          return Container(
+                                            height: 64,
+                                            color: index % 2 == 0
+                                                ? Colors.white
+                                                : const Color(0xFFF9FAFC),
+                                          );
+                                        }
+                                      }),
+                                    ],
+                                  ),
+                                ),
                         ),
                       ],
                     ),
@@ -559,7 +857,7 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
                       children: [
                         // Left side: Items count
                         Text(
-                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageTeachers.length} of ${_teachers.length}',
+                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageTeachers.length} of $_totalTeachers',
                           style: const TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
@@ -678,7 +976,7 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
     );
   }
 
-  Widget _buildFilterButton(String text) {
+  Widget _buildFacultyDropdown() {
     return Container(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -696,25 +994,143 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            text,
-            style: const TextStyle(
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<Map<String, dynamic>>(
+          value: _selectedFaculty,
+          hint: const Text(
+            'Lọc theo khoa',
+            style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 14,
               fontWeight: FontWeight.w400,
               color: Color(0xFFA1A9B8),
             ),
           ),
-          const SizedBox(width: 8),
-          const Icon(
+          icon: const Icon(
             Icons.keyboard_arrow_down,
             size: 16,
             color: Color(0xFF717680),
           ),
+          onChanged: _isLoadingFilters
+              ? null
+              : (Map<String, dynamic>? newValue) {
+                  setState(() {
+                    _selectedFaculty = newValue;
+                    _currentPage = 1; // Reset to first page when filtering
+                  });
+                  if (newValue != null) {
+                    _loadDepartments(facultyId: newValue['id']);
+                  } else {
+                    _loadDepartments();
+                  }
+                  _loadTeachers(); // Reload teachers with new filter
+                },
+          items: [
+            const DropdownMenuItem<Map<String, dynamic>>(
+              value: null,
+              child: Text(
+                'Tất cả khoa',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF1A1D29),
+                ),
+              ),
+            ),
+            ..._faculties.map((faculty) {
+              return DropdownMenuItem<Map<String, dynamic>>(
+                value: faculty,
+                child: Text(
+                  faculty['name'] ?? 'Không xác định',
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xFF1A1D29),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDepartmentDropdown() {
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: const Color(0xFF687182).withValues(alpha: 0.16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
         ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<Map<String, dynamic>>(
+          value: _selectedDepartment,
+          hint: const Text(
+            'Lọc theo bộ môn',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: Color(0xFFA1A9B8),
+            ),
+          ),
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            size: 16,
+            color: Color(0xFF717680),
+          ),
+          onChanged: _isLoadingFilters
+              ? null
+              : (Map<String, dynamic>? newValue) {
+                  setState(() {
+                    _selectedDepartment = newValue;
+                    _currentPage = 1; // Reset to first page when filtering
+                  });
+                  _loadTeachers(); // Reload teachers with new filter
+                },
+          items: [
+            const DropdownMenuItem<Map<String, dynamic>>(
+              value: null,
+              child: Text(
+                'Tất cả bộ môn',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF1A1D29),
+                ),
+              ),
+            ),
+            ..._departments.map((department) {
+              return DropdownMenuItem<Map<String, dynamic>>(
+                value: department,
+                child: Text(
+                  department['name'] ?? 'Không xác định',
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xFF1A1D29),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
@@ -731,18 +1147,24 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
               SizedBox(
                 width: 32,
                 child: Checkbox(
-                  value: currentPageTeachers.every(
-                    (teacher) => _selectedTeachers.contains(teacher.id),
+                  value: currentPageTeacherData.every(
+                    (teacher) => _selectedTeachers.contains(teacher.apiId),
                   ),
                   onChanged: (bool? value) {
                     setState(() {
                       if (value == true) {
-                        _selectedTeachers.addAll(
-                          currentPageTeachers.map((t) => t.id),
-                        );
+                        // Select all current page items
+                        final apiIds = currentPageTeacherData
+                            .map((t) => t.apiId)
+                            .toList();
+                        _selectedTeachers.addAll(apiIds);
                       } else {
-                        for (final teacher in currentPageTeachers) {
-                          _selectedTeachers.remove(teacher.id);
+                        // Deselect all current page items
+                        final apiIds = currentPageTeacherData
+                            .map((t) => t.apiId)
+                            .toList();
+                        for (final apiId in apiIds) {
+                          _selectedTeachers.remove(apiId);
                         }
                       }
                     });
@@ -900,7 +1322,7 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
   }
 
   Widget _buildTableRow(TeacherData teacher, bool isEven) {
-    final isSelected = _selectedTeachers.contains(teacher.id);
+    final isSelected = _selectedTeachers.contains(teacher.apiId);
 
     return DataTableRow<TeacherData>(
       data: teacher,
@@ -910,20 +1332,61 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
       onSelectionChanged: () {
         setState(() {
           if (isSelected) {
-            _selectedTeachers.remove(teacher.id);
+            _selectedTeachers.remove(teacher.apiId);
           } else {
-            _selectedTeachers.add(teacher.id);
+            _selectedTeachers.add(teacher.apiId);
           }
         });
       },
-      onEdit: () {
-        showDialog(
+      onEdit: () async {
+        final result = await showDialog(
           context: context,
           builder: (context) => EditTeacherModal(teacher: teacher),
         );
+
+        // Refresh data if teacher was updated
+        if (result == true) {
+          _loadTeachers();
+        }
       },
-      onDelete: () {
-        // TODO: handle delete
+      onDelete: () async {
+        // Delete individual teacher - use original teacher ID for actual deletion
+        try {
+          final originalId = _teacherIdMapping[teacher.apiId];
+          if (originalId != null) {
+            final teacherIdToDelete = int.tryParse(originalId) ?? 0;
+            print(
+              'Attempting to delete teacher with ID: $teacherIdToDelete (original: $originalId)',
+            );
+            final result = await _apiService.deleteTeacherById(
+              teacherIdToDelete,
+            );
+            if (result.success) {
+              _loadTeachers(); // Reload data
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Đã xóa giảng viên thành công!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } else {
+              throw Exception('API Error: ${result.message}');
+            }
+          } else {
+            throw Exception('Không tìm thấy ID giảng viên');
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Lỗi khi xóa: ${e.toString()}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
       },
     );
   }
@@ -944,6 +1407,12 @@ class TeacherData implements TableRowData {
   final String birthDate;
 
   final String department;
+  final int apiId; // Store original API ID for operations
+
+  // Additional fields for editing
+  final String hometown;
+  final int? facultyId;
+  final int? departmentId;
 
   TeacherData({
     required this.id,
@@ -953,5 +1422,9 @@ class TeacherData implements TableRowData {
     required this.email,
     required this.birthDate,
     required this.department,
+    required this.apiId,
+    required this.hometown,
+    this.facultyId,
+    this.departmentId,
   });
 }
