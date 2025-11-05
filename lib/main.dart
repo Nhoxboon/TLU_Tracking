@@ -10,7 +10,6 @@ import 'package:android_app/screens/admin/dashboard/class_management/class_stude
 import 'package:android_app/screens/onboarding/onboarding_screen.dart';
 import 'package:android_app/screens/users/auth/login_screen.dart';
 import 'package:android_app/screens/users/auth/forgot_password_screen.dart';
-import 'package:android_app/screens/users/auth/reset_password_screen.dart';
 import 'package:android_app/screens/teacher/teacher_dashboard_screen.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'screens/student/student_home_screen.dart';
@@ -68,7 +67,6 @@ class MyApp extends StatelessWidget {
         '/onboarding': (context) => const OnboardingScreen(),
         '/student/login': (context) => const LoginScreen(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
-        '/reset-password': (context) => const ResetPasswordScreen(),
         '/teacher/dashboard': (context) {
           final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
           return TeacherDashboardScreen(initialTab: args?['initialTab'] as int? ?? 0);

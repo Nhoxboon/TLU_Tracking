@@ -5,7 +5,8 @@ import 'mock_api_service.dart';
 import 'user_session.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.10.2:8000/api/v1';
+  // static const String baseUrl = 'http://192.168.10.2:8000/api/v1';
+  static const String baseUrl = 'http://10.0.2.2:8000/api/v1';
   // static const String baseUrl = 'http://localhost:8000/api/v1'; //old address
 
   // Singleton pattern
@@ -665,6 +666,108 @@ class ApiService {
       return ApiResponse.error(
         'Failed to delete teaching session: ${e.toString()}',
       );
+    }
+  }
+
+  // Password Reset endpoints
+  Future<ApiResponse<Map<String, dynamic>>> passwordReset(String email) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$baseUrl/auth/password-reset'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({'email': email}),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return ApiResponse.success(data, message: 'Mã OTP đã được gửi thành công');
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Không thể gửi email đặt lại mật khẩu',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Lỗi gửi email đặt lại mật khẩu: ${e.toString()}');
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> verifyOtp(String email, String otp) async {
+    try {
+      print('DEBUG - Verifying OTP: email=$email, otp=$otp');
+      
+      final requestBody = jsonEncode({
+        'email': email,
+        'token': otp,
+      });
+      print('DEBUG - Request body: $requestBody');
+      
+      final response = await _client
+          .post(
+            Uri.parse('$baseUrl/auth/verify-otp'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: requestBody,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      print('DEBUG - Response status: ${response.statusCode}');
+      print('DEBUG - Response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('DEBUG - Parsed data: $data');
+        return ApiResponse.success(data, message: 'Xác thực OTP thành công');
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Mã OTP không hợp lệ',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      print('DEBUG - Exception in verifyOtp: $e');
+      return ApiResponse.error('Lỗi xác thực OTP: ${e.toString()}');
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> updatePassword(
+    String token,
+    String newPassword,
+  ) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$baseUrl/auth/update-password'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({'new_password': newPassword}),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return ApiResponse.success(data, message: 'Mật khẩu đã được cập nhật thành công');
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Không thể cập nhật mật khẩu',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Lỗi cập nhật mật khẩu: ${e.toString()}');
     }
   }
 
