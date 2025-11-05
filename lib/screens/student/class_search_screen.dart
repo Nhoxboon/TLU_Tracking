@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -14,6 +15,7 @@ class ClassSearchScreen extends StatefulWidget {
 
 class _ClassSearchScreenState extends State<ClassSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
+  Timer? _debounceTimer;
 
   String? _selectedClassCode; // Keep as string for class code
   int? _selectedSubjectId;
@@ -21,6 +23,7 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
   int? _selectedCohortId;
   int? _selectedSemesterId;
 
+  List<_ClassItem> _allClassItems = []; // Store all fetched items
   List<_ClassItem> _searchResults = [];
   bool _isSearching = false;
   String? _error;
@@ -48,8 +51,59 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _filterResults();
+    });
+  }
+
+  void _filterResults() {
+    final searchKeyword = _searchController.text.trim().toLowerCase();
+    
+    setState(() {
+      if (searchKeyword.isEmpty) {
+        // If no search keyword, apply only filter selections
+        _searchResults = _allClassItems.where((item) {
+          if (_selectedClassCode != null && item.code != _selectedClassCode) return false;
+          return true;
+        }).toList();
+      } else {
+        // Search in all string/code fields
+        _searchResults = _allClassItems.where((item) {
+          // Apply class code filter first
+          if (_selectedClassCode != null && item.code != _selectedClassCode) return false;
+          
+          // Search in all string/code fields from raw data
+          final rawData = item.rawData;
+          final searchableFields = [
+            rawData['name']?.toString().toLowerCase(),
+            rawData['code']?.toString().toLowerCase(),
+            rawData['faculty_name']?.toString().toLowerCase(),
+            rawData['department_name']?.toString().toLowerCase(),
+            rawData['major_name']?.toString().toLowerCase(),
+            rawData['subject_name']?.toString().toLowerCase(),
+            rawData['subject_code']?.toString().toLowerCase(),
+            rawData['teacher_name']?.toString().toLowerCase(),
+            rawData['teacher_code']?.toString().toLowerCase(),
+            rawData['cohort_name']?.toString().toLowerCase(),
+            rawData['academic_year_name']?.toString().toLowerCase(),
+            rawData['semester_name']?.toString().toLowerCase(),
+            rawData['study_phase_name']?.toString().toLowerCase(),
+          ];
+          
+          // Check if keyword matches any field
+          return searchableFields.any((field) => 
+            field != null && field.contains(searchKeyword)
+          );
+        }).toList();
+      }
+    });
   }
 
   Future<void> _performSearch() async {
@@ -102,7 +156,7 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
         final data = jsonDecode(resp.body);
         final List<dynamic> items = data['items'] ?? [];
         
-        // Parse results
+        // Parse results and store raw data
         final allResults = items.map((e) {
           final m = e as Map<String, dynamic>;
           return _ClassItem(
@@ -116,25 +170,16 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
             subjectName: (m['subject_name'] ?? '').toString(),
             facultyName: (m['faculty_name'] ?? '').toString(),
             cohortName: (m['cohort_name'] ?? '').toString(),
+            rawData: m, // Store raw API response for searching
           );
         }).toList();
 
-        // Apply client-side filters for class code and search text
-        final filtered = allResults.where((item) {
-          if (_searchController.text.isNotEmpty) {
-            final q = _searchController.text.toLowerCase();
-            if (!item.title.toLowerCase().contains(q) &&
-                !item.code.toLowerCase().contains(q)) {
-              return false;
-            }
-          }
-          if (_selectedClassCode != null && item.code != _selectedClassCode) return false;
-          return true;
-        }).toList();
-
         setState(() {
-          _searchResults = filtered;
+          _allClassItems = allResults;
         });
+        
+        // Apply filters after fetching data
+        _filterResults();
       } else {
         setState(() {
           _error = 'Lỗi tìm kiếm (${resp.statusCode})';
@@ -193,7 +238,7 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                               color: Color(0xB3333333), // 70%
                             ),
                           ),
-                          onChanged: (_) => setState(() {}),
+                          onChanged: _onSearchChanged,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -227,6 +272,7 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                           _selectedClassCode = item['code']?.toString();
                           _expandedFilter = null;
                         });
+                        _filterResults();
                       },
                     ),
                   const SizedBox(height: 8),
@@ -250,6 +296,7 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                           _selectedSubjectId = item['id'] as int?;
                           _expandedFilter = null;
                         });
+                        _performSearch();
                       },
                     ),
                   const SizedBox(height: 8),
@@ -273,6 +320,7 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                           _selectedFacultyId = item['id'] as int?;
                           _expandedFilter = null;
                         });
+                        _performSearch();
                       },
                     ),
                   const SizedBox(height: 8),
@@ -295,6 +343,7 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                           _selectedCohortId = item['id'] as int?;
                           _expandedFilter = null;
                         });
+                        _performSearch();
                       },
                     ),
                   const SizedBox(height: 8),
@@ -317,6 +366,7 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                           _selectedSemesterId = item['id'] as int?;
                           _expandedFilter = null;
                         });
+                        _performSearch();
                       },
                     ),
                 ],
@@ -546,6 +596,13 @@ class _ClassSearchScreenState extends State<ClassSearchScreen> {
                     }
                     _expandedFilter = null;
                   });
+                  // Re-filter results if class code filter was cleared
+                  if (filterKey == 'classCode') {
+                    _filterResults();
+                  } else {
+                    // For other filters, re-perform search to get fresh data
+                    _performSearch();
+                  }
                 },
               ),
             ),
@@ -900,8 +957,9 @@ class _ClassItem {
   final String subjectName;
   final String facultyName;
   final String cohortName;
+  final Map<String, dynamic> rawData; // Store raw API data for searching
 
-  const _ClassItem({
+  _ClassItem({
     required this.id,
     required this.title,
     required this.code,
@@ -910,6 +968,7 @@ class _ClassItem {
     this.subjectName = '',
     this.facultyName = '',
     this.cohortName = '',
+    required this.rawData,
   });
 }
 
