@@ -11,6 +11,7 @@ class UserSession extends ChangeNotifier {
   UserRole? _userRole;
   Map<String, dynamic>? _userData;
   String? _username;
+  String? _email;
   String? _accessToken;
   String? _tokenType;
 
@@ -23,6 +24,7 @@ class UserSession extends ChangeNotifier {
     return null;
   }
   String? get username => _username;
+  String? get email => _email;
   String? get accessToken => _accessToken;
   String? get tokenType => _tokenType;
   bool get isLoggedIn => _userRole != null;
@@ -31,12 +33,14 @@ class UserSession extends ChangeNotifier {
     required UserRole role,
     required Map<String, dynamic> userData,
     required String username,
+    String? email,
     String? accessToken,
     String? tokenType,
   }) {
     _userRole = role;
     _userData = userData;
     _username = username;
+    _email = email ?? userData['email'] as String?;
     _accessToken = accessToken;
     _tokenType = tokenType;
     notifyListeners();
@@ -47,6 +51,7 @@ class UserSession extends ChangeNotifier {
     _userRole = null;
     _userData = null;
     _username = null;
+    _email = null;
     _accessToken = null;
     _tokenType = null;
     notifyListeners();
@@ -85,6 +90,7 @@ class UserSession extends ChangeNotifier {
         'role': _userRole?.toString(),
         'userData': _userData,
         'username': _username,
+        'email': _email,
         'accessToken': _accessToken,
         'tokenType': _tokenType,
       };
@@ -109,6 +115,7 @@ class UserSession extends ChangeNotifier {
       _userRole = UserRole.fromString(roleStr);
       _userData = (map['userData'] as Map?)?.cast<String, dynamic>();
       _username = map['username'] as String?;
+      _email = map['email'] as String?;
       _accessToken = map['accessToken'] as String?;
       _tokenType = map['tokenType'] as String?;
       notifyListeners();

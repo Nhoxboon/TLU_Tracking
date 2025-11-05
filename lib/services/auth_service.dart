@@ -31,6 +31,7 @@ class AuthService {
         role: loginData.role,
         userData: loginData.user,
         username: loginData.user['email'] ?? email,
+        email: loginData.user['email'] as String? ?? email,
         accessToken: loginData.accessToken,
         tokenType: loginData.tokenType,
       );

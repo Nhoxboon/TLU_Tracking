@@ -5,8 +5,8 @@ import 'mock_api_service.dart';
 import 'user_session.dart';
 
 class ApiService {
-  // static const String baseUrl = 'http://192.168.10.2:8000/api/v1';
-  static const String baseUrl = 'http://10.0.2.2:8000/api/v1';
+  static const String baseUrl = 'http://192.168.10.2:8000/api/v1';
+  // static const String baseUrl = 'http://10.0.2.2:8000/api/v1';
   // static const String baseUrl = 'http://localhost:8000/api/v1'; //old address
 
   // Singleton pattern
@@ -50,6 +50,7 @@ class ApiService {
           role: loginResponse.role,
           userData: loginResponse.user,
           username: loginResponse.user['email'] ?? '',
+          email: loginResponse.user['email'] as String?,
           accessToken: loginResponse.accessToken,
           tokenType: loginResponse.tokenType,
         );

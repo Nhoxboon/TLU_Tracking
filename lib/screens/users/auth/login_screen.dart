@@ -107,6 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 role: loginResponse.role,
                 userData: userData,
                 username: _emailController.text.trim(),
+                email: currentUserData['email'] as String? ?? userData['email'] as String?,
                 accessToken: loginResponse.accessToken,
                 tokenType: loginResponse.tokenType,
               );
@@ -116,6 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 role: loginResponse.role,
                 userData: loginResponse.user,
                 username: _emailController.text.trim(),
+                email: loginResponse.user['email'] as String?,
                 accessToken: loginResponse.accessToken,
                 tokenType: loginResponse.tokenType,
               );
@@ -127,6 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
               role: loginResponse.role,
               userData: loginResponse.user,
               username: _emailController.text.trim(),
+              email: loginResponse.user['email'] as String?,
               accessToken: loginResponse.accessToken,
               tokenType: loginResponse.tokenType,
             );
