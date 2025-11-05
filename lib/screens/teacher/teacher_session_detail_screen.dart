@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../services/api_service.dart';
 import '../../services/user_session.dart';
+import 'teacher_dashboard_screen.dart';
+import 'teacher_settings_screen.dart';
 
 class AttendanceRecord {
   final int id;
@@ -340,12 +342,23 @@ class _TeacherSessionDetailScreenState extends State<TeacherSessionDetailScreen>
             IconButton(
               icon: const Icon(Icons.home_outlined, size: 25),
               color: const Color(0xFF2196F3),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TeacherDashboardScreen()),
+                  (route) => false,
+                );
+              },
             ),
             IconButton(
               icon: const Icon(Icons.person_outline, size: 25),
               color: Colors.black.withOpacity(0.7),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TeacherSettingsScreen()),
+                );
+              },
             ),
           ],
         ),
@@ -652,12 +665,23 @@ class QRCodeScreen extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.home_outlined, size: 25),
               color: const Color(0xFF2196F3),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TeacherDashboardScreen()),
+                  (route) => false,
+                );
+              },
             ),
             IconButton(
               icon: const Icon(Icons.person_outline, size: 25),
               color: Colors.black.withOpacity(0.7),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TeacherSettingsScreen()),
+                );
+              },
             ),
           ],
         ),

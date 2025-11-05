@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'student/edit_profile_screen.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../services/user_session.dart';
@@ -178,7 +179,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                   alignment: Alignment.centerRight,
                                   child: GestureDetector(
                                     onTap: () {
-                                      // Navigate to edit profile
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const StudentEditProfileScreen(),
+                                        ),
+                                      ).then((_) => _fetchUserProfile());
                                     },
                                     child: const Text(
                                       'SỬA THÔNG TIN',

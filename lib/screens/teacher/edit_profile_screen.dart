@@ -541,22 +541,79 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  void _saveProfile() {
-    // TODO: Implement save functionality
-    // For now, just show a success message and go back
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Thông tin đã được lưu thành công'),
-        backgroundColor: Color(0xFF4CAF50),
-        duration: Duration(seconds: 2),
-      ),
+  void _saveProfile() async {
+    final token = UserSession().accessToken;
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chưa đăng nhập'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    final profileId = UserSession().userData?['profile_id'];
+    final teacherId = profileId is int ? profileId : (profileId is String ? int.tryParse(profileId) : null);
+    if (teacherId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không tìm thấy mã giáo viên'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    // Convert dd/MM/yyyy -> yyyy-MM-dd for API
+    String? birthIso;
+    if (_selectedDate.isNotEmpty) {
+      try {
+        final parts = _selectedDate.split('/');
+        if (parts.length == 3) {
+          final d = parts[0].padLeft(2, '0');
+          final m = parts[1].padLeft(2, '0');
+          final y = parts[2];
+          birthIso = '$y-$m-$d';
+        }
+      } catch (_) {}
+    }
+
+    final body = <String, dynamic>{
+      'full_name': _nameController.text.trim(),
+      'phone': _phoneController.text.trim(),
+      if (birthIso != null && birthIso.isNotEmpty) 'birth_date': birthIso,
+      if (_selectedLocation.isNotEmpty) 'hometown': _selectedLocation,
+    };
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
     );
-    
-    // Go back to previous screen after a short delay
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        Navigator.pop(context);
+
+    try {
+      final url = Uri.parse('${ApiService.baseUrl}/users/teachers/$teacherId');
+      final resp = await http.put(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+      Navigator.of(context).pop();
+      if (resp.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cập nhật thông tin thành công'), backgroundColor: Color(0xFF2196F3)),
+        );
+        await Future.delayed(const Duration(milliseconds: 800));
+        if (mounted) Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Cập nhật thất bại (${resp.statusCode})'), backgroundColor: Colors.red),
+        );
       }
-    });
+    } catch (e) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi kết nối: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 }
