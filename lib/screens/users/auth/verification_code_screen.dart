@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../services/api_service.dart';
+import 'reset_password_screen.dart';
 
 class VerificationCodeScreen extends StatefulWidget {
   final String email;
@@ -44,7 +46,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
     return _controllers.map((controller) => controller.text).join();
   }
   
-  void _handleVerification() {
+  void _handleVerification() async {
     if (!_isCodeComplete()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -55,44 +57,92 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
       return;
     }
     
-    // Verify the entered code
     String enteredCode = _getFullCode();
-    
-    // For demo purposes, accept any 6-digit code
-    if (enteredCode.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Mã xác thực không hợp lệ'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+    print('DEBUG - Collected OTP: "$enteredCode" (length: ${enteredCode.length})');
+    print('DEBUG - Email: "${widget.email}"');
     
     setState(() {
       _isLoading = true;
     });
     
-    // Simulate verification process
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    try {
+      final response = await ApiService().verifyOtp(widget.email, enteredCode);
+      
       if (mounted) {
-        // Navigate to reset password screen after verification
-        Navigator.pushNamed(context, '/reset-password');
-        
+        if (response.success) {
+          // Extract the reset token from response data
+          final resetToken = response.data?['access_token'] ?? response.data?['token'];
+          
+          if (resetToken != null) {
+            // Navigate to reset password screen with the token
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ResetPasswordScreen(
+                  email: widget.email,
+                  resetToken: resetToken,
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Không nhận được token. Vui lòng thử lại'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi kết nối: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
-    });
+    }
   }
   
-  void _resendCode() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Mã xác thực mới đã được gửi'),
-        backgroundColor: Colors.green,
-      ),
-    );
+  void _resendCode() async {
+    try {
+      final response = await ApiService().passwordReset(widget.email);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.success 
+                ? 'Mã xác thực mới đã được gửi' 
+                : response.message),
+            backgroundColor: response.success ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi khi gửi lại mã: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override

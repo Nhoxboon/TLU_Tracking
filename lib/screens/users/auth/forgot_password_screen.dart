@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/screens/users/auth/verification_code_screen.dart';
+import '../../../services/api_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -34,7 +35,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  void _handleResetPassword() {
+  void _handleResetPassword() async {
     if (_emailController.text.trim().isEmpty) {
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
@@ -50,32 +51,53 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _isLoading = true;
     });
 
-    // Simulate network request
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    try {
+      final response = await ApiService().passwordReset(_emailController.text.trim());
+      
       if (mounted) {
-        // Show success message
+        if (response.success) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response.message),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          // Navigate to verification code screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  VerificationCodeScreen(email: _emailController.text.trim()),
+            ),
+          );
+        } else {
+          // Show error message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đã gửi mã xác thực đến email của bạn'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text('Lỗi kết nối: ${e.toString()}'),
+            backgroundColor: Colors.red,
           ),
         );
-
-        // Navigate to verification code screen
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                VerificationCodeScreen(email: _emailController.text.trim()),
-          ),
-        );
-
-        // Reset loading state
+      }
+    } finally {
+      if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
-    });
+    }
   }
 
   @override
