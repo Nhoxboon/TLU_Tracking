@@ -33,9 +33,6 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
   // Cache for department names
   final Map<int, String> _departmentCache = {};
 
-  // Mapping from uniqueId to original teacher ID for API operations
-  final Map<int, String> _teacherIdMapping = {};
-
   final Set<int> _selectedTeachers = <int>{};
 
   // Filter data
@@ -101,9 +98,8 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
           _totalTeachers = result.data!.total;
           _totalPages = result.data!.totalPages;
           _isLoading = false;
-          // Clear selections and mappings when loading new data (search/pagination)
+          // Clear selections when loading new data (search/pagination)
           _selectedTeachers.clear();
-          _teacherIdMapping.clear();
         });
       } else {
         setState(() {
@@ -111,7 +107,6 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
           _isLoading = false;
           _teachers = [];
           _selectedTeachers.clear();
-          _teacherIdMapping.clear();
         });
       }
     } catch (e) {
@@ -120,7 +115,6 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
         _isLoading = false;
         _teachers = [];
         _selectedTeachers.clear();
-        _teacherIdMapping.clear();
       });
     }
   }
@@ -327,10 +321,6 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
     int sequentialId,
     int uniqueId,
   ) {
-    // Store mapping from uniqueId to real API teacher ID for API operations
-    if (teacher.apiId != null) {
-      _teacherIdMapping[uniqueId] = teacher.apiId.toString();
-    }
     return TeacherData(
       id: sequentialId, // Use sequential number for display
       code: teacher.teacherId,
@@ -340,7 +330,7 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
       birthDate:
           '${teacher.dateOfBirth.day.toString().padLeft(2, '0')}/${teacher.dateOfBirth.month.toString().padLeft(2, '0')}/${teacher.dateOfBirth.year}', // Format as DD/MM/YYYY
       department: _getDepartmentName(teacher.departmentId),
-      apiId: uniqueId, // Use unique ID for selection
+      apiId: teacher.apiId ?? 0, // Store real API ID for operations
       hometown: teacher.hometown,
       facultyId: teacher.facultyId,
       departmentId: teacher.departmentId,
@@ -353,20 +343,12 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
         _isLoading = true;
       });
 
-      // Get the real API IDs for selected teachers
-      final selectedApiIds = _selectedTeachers
-          .map((uniqueId) => _teacherIdMapping[uniqueId])
-          .where((id) => id != null)
-          .cast<String>()
-          .toList();
+      // Convert selected API IDs to list for deletion
+      final selectedApiIds = _selectedTeachers.toList();
 
       // Delete teachers concurrently
-      final futures = selectedApiIds.map((id) {
-        final teacherIdToDelete = int.tryParse(id) ?? 0;
-        print(
-          'Bulk deleting teacher with ID: $teacherIdToDelete (original: $id)',
-        );
-        return _apiService.deleteTeacherById(teacherIdToDelete);
+      final futures = selectedApiIds.map((teacherId) {
+        return _apiService.deleteTeacherById(teacherId);
       });
       final results = await Future.wait(futures);
 
@@ -1350,32 +1332,21 @@ class _TeachersManagementViewState extends State<TeachersManagementView> {
         }
       },
       onDelete: () async {
-        // Delete individual teacher - use original teacher ID for actual deletion
+        // Delete individual teacher - use API ID for actual deletion
         try {
-          final originalId = _teacherIdMapping[teacher.apiId];
-          if (originalId != null) {
-            final teacherIdToDelete = int.tryParse(originalId) ?? 0;
-            print(
-              'Attempting to delete teacher with ID: $teacherIdToDelete (original: $originalId)',
-            );
-            final result = await _apiService.deleteTeacherById(
-              teacherIdToDelete,
-            );
-            if (result.success) {
-              _loadTeachers(); // Reload data
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Đã xóa giảng viên thành công!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            } else {
-              throw Exception('API Error: ${result.message}');
+          final result = await _apiService.deleteTeacherById(teacher.apiId);
+          if (result.success) {
+            _loadTeachers(); // Reload data
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Đã xóa giảng viên thành công!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
             }
           } else {
-            throw Exception('Không tìm thấy ID giảng viên');
+            throw Exception('API Error: ${result.message}');
           }
         } catch (e) {
           if (mounted) {

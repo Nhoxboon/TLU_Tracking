@@ -561,7 +561,8 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
       creationDate: classItem.createdAt != null
           ? _formatDate(classItem.createdAt!)
           : 'Không xác định',
-      apiId: uniqueId, // Use unique ID for selection
+      apiId: classItem.id, // Use real API ID for API operations
+      uniqueId: uniqueId, // Use unique ID for UI selection
       teacherId: classItem.teacherId,
       departmentId: classItem.departmentId,
       subjectId: classItem.subjectId,
@@ -1905,17 +1906,18 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
                 width: 32,
                 child: Checkbox(
                   value: currentPageClassData.every(
-                    (classData) => _selectedClasses.contains(classData.apiId),
+                    (classData) =>
+                        _selectedClasses.contains(classData.uniqueId),
                   ),
                   onChanged: (bool? value) {
                     setState(() {
                       if (value == true) {
                         _selectedClasses.addAll(
-                          currentPageClassData.map((c) => c.apiId),
+                          currentPageClassData.map((c) => c.uniqueId),
                         );
                       } else {
                         for (final classData in currentPageClassData) {
-                          _selectedClasses.remove(classData.apiId);
+                          _selectedClasses.remove(classData.uniqueId);
                         }
                       }
                     });
@@ -2083,7 +2085,7 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
   }
 
   Widget _buildTableRow(ClassData classData, bool isEven) {
-    final isSelected = _selectedClasses.contains(classData.apiId);
+    final isSelected = _selectedClasses.contains(classData.uniqueId);
 
     return GestureDetector(
       onDoubleTap: () {
@@ -2106,9 +2108,9 @@ class _ClassesManagementViewState extends State<ClassesManagementView> {
         onSelectionChanged: () {
           setState(() {
             if (isSelected) {
-              _selectedClasses.remove(classData.apiId);
+              _selectedClasses.remove(classData.uniqueId);
             } else {
-              _selectedClasses.add(classData.apiId);
+              _selectedClasses.add(classData.uniqueId);
             }
           });
         },
@@ -2186,7 +2188,8 @@ class ClassData implements ClassTableRowData {
   String get birthDate => creationDate;
 
   // Additional fields for API operations
-  final int apiId; // Store unique ID for selection
+  final int apiId; // Store real API ID for API operations
+  final int uniqueId; // Store unique ID for UI selection
   final int? teacherId;
   final int? departmentId;
   final int? subjectId;
@@ -2208,6 +2211,7 @@ class ClassData implements ClassTableRowData {
     required this.course,
     required this.creationDate,
     required this.apiId,
+    required this.uniqueId,
     this.teacherId,
     this.departmentId,
     this.subjectId,

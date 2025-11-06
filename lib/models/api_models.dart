@@ -5,6 +5,7 @@ export 'student.dart' show StudentModel;
 export 'teacher.dart';
 export 'subject.dart';
 export 'teaching_session.dart';
+export 'cohort.dart';
 
 class LoginRequest {
   final String email;
@@ -80,7 +81,7 @@ class ApiResponse<T> {
     this.statusCode,
   });
 
-  factory ApiResponse.success(T data, {String message = 'Success'}) {
+  factory ApiResponse.success(T data, {String message = 'Thành công'}) {
     return ApiResponse(
       success: true,
       message: message,
@@ -107,7 +108,7 @@ class BaseResponse {
 
   factory BaseResponse.fromJson(Map<String, dynamic> json) => BaseResponse(
     success: json['success'] ?? true,
-    message: json['message'] ?? 'Operation successful',
+    message: json['message'] ?? 'Thực hiện thành công',
     data: json['data'] is Map<String, dynamic>
         ? (json['data'] as Map<String, dynamic>)
         : null,

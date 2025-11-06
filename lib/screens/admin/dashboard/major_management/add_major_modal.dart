@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:android_app/services/api_service.dart';
 
 class AddMajorModal extends StatefulWidget {
   const AddMajorModal({super.key});
@@ -11,15 +12,19 @@ class _AddMajorModalState extends State<AddMajorModal> {
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
   final _nameController = TextEditingController();
-  String? _selectedFaculty;
+  final ApiService _apiService = ApiService();
 
-  final List<String> _faculties = [
-    'Công nghệ thông tin',
-    'Điện - Điện tử',
-    'Xây dựng',
-    'Cơ khí',
-    'Kinh tế',
-  ];
+  Map<String, dynamic>? _selectedFaculty;
+  bool _isLoading = false;
+
+  // API data
+  List<Map<String, dynamic>> _faculties = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFaculties();
+  }
 
   @override
   void dispose() {
@@ -28,26 +33,78 @@ class _AddMajorModalState extends State<AddMajorModal> {
     super.dispose();
   }
 
-  void _handleConfirm() {
+  Future<void> _loadFaculties() async {
+    try {
+      final result = await _apiService.getFacultiesPaginated(limit: 100);
+      if (result.success && result.data != null) {
+        setState(() {
+          _faculties = result.data!.items.cast<Map<String, dynamic>>();
+        });
+      } else {
+        setState(() {
+          _faculties = [];
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _faculties = [];
+      });
+    }
+  }
+
+  Future<void> _handleConfirm() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: Implement actual major addition logic here
-      // This is where the real logic for adding a new major should be implemented
-      // - Validate all form fields
-      // - Create new major object
-      // - Add to database/API
-      // - Update the majors list
-      // - Show success message
-      // - Close the modal
+      setState(() {
+        _isLoading = true;
+      });
 
-      Navigator.of(context).pop();
+      try {
+        // Prepare major data for API
+        final majorData = {
+          'code': _codeController.text.trim(), // API mong đợi 'code'
+          'name': _nameController.text.trim(), // API mong đợi 'name'
+          'faculty_id': _selectedFaculty?['id'] ?? 0,
+        };
 
-      // For now, just show a placeholder message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('TODO: Implement major addition logic'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+        final result = await _apiService.createMajorData(majorData);
+
+        if (!mounted) return;
+
+        if (result.success) {
+          Navigator.of(context).pop(true); // Return true to indicate success
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tạo ngành mới thành công'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Tạo ngành thất bại: ${result.message}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Đã xảy ra lỗi: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -196,27 +253,27 @@ class _AddMajorModalState extends State<AddMajorModal> {
           ),
         ),
         const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField<Map<String, dynamic>>(
           value: _selectedFaculty,
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
+              horizontal: 12,
               vertical: 10,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               borderSide: const BorderSide(color: Color(0xFF2264E5)),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               borderSide: const BorderSide(color: Colors.red),
             ),
             fillColor: Colors.white,
@@ -226,26 +283,29 @@ class _AddMajorModalState extends State<AddMajorModal> {
             'Chọn khoa',
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: FontWeight.w400,
+              height: 1.43,
               color: Color(0xFFA1A9B8),
             ),
           ),
-          items: _faculties.map((String faculty) {
-            return DropdownMenuItem<String>(
+          items: _faculties.map((Map<String, dynamic> faculty) {
+            return DropdownMenuItem<Map<String, dynamic>>(
               value: faculty,
               child: Text(
-                faculty,
+                faculty['name'] ??
+                    'Không rõ', // API trả về 'name' không phải 'faculty_name'
                 style: const TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  height: 1.43,
                   color: Color(0xFF181D27),
                 ),
               ),
             );
           }).toList(),
-          onChanged: (String? newValue) {
+          onChanged: (Map<String, dynamic>? newValue) {
             setState(() {
               _selectedFaculty = newValue;
             });
@@ -364,14 +424,16 @@ class _AddMajorModalState extends State<AddMajorModal> {
           // Confirm Button
           Expanded(
             child: InkWell(
-              onTap: _handleConfirm,
+              onTap: _isLoading ? null : _handleConfirm,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 18,
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2264E5),
+                  color: _isLoading
+                      ? const Color(0xFF2264E5).withOpacity(0.6)
+                      : const Color(0xFF2264E5),
                   border: Border.all(color: const Color(0xFF7F56D9)),
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
@@ -382,16 +444,27 @@ class _AddMajorModalState extends State<AddMajorModal> {
                     ),
                   ],
                 ),
-                child: const Center(
-                  child: Text(
-                    'Xác nhận',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
+                child: Center(
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text(
+                          'Xác nhận',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ),

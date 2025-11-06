@@ -38,9 +38,6 @@ class _StudentsManagementViewState extends State<StudentsManagementView> {
   final Set<int> _loadingMajors = {};
   final Set<int> _loadingCohorts = {};
 
-  // Mapping from uniqueId to original student ID for API operations
-  final Map<int, String> _studentIdMapping = {};
-
   final Set<int> _selectedStudents = <int>{};
 
   // Filter data
@@ -103,9 +100,8 @@ class _StudentsManagementViewState extends State<StudentsManagementView> {
           _totalStudents = result.data!.total;
           _totalPages = result.data!.totalPages;
           _isLoading = false;
-          // Clear selections and mappings when loading new data (search/pagination)
+          // Clear selections when loading new data (search/pagination)
           _selectedStudents.clear();
-          _studentIdMapping.clear();
         });
 
         // Load major and cohort names after state is updated
@@ -117,7 +113,6 @@ class _StudentsManagementViewState extends State<StudentsManagementView> {
           _isLoading = false;
           _errorMessage = result.message;
           _selectedStudents.clear();
-          _studentIdMapping.clear();
         });
       }
     } catch (e) {
@@ -125,7 +120,6 @@ class _StudentsManagementViewState extends State<StudentsManagementView> {
         _isLoading = false;
         _errorMessage = 'Lỗi khi tải dữ liệu sinh viên: ${e.toString()}';
         _selectedStudents.clear();
-        _studentIdMapping.clear();
       });
     }
   }
@@ -442,10 +436,6 @@ class _StudentsManagementViewState extends State<StudentsManagementView> {
     int sequentialId,
     int uniqueId,
   ) {
-    // Store mapping from uniqueId to real API student ID for API operations
-    if (student.apiId != null) {
-      _studentIdMapping[uniqueId] = student.apiId!.toString();
-    }
     return StudentData(
       id: sequentialId, // Use sequential number for display
       code: student.studentCode,
@@ -457,7 +447,7 @@ class _StudentsManagementViewState extends State<StudentsManagementView> {
           ? _formatDateForDisplay(student.birthDate!)
           : '',
       course: _getCohortName(student.cohortId),
-      apiId: uniqueId, // Use unique ID for selection
+      apiId: student.apiId ?? 0, // Store real API ID for operations
       // Additional fields for editing
       hometown: student.hometown,
       facultyId: student.facultyId,
@@ -552,11 +542,9 @@ class _StudentsManagementViewState extends State<StudentsManagementView> {
         _isLoading = true;
       });
 
-      // Get the real API IDs for selected students
+      // Convert selected API IDs to strings for deletion
       final selectedApiIds = _selectedStudents
-          .map((uniqueId) => _studentIdMapping[uniqueId])
-          .where((id) => id != null)
-          .cast<String>()
+          .map((apiId) => apiId.toString())
           .toList();
 
       // Delete students concurrently
@@ -1537,29 +1525,21 @@ class _StudentsManagementViewState extends State<StudentsManagementView> {
         );
       },
       onDelete: () async {
-        // Delete individual student - use original student ID for actual deletion
+        // Delete individual student - use API ID for actual deletion
         try {
-          final originalId = _studentIdMapping[student.apiId];
-          if (originalId != null) {
-            final studentIdToDelete = int.tryParse(originalId) ?? 0;
-            final result = await _apiService.deleteStudentById(
-              studentIdToDelete,
-            );
-            if (result.success) {
-              _loadStudents(); // Reload data
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Đã xóa sinh viên thành công!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            } else {
-              throw Exception('API Error: ${result.message}');
+          final result = await _apiService.deleteStudentById(student.apiId);
+          if (result.success) {
+            _loadStudents(); // Reload data
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Đã xóa sinh viên thành công!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
             }
           } else {
-            throw Exception('Không tìm thấy ID sinh viên');
+            throw Exception('API Error: ${result.message}');
           }
         } catch (e) {
           if (mounted) {

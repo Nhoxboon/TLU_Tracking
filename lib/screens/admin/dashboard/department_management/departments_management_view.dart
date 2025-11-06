@@ -4,6 +4,8 @@ import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
 import 'package:android_app/screens/admin/dashboard/department_management/add_department_modal.dart';
 import 'package:android_app/screens/admin/dashboard/department_management/edit_department_modal.dart';
+import 'package:android_app/services/api_service.dart';
+import 'package:android_app/models/department.dart';
 
 class DepartmentsManagementView extends StatefulWidget {
   const DepartmentsManagementView({super.key});
@@ -15,98 +17,27 @@ class DepartmentsManagementView extends StatefulWidget {
 
 class _DepartmentsManagementViewState extends State<DepartmentsManagementView> {
   final TextEditingController _searchController = TextEditingController();
+  final ApiService _apiService = ApiService();
 
   // Pagination variables
   int _currentPage = 1;
   final int _itemsPerPage = 10;
 
-  // Faculties list (should come from a service in production)
-  final List<String> _faculties = [
-    'Công nghệ thông tin',
-    'Kinh tế',
-    'Ngoại ngữ',
-    'Luật',
-    'Toán - Tin',
-    'Văn học',
-  ];
+  // API data for departments
+  List<Department> _departments = [];
+  bool _isLoading = false;
+  int _totalDepartments = 0;
+  int _totalPages = 0;
+  String? _errorMessage;
 
-  // Sample data for departments
-  final List<DepartmentData> _departments = [
-    DepartmentData(
-      id: 1,
-      code: 'BM001',
-      name: 'Bộ môn Lập trình',
-      faculty: 'Công nghệ thông tin',
-    ),
-    DepartmentData(
-      id: 2,
-      code: 'BM002',
-      name: 'Bộ môn Mạng máy tính',
-      faculty: 'Công nghệ thông tin',
-    ),
-    DepartmentData(
-      id: 3,
-      code: 'BM003',
-      name: 'Bộ môn Trí tuệ nhân tạo',
-      faculty: 'Công nghệ thông tin',
-    ),
-    DepartmentData(
-      id: 4,
-      code: 'BM004',
-      name: 'Bộ môn Kinh tế vi mô',
-      faculty: 'Kinh tế',
-    ),
-    DepartmentData(
-      id: 5,
-      code: 'BM005',
-      name: 'Bộ môn Kinh tế vĩ mô',
-      faculty: 'Kinh tế',
-    ),
-    DepartmentData(
-      id: 6,
-      code: 'BM006',
-      name: 'Bộ môn Tiếng Anh',
-      faculty: 'Ngoại ngữ',
-    ),
-    DepartmentData(
-      id: 7,
-      code: 'BM007',
-      name: 'Bộ môn Tiếng Trung',
-      faculty: 'Ngoại ngữ',
-    ),
-    DepartmentData(
-      id: 8,
-      code: 'BM008',
-      name: 'Bộ môn Luật Dân sự',
-      faculty: 'Luật',
-    ),
-    DepartmentData(
-      id: 9,
-      code: 'BM009',
-      name: 'Bộ môn Toán học',
-      faculty: 'Toán - Tin',
-    ),
-    DepartmentData(
-      id: 10,
-      code: 'BM010',
-      name: 'Bộ môn Tin học ứng dụng',
-      faculty: 'Toán - Tin',
-    ),
-    DepartmentData(
-      id: 11,
-      code: 'BM011',
-      name: 'Bộ môn Văn học Việt Nam',
-      faculty: 'Văn học',
-    ),
-    DepartmentData(
-      id: 12,
-      code: 'BM012',
-      name: 'Bộ môn Văn học nước ngoài',
-      faculty: 'Văn học',
-    ),
-  ];
+  // Cache for faculty names
+  final Map<int, String> _facultyCache = {};
 
   final Set<int> _selectedDepartments = <int>{};
+
+  // Filter data
+  List<Map<String, dynamic>> _faculties = [];
+  Map<String, dynamic>? _selectedFaculty;
 
   // Column configuration for departments table
   static const List<TableColumn> _departmentColumns = [
@@ -137,16 +68,172 @@ class _DepartmentsManagementViewState extends State<DepartmentsManagementView> {
     ),
   ];
 
-  // Pagination getters and methods
-  int get totalPages => (_departments.length / _itemsPerPage).ceil();
+  @override
+  void initState() {
+    super.initState();
+    _loadDepartments();
+    _loadFaculties();
+    _searchController.addListener(_onSearchChanged);
+  }
 
-  List<DepartmentData> get currentPageDepartments {
-    final startIndex = (_currentPage - 1) * _itemsPerPage;
-    final endIndex = startIndex + _itemsPerPage;
-    return _departments.sublist(
-      startIndex,
-      endIndex > _departments.length ? _departments.length : endIndex,
-    );
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    // Debounce search
+    if (_searchController.text.length >= 3 || _searchController.text.isEmpty) {
+      setState(() {
+        _currentPage = 1; // Reset to first page when searching
+      });
+      _loadDepartments();
+    }
+  }
+
+  Future<void> _loadDepartments() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _apiService.getDepartmentsPaginated(
+        page: _currentPage,
+        limit: _itemsPerPage,
+        search: _searchController.text.isNotEmpty
+            ? _searchController.text
+            : null,
+        facultyId: _selectedFaculty?['id'],
+      );
+
+      if (result.success && result.data != null) {
+        // Load faculty names for departments
+        await _loadFacultyNames(result.data!.items);
+
+        setState(() {
+          _departments = result.data!.items
+              .map((item) => Department.fromJson(item))
+              .toList();
+          _totalDepartments = result.data!.total;
+          _totalPages = result.data!.totalPages;
+          _isLoading = false;
+          _selectedDepartments.clear();
+        });
+      } else {
+        setState(() {
+          _departments = [];
+          _totalDepartments = 0;
+          _totalPages = 0;
+          _isLoading = false;
+          _errorMessage = result.message;
+          _selectedDepartments.clear();
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _departments = [];
+        _totalDepartments = 0;
+        _totalPages = 0;
+        _isLoading = false;
+        _errorMessage = 'Đã xảy ra lỗi khi tải dữ liệu: $e';
+        _selectedDepartments.clear();
+      });
+    }
+  }
+
+  Future<void> _loadFacultyNames(List<Map<String, dynamic>> departments) async {
+    // Get unique faculty IDs that we haven't cached yet
+    final facultyIds = departments
+        .map((department) => department['faculty_id'] as int?)
+        .where((id) => id != null && !_facultyCache.containsKey(id))
+        .cast<int>()
+        .toSet();
+
+    // Load faculty names concurrently
+    final futures = facultyIds.map((id) async {
+      try {
+        final result = await _apiService.getFaculty(id);
+        if (result.success && result.data != null) {
+          setState(() {
+            _facultyCache[id] = result.data!['name'] ?? 'Không rõ';
+          });
+        }
+      } catch (e) {
+        setState(() {
+          _facultyCache[id] = 'Không rõ';
+        });
+      }
+    });
+
+    await Future.wait(futures);
+  }
+
+  Future<void> _loadFaculties() async {
+    try {
+      final result = await _apiService.getFacultiesPaginated(limit: 100);
+      if (result.success && result.data != null) {
+        setState(() {
+          _faculties = result.data!.items.cast<Map<String, dynamic>>();
+        });
+      } else {
+        setState(() {
+          _faculties = [];
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _faculties = [];
+      });
+    }
+  }
+
+  String _getFacultyName(int? facultyId) {
+    if (facultyId == null) return 'Chưa phân khoa';
+    final cachedName = _facultyCache[facultyId];
+    if (cachedName != null) return cachedName;
+
+    // If not cached, start loading in background
+    _loadSingleFaculty(facultyId);
+    return 'Đang tải...';
+  }
+
+  Future<void> _loadSingleFaculty(int facultyId) async {
+    if (_facultyCache.containsKey(facultyId)) return;
+
+    try {
+      final result = await _apiService.getFaculty(facultyId);
+      if (result.success && result.data != null) {
+        setState(() {
+          _facultyCache[facultyId] = result.data!['name'] ?? 'Không rõ';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _facultyCache[facultyId] = 'Không rõ';
+      });
+    }
+  }
+
+  // Pagination getters and methods
+  int get totalPages => _totalPages;
+
+  // Since we're getting paginated data from API, just return current page data
+  List<Department> get currentPageDepartments => _departments;
+
+  // Get current page as DepartmentData objects with sequential IDs
+  List<DepartmentData> get currentPageDepartmentData {
+    return _departments.asMap().entries.map((entry) {
+      final index = entry.key;
+      final department = entry.value;
+      return _departmentToDepartmentDataWithUniqueId(
+        department,
+        index + 1,
+        department.id,
+      );
+    }).toList();
   }
 
   void _goToPreviousPage() {
@@ -154,6 +241,7 @@ class _DepartmentsManagementViewState extends State<DepartmentsManagementView> {
       setState(() {
         _currentPage--;
       });
+      _loadDepartments();
     }
   }
 
@@ -162,6 +250,60 @@ class _DepartmentsManagementViewState extends State<DepartmentsManagementView> {
       setState(() {
         _currentPage++;
       });
+      _loadDepartments();
+    }
+  }
+
+  // Convert Department model to DepartmentData with unique ID for UI
+  DepartmentData _departmentToDepartmentDataWithUniqueId(
+    Department department,
+    int sequentialId,
+    int uniqueId,
+  ) {
+    return DepartmentData(
+      id: sequentialId,
+      code: department.code,
+      name: department.name,
+      faculty: _getFacultyName(department.facultyId),
+      apiId: uniqueId,
+      facultyId: department.facultyId,
+    );
+  }
+
+  Future<void> _handleDeleteSelectedDepartments() async {
+    try {
+      // Get API IDs from selected department data
+      final selectedApiIds = currentPageDepartmentData
+          .where((dept) => _selectedDepartments.contains(dept.id))
+          .map((dept) => dept.apiId)
+          .toList();
+
+      // Delete each selected department
+      for (final apiId in selectedApiIds) {
+        await _apiService.deleteDepartment(apiId);
+      }
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Xóa bộ môn thành công'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      // Reload the data
+      await _loadDepartments();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Có lỗi xảy ra khi xóa: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -205,19 +347,8 @@ class _DepartmentsManagementViewState extends State<DepartmentsManagementView> {
             ),
             ElevatedButton(
               onPressed: () {
-                // Handle delete action
-                setState(() {
-                  _departments.removeWhere(
-                    (department) =>
-                        _selectedDepartments.contains(department.id),
-                  );
-                  _selectedDepartments.clear();
-                  // Reset to first page if current page is empty
-                  if (currentPageDepartments.isEmpty && _currentPage > 1) {
-                    _currentPage = 1;
-                  }
-                });
                 Navigator.of(context).pop();
+                _handleDeleteSelectedDepartments();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFEF4444),
@@ -306,17 +437,19 @@ class _DepartmentsManagementViewState extends State<DepartmentsManagementView> {
                               ),
                               const SizedBox(width: 16),
                               // Filter by faculty
-                              _buildFilterButton('Lọc theo khoa'),
+                              _buildFacultyDropdown(),
                               const Spacer(),
                               // Add button
                               ElevatedButton.icon(
-                                onPressed: () {
-                                  showDialog(
+                                onPressed: () async {
+                                  final result = await showDialog<bool>(
                                     context: context,
-                                    builder: (context) => AddDepartmentModal(
-                                      faculties: _faculties,
-                                    ),
+                                    builder: (context) =>
+                                        const AddDepartmentModal(),
                                   );
+                                  if (result == true) {
+                                    _loadDepartments();
+                                  }
                                 },
                                 icon: const Icon(Icons.add, size: 16),
                                 label: const Text(
@@ -394,15 +527,46 @@ class _DepartmentsManagementViewState extends State<DepartmentsManagementView> {
                       children: [
                         _buildTableHeader(),
                         Expanded(
-                          child: ListView.builder(
-                            itemCount: currentPageDepartments.length,
-                            itemBuilder: (context, index) {
-                              return _buildTableRow(
-                                currentPageDepartments[index],
-                                index % 2 == 0,
-                              );
-                            },
-                          ),
+                          child: _isLoading
+                              ? const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(50.0),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                )
+                              : _errorMessage != null
+                              ? Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(50.0),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          _errorMessage!,
+                                          style: const TextStyle(
+                                            color: Colors.red,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        ElevatedButton(
+                                          onPressed: _loadDepartments,
+                                          child: const Text('Thử lại'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  itemCount: currentPageDepartmentData.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildTableRow(
+                                      currentPageDepartmentData[index],
+                                      index % 2 == 0,
+                                    );
+                                  },
+                                ),
                         ),
                       ],
                     ),
@@ -422,7 +586,7 @@ class _DepartmentsManagementViewState extends State<DepartmentsManagementView> {
                       children: [
                         // Page info
                         Text(
-                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageDepartments.length} of ${_departments.length}',
+                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageDepartments.length} của $_totalDepartments',
                           style: const TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
@@ -522,10 +686,10 @@ class _DepartmentsManagementViewState extends State<DepartmentsManagementView> {
     );
   }
 
-  Widget _buildFilterButton(String text) {
+  Widget _buildFacultyDropdown() {
     return Container(
       height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(6),
@@ -540,25 +704,59 @@ class _DepartmentsManagementViewState extends State<DepartmentsManagementView> {
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            text,
-            style: const TextStyle(
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<Map<String, dynamic>>(
+          value: _selectedFaculty,
+          hint: const Text(
+            'Tất cả khoa',
+            style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 14,
               fontWeight: FontWeight.w400,
               color: Color(0xFFA1A9B8),
             ),
           ),
-          const SizedBox(width: 8),
-          const Icon(
+          icon: const Icon(
             Icons.keyboard_arrow_down,
             size: 16,
             color: Color(0xFF717680),
           ),
-        ],
+          items: [
+            const DropdownMenuItem<Map<String, dynamic>>(
+              value: null,
+              child: Text(
+                'Tất cả khoa',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFFA1A9B8),
+                ),
+              ),
+            ),
+            ..._faculties.map((Map<String, dynamic> faculty) {
+              return DropdownMenuItem<Map<String, dynamic>>(
+                value: faculty,
+                child: Text(
+                  faculty['name'] ?? '',
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xFF181D27),
+                  ),
+                ),
+              );
+            }).toList(),
+          ],
+          onChanged: (Map<String, dynamic>? newValue) {
+            setState(() {
+              _selectedFaculty = newValue;
+              _currentPage = 1; // Reset to first page when filtering
+            });
+            _loadDepartments();
+          },
+        ),
       ),
     );
   }
@@ -715,17 +913,40 @@ class _DepartmentsManagementViewState extends State<DepartmentsManagementView> {
           }
         });
       },
-      onEdit: () {
-        showDialog(
+      onEdit: () async {
+        final result = await showDialog<bool>(
           context: context,
           builder: (context) => EditDepartmentModal(
-            department: department,
-            faculties: _faculties,
+            departmentId: department.apiId,
+            onUpdate: _loadDepartments,
           ),
         );
+        if (result == true) {
+          _loadDepartments();
+        }
       },
-      onDelete: () {
-        // TODO: handle delete
+      onDelete: () async {
+        try {
+          await _apiService.deleteDepartment(department.apiId);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Xóa bộ môn thành công'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+          _loadDepartments();
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Có lỗi xảy ra khi xóa: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
       },
     );
   }
@@ -740,6 +961,9 @@ class DepartmentData implements DepartmentTableRowData {
   final String name;
   final String faculty;
 
+  final int apiId; // Store original API ID for operations
+  final int? facultyId;
+
   // Required fields from TableRowData interface (not used for departments)
   @override
   String get phone => '';
@@ -753,6 +977,8 @@ class DepartmentData implements DepartmentTableRowData {
     required this.code,
     required this.name,
     required this.faculty,
+    required this.apiId,
+    this.facultyId,
   });
 
   @override

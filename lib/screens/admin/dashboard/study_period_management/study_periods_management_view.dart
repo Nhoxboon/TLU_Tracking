@@ -23,17 +23,13 @@ class _StudyPeriodsManagementViewState
   int _currentPage = 1;
   final int _itemsPerPage = 10;
 
-  // Academic years list (should come from a service in production)
-  final List<String> _academicYears = [
-    '2024-2025',
-    '2023-2024',
-    '2022-2023',
-    '2021-2022',
-    '2020-2021',
-    '2019-2020',
-    '2018-2019',
-    '2017-2018',
-  ];
+  // Academic years data from API
+  List<Map<String, dynamic>> _academicYears = [];
+  // Semesters data from API
+  List<Map<String, dynamic>> _semesters = [];
+  // Cache for academic year and semester names
+  final Map<int, String> _academicYearCache = {};
+  final Map<int, String> _semesterCache = {};
 
   // API-backed data for study periods
   List<StudyPeriodData> _studyPeriods = [];
@@ -99,6 +95,7 @@ class _StudyPeriodsManagementViewState
       setState(() {
         _currentPage--;
       });
+      _loadStudyPhases();
     }
   }
 
@@ -177,7 +174,14 @@ class _StudyPeriodsManagementViewState
   @override
   void initState() {
     super.initState();
-    _loadStudyPhases();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    // Load academic years and semesters first, then study phases
+    await Future.wait([_loadAcademicYears(), _loadSemesters()]);
+    // Load study phases after caches are populated
+    await _loadStudyPhases();
   }
 
   Future<void> _loadStudyPhases() async {
@@ -201,19 +205,36 @@ class _StudyPeriodsManagementViewState
           final apiId = (item['id'] as num).toInt();
           final start = DateTime.tryParse(item['start_date'] as String? ?? '');
           final end = DateTime.tryParse(item['end_date'] as String? ?? '');
-          final semesterId = item['semester_id'];
+          final semesterId = item['semester_id'] as int?;
+          // Use 'name' field as period since API doesn't have 'period' field
+          final period = item['name'] as String? ?? '';
+
+          // Get academic_year_id from semester data
+          int? academicYearId;
+          if (semesterId != null) {
+            // Find semester in _semesters list to get academic_year_id
+            final semester = _semesters.firstWhere(
+              (s) => s['id'] == semesterId,
+              orElse: () => <String, dynamic>{},
+            );
+            academicYearId = semester['academic_year_id'] as int?;
+          }
+
           // Map API to UI row
           final uiId = ((_currentPage - 1) * _itemsPerPage) + i + 1;
           _studyPeriodIdMapping[uiId] = apiId;
+
           rows.add(
             StudyPeriodData(
               id: uiId,
-              academicYear: '',
-              semester: semesterId?.toString() ?? '',
-              period: (item['name'] as String?) ?? '',
+              academicYear: _getAcademicYearName(academicYearId),
+              semester: _getSemesterName(semesterId),
+              period: period,
               startDate: start ?? DateTime.now(),
               endDate: end ?? DateTime.now(),
               apiId: apiId,
+              semesterId: semesterId,
+              academicYearId: academicYearId,
             ),
           );
         }
@@ -269,6 +290,55 @@ class _StudyPeriodsManagementViewState
         );
       }
     }
+  }
+
+  Future<void> _loadAcademicYears() async {
+    try {
+      final result = await _apiService.getAcademicYearsPaginated(limit: 100);
+      if (result.success && result.data != null) {
+        setState(() {
+          _academicYears = result.data!.items;
+        });
+        // Cache academic year names
+        for (final academicYear in _academicYears) {
+          final id = (academicYear['id'] as num).toInt();
+          final name = academicYear['name'] as String? ?? 'Unknown';
+          _academicYearCache[id] = name;
+        }
+      }
+    } catch (e) {
+      // Handle error silently for now
+    }
+  }
+
+  Future<void> _loadSemesters() async {
+    try {
+      final result = await _apiService.getSemestersPaginated(limit: 100);
+
+      if (result.success && result.data != null) {
+        setState(() {
+          _semesters = result.data!.items;
+        });
+        // Cache semester names
+        for (final semester in _semesters) {
+          final id = (semester['id'] as num).toInt();
+          final name = semester['name'] as String? ?? 'Unknown';
+          _semesterCache[id] = name;
+        }
+      }
+    } catch (e) {
+      // Handle error silently for now
+    }
+  }
+
+  String _getAcademicYearName(int? academicYearId) {
+    if (academicYearId == null) return 'Chưa xác định';
+    return _academicYearCache[academicYearId] ?? 'Đang tải...';
+  }
+
+  String _getSemesterName(int? semesterId) {
+    if (semesterId == null) return 'Chưa xác định';
+    return _semesterCache[semesterId] ?? 'Đang tải...';
   }
 
   @override
@@ -841,8 +911,13 @@ class _StudyPeriodsManagementViewState
             academicYears: _academicYears,
           ),
         );
+
+        // Refresh data if study period was updated
         if (result == true) {
           _loadStudyPhases();
+
+          // Show success message with note about position
+          if (mounted) {}
         }
       },
       onDelete: () async {
@@ -895,6 +970,9 @@ class StudyPeriodData implements StudyPeriodTableRowData {
   final DateTime endDate;
   // Keep track of API ID for operations
   final int? apiId;
+  // Additional fields for API operations
+  final int? semesterId;
+  final int? academicYearId;
 
   // Required fields from TableRowData interface (not used for study periods)
   @override
@@ -916,5 +994,7 @@ class StudyPeriodData implements StudyPeriodTableRowData {
     required this.startDate,
     required this.endDate,
     this.apiId,
+    this.semesterId,
+    this.academicYearId,
   });
 }

@@ -63,6 +63,10 @@ class SubjectData implements TableRowData {
   final String department;
   final int credits;
 
+  // Additional fields for API operations
+  final int? departmentId;
+  final String apiId; // Store original API ID for operations
+
   // Required fields from TableRowData interface - not used for subjects
   @override
   String get phone => '';
@@ -77,6 +81,8 @@ class SubjectData implements TableRowData {
     required this.name,
     required this.department,
     required this.credits,
+    this.departmentId,
+    required this.apiId,
   });
 
   factory SubjectData.fromJson(Map<String, dynamic> json) {
@@ -86,6 +92,8 @@ class SubjectData implements TableRowData {
       name: json['name'] ?? '',
       department: json['department'] ?? '',
       credits: json['credits'] ?? 0,
+      departmentId: json['department_id'],
+      apiId: json['id']?.toString() ?? '',
     );
   }
 
@@ -106,6 +114,7 @@ class SubjectData implements TableRowData {
       name: subject.name,
       department: subject.department,
       credits: subject.credits,
+      apiId: subject.id,
     );
   }
 }

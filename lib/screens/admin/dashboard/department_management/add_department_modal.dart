@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:android_app/services/api_service.dart';
 
 class AddDepartmentModal extends StatefulWidget {
-  final List<String>? faculties;
-
-  const AddDepartmentModal({super.key, this.faculties});
+  const AddDepartmentModal({super.key});
 
   @override
   State<AddDepartmentModal> createState() => _AddDepartmentModalState();
@@ -13,13 +12,100 @@ class _AddDepartmentModalState extends State<AddDepartmentModal> {
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
   final _nameController = TextEditingController();
-  String? _selectedFaculty;
+  final ApiService _apiService = ApiService();
+
+  Map<String, dynamic>? _selectedFaculty;
+  bool _isLoading = false;
+
+  // API data
+  List<Map<String, dynamic>> _faculties = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFaculties();
+  }
 
   @override
   void dispose() {
     _codeController.dispose();
     _nameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadFaculties() async {
+    try {
+      final result = await _apiService.getFacultiesPaginated(limit: 100);
+      if (result.success && result.data != null) {
+        setState(() {
+          _faculties = result.data!.items.cast<Map<String, dynamic>>();
+        });
+      } else {
+        setState(() {
+          _faculties = [];
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _faculties = [];
+      });
+    }
+  }
+
+  Future<void> _handleConfirm() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Prepare department data for API
+        final departmentData = {
+          'code': _codeController.text.trim(),
+          'name': _nameController.text.trim(),
+          'faculty_id': _selectedFaculty?['id'] ?? 0,
+        };
+
+        final result = await _apiService.createDepartmentData(departmentData);
+
+        if (!mounted) return;
+
+        if (result.success) {
+          Navigator.of(context).pop(true); // Return true to indicate success
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Thêm bộ môn thành công'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Đã xảy ra lỗi: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -172,47 +258,56 @@ class _AddDepartmentModalState extends State<AddDepartmentModal> {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        DropdownButtonFormField<String>(
-                          initialValue: _selectedFaculty,
+                        DropdownButtonFormField<Map<String, dynamic>>(
+                          value: _selectedFaculty,
                           decoration: InputDecoration(
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 14,
+                              horizontal: 12,
                               vertical: 10,
                             ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(6),
                               borderSide: const BorderSide(
                                 color: Color(0xFFD5D7DA),
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(6),
                               borderSide: const BorderSide(
                                 color: Color(0xFFD5D7DA),
                               ),
                             ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(6),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF2563EB),
+                              ),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
                           ),
                           hint: const Text(
                             'Chọn khoa',
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 16,
-                              color: Color(0xFF717680),
+                              color: Color(0xFF9CA3AF),
                             ),
                           ),
-                          items: (widget.faculties ?? []).map((String faculty) {
-                            return DropdownMenuItem<String>(
+                          items: _faculties.map((Map<String, dynamic> faculty) {
+                            return DropdownMenuItem<Map<String, dynamic>>(
                               value: faculty,
                               child: Text(
-                                faculty,
+                                faculty['name'] ?? '',
                                 style: const TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 16,
+                                  color: Color(0xFF181D27),
                                 ),
                               ),
                             );
                           }).toList(),
-                          onChanged: (String? newValue) {
+                          onChanged: (Map<String, dynamic>? newValue) {
                             setState(() {
                               _selectedFaculty = newValue;
                             });
@@ -265,12 +360,7 @@ class _AddDepartmentModalState extends State<AddDepartmentModal> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            // TODO: Handle save action
-                            Navigator.of(context).pop();
-                          }
-                        },
+                        onPressed: _isLoading ? null : _handleConfirm,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2264E5),
                           foregroundColor: Colors.white,
@@ -284,14 +374,23 @@ class _AddDepartmentModalState extends State<AddDepartmentModal> {
                             side: const BorderSide(color: Color(0xFF7F56D9)),
                           ),
                         ),
-                        child: const Text(
-                          'Xác nhận',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Xác nhận',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
                   ],

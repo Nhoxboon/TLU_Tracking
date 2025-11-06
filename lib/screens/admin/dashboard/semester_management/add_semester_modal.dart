@@ -3,9 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:android_app/services/api_service.dart';
 
 class AddSemesterModal extends StatefulWidget {
-  final List<String>? academicYears;
-
-  const AddSemesterModal({super.key, this.academicYears});
+  const AddSemesterModal({super.key});
 
   @override
   State<AddSemesterModal> createState() => _AddSemesterModalState();
@@ -23,11 +21,45 @@ class _AddSemesterModalState extends State<AddSemesterModal> {
   final List<String> _semesters = ['1', '2'];
   final ApiService _apiService = ApiService();
 
+  // API data
+  List<Map<String, dynamic>> _academicYears = [];
+  bool _isLoadingData = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAcademicYears();
+  }
+
   @override
   void dispose() {
     _startDateController.dispose();
     _endDateController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadAcademicYears() async {
+    setState(() {
+      _isLoadingData = true;
+    });
+
+    try {
+      final result = await _apiService.getAcademicYearsPaginated(limit: 100);
+      if (result.success && result.data != null) {
+        setState(() {
+          _academicYears = result.data!.items;
+          _isLoadingData = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingData = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingData = false;
+      });
+    }
   }
 
   Future<void> _selectStartDate(BuildContext context) async {
@@ -146,25 +178,39 @@ class _AddSemesterModalState extends State<AddSemesterModal> {
                               color: Color(0xFF717680),
                             ),
                           ),
-                          items: (widget.academicYears ?? []).map((
-                            String year,
-                          ) {
-                            return DropdownMenuItem<String>(
-                              value: year,
-                              child: Text(
-                                year,
-                                style: const TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 16,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              _selectedAcademicYear = newValue;
-                            });
-                          },
+                          items: _isLoadingData
+                              ? [
+                                  const DropdownMenuItem<String>(
+                                    value: null,
+                                    child: Text(
+                                      'Đang tải...',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 16,
+                                        color: Color(0xFF717680),
+                                      ),
+                                    ),
+                                  ),
+                                ]
+                              : _academicYears.map((Map<String, dynamic> year) {
+                                  return DropdownMenuItem<String>(
+                                    value: year['name'],
+                                    child: Text(
+                                      year['name'],
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                          onChanged: _isLoadingData
+                              ? null
+                              : (String? newValue) {
+                                  setState(() {
+                                    _selectedAcademicYear = newValue;
+                                  });
+                                },
                           validator: (value) {
                             if (value == null) {
                               return 'Vui lòng chọn năm học';
@@ -399,25 +445,41 @@ class _AddSemesterModalState extends State<AddSemesterModal> {
                       child: ElevatedButton(
                         onPressed: () async {
                           if (_formKey.currentState!.validate()) {
+                            // Store context before async operations
+                            final navigator = Navigator.of(context);
+                            final scaffoldMessenger = ScaffoldMessenger.of(
+                              context,
+                            );
+
                             try {
+                              // Find the academic year ID from the selected name
+                              final selectedAcademicYear = _academicYears
+                                  .firstWhere(
+                                    (year) =>
+                                        year['name'] == _selectedAcademicYear,
+                                    orElse: () => <String, dynamic>{},
+                                  );
+
                               final payload = {
-                                'name': _selectedSemester != null
-                                    ? 'Học kì ${_selectedSemester}'
-                                    : 'Học kì',
+                                'name': _selectedSemester ?? '',
+                                'academic_year_id': selectedAcademicYear['id'],
                                 'start_date': _startDate != null
-                                    ? DateFormat('yyyy-MM-dd').format(_startDate!)
+                                    ? DateFormat(
+                                        'yyyy-MM-dd',
+                                      ).format(_startDate!)
                                     : null,
                                 'end_date': _endDate != null
                                     ? DateFormat('yyyy-MM-dd').format(_endDate!)
                                     : null,
-                                // In real flow, map academic year string to ID; leaving null if not available
                               }..removeWhere((k, v) => v == null);
 
-                              final res = await _apiService.createSemester(payload);
+                              final res = await _apiService.createSemester(
+                                payload,
+                              );
                               if (res.success) {
                                 if (mounted) {
-                                  Navigator.of(context).pop(true);
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  navigator.pop(true);
+                                  scaffoldMessenger.showSnackBar(
                                     const SnackBar(
                                       content: Text('Thêm học kì thành công'),
                                       backgroundColor: Colors.green,
@@ -429,7 +491,7 @@ class _AddSemesterModalState extends State<AddSemesterModal> {
                               }
                             } catch (e) {
                               if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                scaffoldMessenger.showSnackBar(
                                   SnackBar(
                                     content: Text('Lỗi: ${e.toString()}'),
                                     backgroundColor: Colors.red,

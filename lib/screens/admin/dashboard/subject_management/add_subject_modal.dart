@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:android_app/services/api_service.dart';
 
 class AddSubjectModal extends StatefulWidget {
-  const AddSubjectModal({super.key});
+  final VoidCallback? onSubjectAdded;
+
+  const AddSubjectModal({super.key, this.onSubjectAdded});
 
   @override
   State<AddSubjectModal> createState() => _AddSubjectModalState();
@@ -12,15 +15,22 @@ class _AddSubjectModalState extends State<AddSubjectModal> {
   final _codeController = TextEditingController();
   final _nameController = TextEditingController();
   final _creditsController = TextEditingController();
-  String? _selectedDepartment;
+  final ApiService _apiService = ApiService();
 
-  // Sample departments - TODO: Replace with actual data
-  final List<String> _departments = [
-    'Khoa học máy tính',
-    'Công nghệ thông tin',
-    'Hệ thống thông tin',
-    'Kỹ thuật phần mềm',
-  ];
+  Map<String, dynamic>? _selectedFaculty;
+  Map<String, dynamic>? _selectedDepartment;
+  bool _isLoading = false;
+
+  // API data
+  List<Map<String, dynamic>> _faculties = [];
+  List<Map<String, dynamic>> _departments = [];
+  bool _isLoadingData = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFaculties();
+  }
 
   @override
   void dispose() {
@@ -30,26 +40,118 @@ class _AddSubjectModalState extends State<AddSubjectModal> {
     super.dispose();
   }
 
-  void _handleConfirm() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Implement actual subject addition logic here
-      // This is where the real logic for adding a new subject should be implemented
-      // - Validate all form fields
-      // - Create new subject object
-      // - Add to database/API
-      // - Update the subjects list
-      // - Show success message
-      // - Close the modal
+  Future<void> _loadFaculties() async {
+    setState(() {
+      _isLoadingData = true;
+    });
 
-      Navigator.of(context).pop();
+    try {
+      final result = await _apiService.getFacultiesPaginated(limit: 100);
+      if (result.success && result.data != null) {
+        setState(() {
+          _faculties = result.data!.items;
+          _isLoadingData = false;
+        });
+        // Load all departments initially
+        _loadDepartments();
+      } else {
+        setState(() {
+          _isLoadingData = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingData = false;
+      });
+    }
+  }
 
-      // For now, just show a placeholder message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('TODO: Implement subject addition logic'),
-          backgroundColor: Colors.orange,
-        ),
+  Future<void> _loadDepartments({int? facultyId}) async {
+    try {
+      final result = await _apiService.getDepartmentsPaginated(
+        limit: 100,
+        facultyId: facultyId,
       );
+      if (result.success && result.data != null) {
+        setState(() {
+          _departments = result.data!.items;
+          // Reset selected department when faculty changes
+          if (facultyId != null) {
+            _selectedDepartment = null;
+          }
+        });
+      }
+    } catch (e) {
+      // Handle error
+    }
+  }
+
+  Future<void> _handleConfirm() async {
+    if (_formKey.currentState!.validate()) {
+      // Additional validation for dropdowns
+      if (_selectedDepartment == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vui lòng chọn bộ môn'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Prepare subject data for API (matching the API schema)
+        final subjectData = {
+          'code': _codeController.text.trim(),
+          'name': _nameController.text.trim(),
+          'credits': int.tryParse(_creditsController.text.trim()) ?? 0,
+          'department_id': _selectedDepartment!['id'],
+        };
+
+        final result = await _apiService.createSubjectData(subjectData);
+
+        if (!mounted) return;
+
+        if (result.success) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tạo môn học thành công'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Call the callback to refresh the parent view
+          if (widget.onSubjectAdded != null) {
+            widget.onSubjectAdded!();
+          }
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Lỗi tạo môn học: ${result.message}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi kết nối: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -169,23 +271,12 @@ class _AddSubjectModalState extends State<AddSubjectModal> {
             ),
             const SizedBox(height: 16),
 
+            // Faculty Dropdown Field
+            _buildFacultyField(),
+            const SizedBox(height: 16),
+
             // Department Dropdown Field
-            _buildDropdownField(
-              label: 'Bộ môn*',
-              value: _selectedDepartment,
-              items: _departments,
-              onChanged: (value) {
-                setState(() {
-                  _selectedDepartment = value;
-                });
-              },
-              validator: (value) {
-                if (value == null) {
-                  return 'Vui lòng chọn bộ môn';
-                }
-                return null;
-              },
-            ),
+            _buildDepartmentField(),
             const SizedBox(height: 16),
 
             // Credits Field
@@ -269,19 +360,13 @@ class _AddSubjectModalState extends State<AddSubjectModal> {
     );
   }
 
-  Widget _buildDropdownField({
-    required String label,
-    required String? value,
-    required List<String> items,
-    required void Function(String?) onChanged,
-    String? Function(String?)? validator,
-  }) {
+  Widget _buildFacultyField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
+        const Text(
+          'Khoa*',
+          style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 14,
             fontWeight: FontWeight.w500,
@@ -290,9 +375,14 @@ class _AddSubjectModalState extends State<AddSubjectModal> {
           ),
         ),
         const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          value: value,
-          validator: validator,
+        DropdownButtonFormField<Map<String, dynamic>>(
+          initialValue: _selectedFaculty,
+          validator: (value) {
+            if (value == null) {
+              return 'Vui lòng chọn khoa';
+            }
+            return null;
+          },
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
@@ -324,10 +414,96 @@ class _AddSubjectModalState extends State<AddSubjectModal> {
             color: Color(0xFF181D27),
           ),
           icon: const Icon(Icons.keyboard_arrow_down),
-          items: items.map((String item) {
-            return DropdownMenuItem<String>(value: item, child: Text(item));
-          }).toList(),
-          onChanged: onChanged,
+          items: _isLoadingData
+              ? []
+              : _faculties.map((faculty) {
+                  return DropdownMenuItem<Map<String, dynamic>>(
+                    value: faculty,
+                    child: Text(faculty['name'] ?? ''),
+                  );
+                }).toList(),
+          onChanged: (value) {
+            setState(() {
+              _selectedFaculty = value;
+              _selectedDepartment =
+                  null; // Reset department when faculty changes
+            });
+            if (value != null) {
+              _loadDepartments(facultyId: value['id']);
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDepartmentField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Bộ môn*',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            height: 1.43,
+            color: Color(0xFF414651),
+          ),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<Map<String, dynamic>>(
+          initialValue: _selectedDepartment,
+          validator: (value) {
+            if (value == null) {
+              return 'Vui lòng chọn bộ môn';
+            }
+            return null;
+          },
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF2264E5)),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            fillColor: Colors.white,
+            filled: true,
+          ),
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF181D27),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down),
+          items: _isLoadingData
+              ? []
+              : _departments.map((department) {
+                  return DropdownMenuItem<Map<String, dynamic>>(
+                    value: department,
+                    child: Text(department['name'] ?? ''),
+                  );
+                }).toList(),
+          onChanged: (value) {
+            setState(() {
+              _selectedDepartment = value;
+            });
+          },
         ),
       ],
     );
@@ -379,14 +555,14 @@ class _AddSubjectModalState extends State<AddSubjectModal> {
           // Confirm Button
           Expanded(
             child: InkWell(
-              onTap: _handleConfirm,
+              onTap: _isLoading ? null : _handleConfirm,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 18,
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2264E5),
+                  color: _isLoading ? Colors.grey : const Color(0xFF2264E5),
                   border: Border.all(color: const Color(0xFF7F56D9)),
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
@@ -397,16 +573,27 @@ class _AddSubjectModalState extends State<AddSubjectModal> {
                     ),
                   ],
                 ),
-                child: const Center(
-                  child: Text(
-                    'Xác nhận',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
+                child: Center(
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text(
+                          'Xác nhận',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ),

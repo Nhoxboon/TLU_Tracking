@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/screens/admin/dashboard/course_management/courses_management_view.dart';
+import 'package:android_app/services/api_service.dart';
+import 'package:android_app/models/cohort.dart';
 
 class EditCourseModal extends StatefulWidget {
   final CourseData course;
@@ -12,10 +14,12 @@ class EditCourseModal extends StatefulWidget {
 
 class _EditCourseModalState extends State<EditCourseModal> {
   final _formKey = GlobalKey<FormState>();
+  final ApiService _apiService = ApiService();
   late final TextEditingController _nameController;
 
   String? _selectedAdmissionYear;
   String? _selectedEndYear;
+  bool _isLoading = false;
 
   // Generate years dynamically from current year backwards
   late final List<String> _admissionYears;
@@ -61,26 +65,70 @@ class _EditCourseModalState extends State<EditCourseModal> {
     super.dispose();
   }
 
-  void _handleConfirm() {
+  Future<void> _handleConfirm() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: Implement actual course update logic here
-      // This is where the real logic for updating the course should be implemented
-      // - Validate all form fields
-      // - Update course object with new data
-      // - Update in database/API
-      // - Update the courses list in parent widget
-      // - Show success message
-      // - Close the modal
+      if (_selectedAdmissionYear == null || _selectedEndYear == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vui lòng chọn năm nhập học và năm kết thúc'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
 
-      Navigator.of(context).pop();
+      setState(() {
+        _isLoading = true;
+      });
 
-      // For now, just show a placeholder message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('TODO: Implement course update logic'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      try {
+        // Prepare cohort data for API
+        final cohortData = Cohort(
+          name: _nameController.text.trim(),
+          startYear: int.parse(_selectedAdmissionYear!),
+          endYear: int.parse(_selectedEndYear!),
+        ).toUpdateJson();
+
+        final result = await _apiService.updateCohort(
+          widget.course.apiId, // Use the API ID from the course object
+          cohortData,
+        );
+
+        if (!mounted) return;
+
+        if (result.success) {
+          Navigator.of(context).pop(true); // Pass true to indicate success
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cập nhật khóa học thành công'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi kết nối: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -436,14 +484,14 @@ class _EditCourseModalState extends State<EditCourseModal> {
           // Confirm Button
           Expanded(
             child: InkWell(
-              onTap: _handleConfirm,
+              onTap: _isLoading ? null : _handleConfirm,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 18,
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2264E5),
+                  color: _isLoading ? Colors.grey : const Color(0xFF2264E5),
                   border: Border.all(color: const Color(0xFF7F56D9)),
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
@@ -454,16 +502,25 @@ class _EditCourseModalState extends State<EditCourseModal> {
                     ),
                   ],
                 ),
-                child: const Center(
-                  child: Text(
-                    'Xác nhận',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
+                child: Center(
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Xác nhận',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ),

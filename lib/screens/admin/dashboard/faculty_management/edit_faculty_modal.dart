@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/screens/admin/dashboard/faculty_management/faculties_management_view.dart';
+import 'package:android_app/services/api_service.dart';
 
 class EditFacultyModal extends StatefulWidget {
   final FacultyData faculty;
@@ -14,6 +15,8 @@ class _EditFacultyModalState extends State<EditFacultyModal> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _codeController;
   late TextEditingController _nameController;
+  final ApiService _apiService = ApiService();
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -27,6 +30,63 @@ class _EditFacultyModalState extends State<EditFacultyModal> {
     _codeController.dispose();
     _nameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleConfirm() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Prepare faculty data for API update
+        final facultyData = {
+          'code': _codeController.text.trim(),
+          'name': _nameController.text.trim(),
+        };
+
+        final result = await _apiService.updateFacultyData(
+          widget.faculty.apiId, // Use the API ID instead of display ID
+          facultyData,
+        );
+
+        if (!mounted) return;
+
+        if (result.success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cập nhật khoa thành công'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).pop();
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Có lỗi xảy ra: ${result.message}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Có lỗi xảy ra: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -208,12 +268,7 @@ class _EditFacultyModalState extends State<EditFacultyModal> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            // TODO: Handle update action
-                            Navigator.of(context).pop();
-                          }
-                        },
+                        onPressed: _isLoading ? null : _handleConfirm,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2264E5),
                           foregroundColor: Colors.white,
@@ -227,14 +282,23 @@ class _EditFacultyModalState extends State<EditFacultyModal> {
                             side: const BorderSide(color: Color(0xFF7F56D9)),
                           ),
                         ),
-                        child: const Text(
-                          'Xác nhận',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Xác nhận',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
                   ],

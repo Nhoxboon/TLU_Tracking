@@ -5,13 +5,8 @@ import 'package:android_app/services/api_service.dart';
 
 class EditSemesterModal extends StatefulWidget {
   final SemesterData semester;
-  final List<String>? academicYears;
 
-  const EditSemesterModal({
-    super.key,
-    required this.semester,
-    this.academicYears,
-  });
+  const EditSemesterModal({super.key, required this.semester});
 
   @override
   State<EditSemesterModal> createState() => _EditSemesterModalState();
@@ -28,6 +23,10 @@ class _EditSemesterModalState extends State<EditSemesterModal> {
 
   final List<String> _semesters = ['1', '2'];
   final ApiService _apiService = ApiService();
+
+  // API data
+  List<Map<String, dynamic>> _academicYears = [];
+  bool _isLoadingData = false;
 
   @override
   void initState() {
@@ -49,10 +48,32 @@ class _EditSemesterModalState extends State<EditSemesterModal> {
         !_semesters.contains(_selectedSemester)) {
       _semesters.add(_selectedSemester!);
     }
-    if (_selectedAcademicYear != null &&
-        widget.academicYears != null &&
-        !widget.academicYears!.contains(_selectedAcademicYear)) {
-      _selectedAcademicYear = null;
+
+    // Load academic years from API
+    _loadAcademicYears();
+  }
+
+  Future<void> _loadAcademicYears() async {
+    setState(() {
+      _isLoadingData = true;
+    });
+
+    try {
+      final result = await _apiService.getAcademicYearsPaginated(limit: 100);
+      if (result.success && result.data != null) {
+        setState(() {
+          _academicYears = result.data!.items;
+          _isLoadingData = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingData = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingData = false;
+      });
     }
   }
 
@@ -61,6 +82,55 @@ class _EditSemesterModalState extends State<EditSemesterModal> {
     _startDateController.dispose();
     _endDateController.dispose();
     super.dispose();
+  }
+
+  List<DropdownMenuItem<String>> _buildAcademicYearItems() {
+    final Set<String> allYears = <String>{};
+
+    // Always include the current academic year first (from the existing data)
+    if (_selectedAcademicYear != null && _selectedAcademicYear!.isNotEmpty) {
+      allYears.add(_selectedAcademicYear!);
+    }
+
+    // Add years from API if loaded
+    if (!_isLoadingData) {
+      for (final year in _academicYears) {
+        final yearName = year['name'] as String?;
+        if (yearName != null && yearName.isNotEmpty) {
+          allYears.add(yearName);
+        }
+      }
+    }
+
+    // If still loading and no current value, show loading item
+    if (_isLoadingData && allYears.isEmpty) {
+      return [
+        const DropdownMenuItem<String>(
+          value: null,
+          child: Text(
+            'Đang tải...',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 16,
+              color: Color(0xFF717680),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    // Convert to dropdown items, sorted
+    final sortedYears = allYears.toList()
+      ..sort((a, b) => b.compareTo(a)); // Desc order
+    return sortedYears.map((year) {
+      return DropdownMenuItem<String>(
+        value: year,
+        child: Text(
+          year,
+          style: const TextStyle(fontFamily: 'Inter', fontSize: 16),
+        ),
+      );
+    }).toList();
   }
 
   Future<void> _selectStartDate(BuildContext context) async {
@@ -171,25 +241,14 @@ class _EditSemesterModalState extends State<EditSemesterModal> {
                               ),
                             ),
                           ),
-                          items: (widget.academicYears ?? []).map((
-                            String year,
-                          ) {
-                            return DropdownMenuItem<String>(
-                              value: year,
-                              child: Text(
-                                year,
-                                style: const TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 16,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              _selectedAcademicYear = newValue;
-                            });
-                          },
+                          items: _buildAcademicYearItems(),
+                          onChanged: _isLoadingData
+                              ? null
+                              : (String? newValue) {
+                                  setState(() {
+                                    _selectedAcademicYear = newValue;
+                                  });
+                                },
                           validator: (value) {
                             if (value == null) {
                               return 'Vui lòng chọn năm học';
@@ -416,20 +475,39 @@ class _EditSemesterModalState extends State<EditSemesterModal> {
                       child: ElevatedButton(
                         onPressed: () async {
                           if (_formKey.currentState!.validate()) {
+                            // Store context before async operations
+                            final navigator = Navigator.of(context);
+                            final scaffoldMessenger = ScaffoldMessenger.of(
+                              context,
+                            );
+
                             try {
+                              // Find the academic year ID from the selected name
+                              final selectedAcademicYear = _academicYears
+                                  .firstWhere(
+                                    (year) =>
+                                        year['name'] == _selectedAcademicYear,
+                                    orElse: () => <String, dynamic>{},
+                                  );
+
                               final payload = <String, dynamic>{};
                               if (_selectedSemester != null) {
-                                payload['name'] = 'Học kì ${_selectedSemester}';
+                                payload['name'] = _selectedSemester!;
+                              }
+                              if (selectedAcademicYear.isNotEmpty) {
+                                payload['academic_year_id'] =
+                                    selectedAcademicYear['id'];
                               }
                               if (_startDate != null) {
-                                payload['start_date'] =
-                                    DateFormat('yyyy-MM-dd').format(_startDate!);
+                                payload['start_date'] = DateFormat(
+                                  'yyyy-MM-dd',
+                                ).format(_startDate!);
                               }
                               if (_endDate != null) {
-                                payload['end_date'] =
-                                    DateFormat('yyyy-MM-dd').format(_endDate!);
+                                payload['end_date'] = DateFormat(
+                                  'yyyy-MM-dd',
+                                ).format(_endDate!);
                               }
-                              // academic_year_id mapping omitted (needs ID source)
 
                               final apiId = widget.semester.apiId;
                               if (apiId == null) {
@@ -442,10 +520,12 @@ class _EditSemesterModalState extends State<EditSemesterModal> {
                               );
                               if (res.success) {
                                 if (mounted) {
-                                  Navigator.of(context).pop(true);
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  navigator.pop(true);
+                                  scaffoldMessenger.showSnackBar(
                                     const SnackBar(
-                                      content: Text('Cập nhật học kì thành công'),
+                                      content: Text(
+                                        'Cập nhật học kì thành công',
+                                      ),
                                       backgroundColor: Colors.green,
                                     ),
                                   );
@@ -455,7 +535,7 @@ class _EditSemesterModalState extends State<EditSemesterModal> {
                               }
                             } catch (e) {
                               if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                scaffoldMessenger.showSnackBar(
                                   SnackBar(
                                     content: Text('Lỗi: ${e.toString()}'),
                                     backgroundColor: Colors.red,
