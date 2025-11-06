@@ -103,7 +103,7 @@ class _AcademicYearsManagementViewState
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Network error: $e';
+        _errorMessage = 'Lỗi kết nối mạng: $e';
         _academicYears = [];
         _totalPages = 0;
         _academicYearIdMapping.clear();
@@ -155,9 +155,7 @@ class _AcademicYearsManagementViewState
       if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Successfully deleted ${apiIds.length} academic year(s)',
-            ),
+            content: Text('Xóa thành công ${apiIds.length} năm học'),
             backgroundColor: Colors.green,
           ),
         );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:android_app/services/api_service.dart';
 
 class AddFacultyModal extends StatefulWidget {
   const AddFacultyModal({super.key});
@@ -11,12 +12,68 @@ class _AddFacultyModalState extends State<AddFacultyModal> {
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
   final _nameController = TextEditingController();
+  final ApiService _apiService = ApiService();
+  bool _isLoading = false;
 
   @override
   void dispose() {
     _codeController.dispose();
     _nameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleConfirm() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Prepare faculty data for API
+        final facultyData = {
+          'code': _codeController.text.trim(),
+          'name': _nameController.text.trim(),
+        };
+
+        final result = await _apiService.createFacultyData(facultyData);
+
+        if (!mounted) return;
+
+        if (result.success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Thêm khoa thành công'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).pop();
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Có lỗi xảy ra: ${result.message}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Có lỗi xảy ra: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -210,12 +267,7 @@ class _AddFacultyModalState extends State<AddFacultyModal> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            // TODO: Handle save action
-                            Navigator.of(context).pop();
-                          }
-                        },
+                        onPressed: _isLoading ? null : _handleConfirm,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2264E5),
                           foregroundColor: Colors.white,
@@ -229,14 +281,23 @@ class _AddFacultyModalState extends State<AddFacultyModal> {
                             side: const BorderSide(color: Color(0xFF7F56D9)),
                           ),
                         ),
-                        child: const Text(
-                          'Xác nhận',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Xác nhận',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
                   ],

@@ -5,6 +5,7 @@ import 'package:android_app/widgets/common/data_table_row.dart';
 import 'package:android_app/models/subject.dart';
 import 'package:android_app/screens/admin/dashboard/subject_management/add_subject_modal.dart';
 import 'package:android_app/screens/admin/dashboard/subject_management/edit_subject_modal.dart';
+import 'package:android_app/services/api_service.dart';
 
 class SubjectsManagementView extends StatefulWidget {
   const SubjectsManagementView({super.key});
@@ -15,98 +16,34 @@ class SubjectsManagementView extends StatefulWidget {
 
 class _SubjectsManagementViewState extends State<SubjectsManagementView> {
   final TextEditingController _searchController = TextEditingController();
+  final ApiService _apiService = ApiService();
 
   // Pagination variables
   int _currentPage = 1;
   final int _itemsPerPage = 10;
 
-  // Sample data for subjects
-  final List<SubjectData> _subjects = [
-    SubjectData(
-      id: 1,
-      code: 'CS101',
-      name: 'Lập trình cơ bản',
-      department: 'Khoa học máy tính',
-      credits: 3,
-    ),
-    SubjectData(
-      id: 2,
-      code: 'CS102',
-      name: 'Cấu trúc dữ liệu',
-      department: 'Khoa học máy tính',
-      credits: 4,
-    ),
-    SubjectData(
-      id: 3,
-      code: 'CS103',
-      name: 'Cơ sở dữ liệu',
-      department: 'Hệ thống thông tin',
-      credits: 3,
-    ),
-    SubjectData(
-      id: 4,
-      code: 'CS104',
-      name: 'Mạng máy tính',
-      department: 'Công nghệ thông tin',
-      credits: 3,
-    ),
-    SubjectData(
-      id: 5,
-      code: 'CS105',
-      name: 'Hệ điều hành',
-      department: 'Khoa học máy tính',
-      credits: 3,
-    ),
-    SubjectData(
-      id: 6,
-      code: 'CS106',
-      name: 'Phát triển web',
-      department: 'Kỹ thuật phần mềm',
-      credits: 4,
-    ),
-    SubjectData(
-      id: 7,
-      code: 'CS107',
-      name: 'Thuật toán',
-      department: 'Khoa học máy tính',
-      credits: 3,
-    ),
-    SubjectData(
-      id: 8,
-      code: 'CS108',
-      name: 'Trí tuệ nhân tạo',
-      department: 'Khoa học máy tính',
-      credits: 3,
-    ),
-    SubjectData(
-      id: 9,
-      code: 'CS109',
-      name: 'Bảo mật thông tin',
-      department: 'Công nghệ thông tin',
-      credits: 3,
-    ),
-    SubjectData(
-      id: 10,
-      code: 'CS110',
-      name: 'Kỹ thuật phần mềm',
-      department: 'Kỹ thuật phần mềm',
-      credits: 3,
-    ),
-    SubjectData(
-      id: 11,
-      code: 'CS111',
-      name: 'Học máy',
-      department: 'Khoa học máy tính',
-      credits: 4,
-    ),
-    SubjectData(
-      id: 12,
-      code: 'CS112',
-      name: 'Phân tích dữ liệu',
-      department: 'Hệ thống thông tin',
-      credits: 3,
-    ),
-  ];
+  // API data for subjects
+  List<SubjectData> _subjects = [];
+  bool _isLoading = false;
+  int _totalSubjects = 0;
+  int _totalPages = 0;
+  String? _errorMessage;
+
+  // Cache for department names
+  final Map<int, String> _departmentCache = {};
+
+  // Mapping from uniqueId to original subject ID for API operations
+  final Map<int, String> _subjectIdMapping = {};
+
+  // Filter data
+  List<Map<String, dynamic>> _faculties = [];
+  List<Map<String, dynamic>> _departments = [];
+  Map<String, dynamic>? _selectedFaculty;
+  Map<String, dynamic>? _selectedDepartment;
+  bool _isLoadingFilters = false;
+
+  // Sample data for subjects (commented out - now using API)
+  // final List<SubjectData> _sampleSubjects = [ ... ];
 
   final Set<int> _selectedSubjects = <int>{};
 
@@ -144,16 +81,200 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
     ),
   ];
 
-  // Pagination getters and methods
-  int get totalPages => (_subjects.length / _itemsPerPage).ceil();
+  @override
+  void initState() {
+    super.initState();
+    _loadSubjects();
+    _loadFaculties();
+    _searchController.addListener(_onSearchChanged);
+  }
 
-  List<SubjectData> get currentPageSubjects {
-    final startIndex = (_currentPage - 1) * _itemsPerPage;
-    final endIndex = startIndex + _itemsPerPage;
-    return _subjects.sublist(
-      startIndex,
-      endIndex > _subjects.length ? _subjects.length : endIndex,
-    );
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    // Debounce search
+    if (_searchController.text.length >= 3 || _searchController.text.isEmpty) {
+      setState(() {
+        _currentPage = 1; // Reset to first page when searching
+      });
+      _loadSubjects();
+    }
+  }
+
+  Future<void> _loadSubjects() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _apiService.getSubjectsPaginated(
+        page: _currentPage,
+        limit: _itemsPerPage,
+        departmentId: _selectedDepartment?['id'],
+        facultyId: _selectedFaculty?['id'],
+      );
+
+      if (result.success && result.data != null) {
+        // Load department names first from API data before creating subjects
+        await _preloadDepartmentNames(result.data!.items);
+
+        final subjects = <SubjectData>[];
+        _subjectIdMapping.clear();
+
+        // Now create subjects after departments are loaded
+        for (int i = 0; i < result.data!.items.length; i++) {
+          final item = result.data!.items[i];
+          final uniqueId = i + 1; // Sequential ID for UI
+          final subjectData = _subjectToSubjectDataWithUniqueId(item, uniqueId);
+          subjects.add(subjectData);
+        }
+
+        setState(() {
+          _subjects = subjects;
+          _totalSubjects = result.data!.total;
+          _totalPages = result.data!.totalPages;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _subjects = [];
+          _totalSubjects = 0;
+          _totalPages = 0;
+          _errorMessage = result.message;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _subjects = [];
+        _totalSubjects = 0;
+        _totalPages = 0;
+        _errorMessage = 'Lỗi kết nối mạng: ${e.toString()}';
+        _isLoading = false;
+        _subjectIdMapping.clear();
+      });
+    }
+  }
+
+  Future<void> _preloadDepartmentNames(
+    List<Map<String, dynamic>> apiSubjects,
+  ) async {
+    // Get unique department IDs that we haven't cached yet
+    final departmentIds = apiSubjects
+        .where((subject) => subject['department_id'] != null)
+        .map((subject) => subject['department_id'] as int)
+        .where((id) => !_departmentCache.containsKey(id))
+        .toSet();
+
+    if (departmentIds.isEmpty) return;
+
+    // Load department names concurrently
+    final futures = departmentIds.map((id) async {
+      try {
+        final result = await _apiService.getDepartment(id);
+        if (result.success && result.data != null) {
+          _departmentCache[id] = result.data!['name'] ?? 'Unknown Department';
+        }
+      } catch (e) {
+        _departmentCache[id] = 'Lỗi tải dữ liệu';
+      }
+    });
+
+    await Future.wait(futures);
+  }
+
+  Future<void> _loadFaculties() async {
+    setState(() {
+      _isLoadingFilters = true;
+    });
+
+    try {
+      final result = await _apiService.getFacultiesPaginated(limit: 100);
+      if (result.success && result.data != null) {
+        setState(() {
+          _faculties = result.data!.items;
+          _isLoadingFilters = false;
+        });
+        // Load all departments initially
+        _loadDepartments();
+      } else {
+        setState(() {
+          _isLoadingFilters = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingFilters = false;
+      });
+    }
+  }
+
+  Future<void> _loadDepartments({int? facultyId}) async {
+    try {
+      final result = await _apiService.getDepartmentsPaginated(
+        limit: 100,
+        facultyId: facultyId,
+      );
+      if (result.success && result.data != null) {
+        setState(() {
+          _departments = result.data!.items;
+          // Reset selected department when faculty changes
+          if (facultyId != null) {
+            _selectedDepartment = null;
+          }
+        });
+      }
+    } catch (e) {
+      // Handle error
+    }
+  }
+
+  String _getDepartmentName(int? departmentId) {
+    if (departmentId == null) return 'Chưa phân bộ môn';
+    final cachedName = _departmentCache[departmentId];
+    if (cachedName != null) return cachedName;
+
+    // If not cached, start loading in background
+    _loadSingleDepartment(departmentId);
+    return 'Đang tải...';
+  }
+
+  Future<void> _loadSingleDepartment(int departmentId) async {
+    if (_departmentCache.containsKey(departmentId)) return;
+
+    try {
+      final result = await _apiService.getDepartment(departmentId);
+      if (result.success && result.data != null) {
+        setState(() {
+          _departmentCache[departmentId] =
+              result.data!['name'] ?? 'Unknown Department';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _departmentCache[departmentId] = 'Lỗi tải dữ liệu';
+      });
+    }
+  }
+
+  // Pagination getters and methods
+  int get totalPages => _totalPages;
+
+  // Since we're getting paginated data from API, just return current page data
+  List<SubjectData> get currentPageSubjects => _subjects;
+
+  // Get current page as SubjectData objects with sequential IDs
+  List<SubjectData> get currentPageSubjectData {
+    return _subjects.asMap().entries.map((entry) {
+      final subject = entry.value;
+      return subject;
+    }).toList();
   }
 
   void _goToPreviousPage() {
@@ -161,6 +282,7 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
       setState(() {
         _currentPage--;
       });
+      _loadSubjects();
     }
   }
 
@@ -169,6 +291,64 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
       setState(() {
         _currentPage++;
       });
+      _loadSubjects();
+    }
+  }
+
+  // Convert API data to SubjectData with unique ID for UI
+  SubjectData _subjectToSubjectDataWithUniqueId(
+    Map<String, dynamic> apiSubject,
+    int uniqueId,
+  ) {
+    // Store mapping from uniqueId to real API subject ID for API operations
+    final apiId = apiSubject['id'];
+    if (apiId != null) {
+      _subjectIdMapping[uniqueId] = apiId.toString();
+    }
+
+    return SubjectData(
+      id: uniqueId,
+      code: apiSubject['code'] ?? '',
+      name: apiSubject['name'] ?? '',
+      department: _getDepartmentName(apiSubject['department_id']),
+      credits: apiSubject['credits'] ?? 0,
+      // Add additional fields for API operations
+      departmentId: apiSubject['department_id'],
+      apiId: apiId is int ? apiId.toString() : (apiId?.toString() ?? ''),
+    );
+  }
+
+  Future<void> _handleDeleteSelectedSubjects() async {
+    try {
+      // Convert selected UI IDs to API IDs and delete
+      for (final uiId in _selectedSubjects) {
+        final apiId = _subjectIdMapping[uiId];
+        if (apiId != null) {
+          await _apiService.deleteSubject(apiId);
+        }
+      }
+
+      // Reload subjects and show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Xóa thành công ${_selectedSubjects.length} môn học'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      setState(() {
+        _selectedSubjects.clear();
+      });
+
+      // Reload current page
+      _loadSubjects();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi khi xóa môn học: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -212,18 +392,8 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
             ),
             ElevatedButton(
               onPressed: () {
-                // Handle delete action
-                setState(() {
-                  _subjects.removeWhere(
-                    (subject) => _selectedSubjects.contains(subject.id),
-                  );
-                  _selectedSubjects.clear();
-                  // Reset to first page if current page is empty
-                  if (currentPageSubjects.isEmpty && _currentPage > 1) {
-                    _currentPage = 1;
-                  }
-                });
                 Navigator.of(context).pop();
+                _handleDeleteSelectedSubjects();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFEF4444),
@@ -323,44 +493,11 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
                               ),
                               const SizedBox(width: 16),
 
-                              // Filter buttons
-                              _buildFilterButton('Lọc theo bộ môn'),
+                              // Filter dropdowns
+                              _buildDepartmentDropdown(),
                               const SizedBox(width: 16),
-                              _buildFilterButton('Lọc theo khoa'),
+                              _buildFacultyDropdown(),
                               const Spacer(),
-
-                              // Import excel button
-                              SizedBox(
-                                height: 38,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    // Handle import excel
-                                  },
-                                  icon: const Icon(Icons.upload_file, size: 16),
-                                  label: const Text(
-                                    'Nhập excel',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      letterSpacing: 0.28,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF46E522),
-                                    foregroundColor: Colors.black,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
 
                               // Add subject button
                               SizedBox(
@@ -369,8 +506,9 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
                                   onPressed: () {
                                     showDialog(
                                       context: context,
-                                      builder: (context) =>
-                                          const AddSubjectModal(),
+                                      builder: (context) => AddSubjectModal(
+                                        onSubjectAdded: _loadSubjects,
+                                      ),
                                     );
                                   },
                                   icon: const Icon(Icons.add, size: 16),
@@ -455,41 +593,75 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
 
                   // Table
                   Expanded(
-                    child: Column(
-                      children: [
-                        // Fixed Table header
-                        Container(
-                          color: const Color(0xFFF9FAFC),
-                          child: _buildTableHeader(),
-                        ),
-
-                        // Table rows - using Flexible to prevent overflow
-                        Flexible(
-                          child: SingleChildScrollView(
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _errorMessage != null
+                        ? Center(
                             child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                // Table rows
-                                ...List.generate(_itemsPerPage, (index) {
-                                  if (index < currentPageSubjects.length) {
-                                    final subject = currentPageSubjects[index];
-                                    final isEven = index % 2 == 0;
-                                    return _buildTableRow(subject, isEven);
-                                  } else {
-                                    // Empty row to maintain consistent height
-                                    return Container(
-                                      height: 64,
-                                      color: index % 2 == 0
-                                          ? Colors.white
-                                          : const Color(0xFFF9FAFC),
-                                    );
-                                  }
-                                }),
+                                const Icon(
+                                  Icons.error_outline,
+                                  size: 64,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: _loadSubjects,
+                                  child: const Text('Thử lại'),
+                                ),
                               ],
                             ),
+                          )
+                        : Column(
+                            children: [
+                              // Fixed Table header
+                              Container(
+                                color: const Color(0xFFF9FAFC),
+                                child: _buildTableHeader(),
+                              ),
+
+                              // Table rows - using Flexible to prevent overflow
+                              Flexible(
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    children: [
+                                      // Table rows
+                                      ...List.generate(_itemsPerPage, (index) {
+                                        if (index <
+                                            currentPageSubjects.length) {
+                                          final subject =
+                                              currentPageSubjects[index];
+                                          final isEven = index % 2 == 0;
+                                          return _buildTableRow(
+                                            subject,
+                                            isEven,
+                                          );
+                                        } else {
+                                          // Empty row to maintain consistent height
+                                          return Container(
+                                            height: 64,
+                                            color: index % 2 == 0
+                                                ? Colors.white
+                                                : const Color(0xFFF9FAFC),
+                                          );
+                                        }
+                                      }),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                   ),
 
                   // Pagination
@@ -506,7 +678,7 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
                       children: [
                         // Left side: Items count
                         Text(
-                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageSubjects.length} of ${_subjects.length}',
+                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageSubjects.length} of $_totalSubjects',
                           style: const TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
@@ -623,7 +795,7 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
     );
   }
 
-  Widget _buildFilterButton(String text) {
+  Widget _buildFacultyDropdown() {
     return Container(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -641,25 +813,111 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            text,
-            style: const TextStyle(
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<Map<String, dynamic>>(
+          value: _selectedFaculty,
+          hint: const Text(
+            'Lọc theo khoa',
+            style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 14,
               fontWeight: FontWeight.w400,
               color: Color(0xFFA1A9B8),
             ),
           ),
-          const SizedBox(width: 8),
-          const Icon(
+          icon: const Icon(
             Icons.keyboard_arrow_down,
             size: 16,
             color: Color(0xFF717680),
           ),
+          items: _isLoadingFilters
+              ? []
+              : [
+                  const DropdownMenuItem<Map<String, dynamic>>(
+                    value: null,
+                    child: Text('Tất cả khoa'),
+                  ),
+                  ..._faculties.map((faculty) {
+                    return DropdownMenuItem<Map<String, dynamic>>(
+                      value: faculty,
+                      child: Text(faculty['name'] ?? ''),
+                    );
+                  }).toList(),
+                ],
+          onChanged: (value) {
+            setState(() {
+              _selectedFaculty = value;
+              _currentPage = 1;
+            });
+            if (value != null) {
+              _loadDepartments(facultyId: value['id']);
+            } else {
+              _loadDepartments();
+            }
+            _loadSubjects();
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDepartmentDropdown() {
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: const Color(0xFF687182).withValues(alpha: 0.16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
         ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<Map<String, dynamic>>(
+          value: _selectedDepartment,
+          hint: const Text(
+            'Lọc theo bộ môn',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: Color(0xFFA1A9B8),
+            ),
+          ),
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            size: 16,
+            color: Color(0xFF717680),
+          ),
+          items: _isLoadingFilters
+              ? []
+              : [
+                  const DropdownMenuItem<Map<String, dynamic>>(
+                    value: null,
+                    child: Text('Tất cả bộ môn'),
+                  ),
+                  ..._departments.map((department) {
+                    return DropdownMenuItem<Map<String, dynamic>>(
+                      value: department,
+                      child: Text(department['name'] ?? ''),
+                    );
+                  }).toList(),
+                ],
+          onChanged: (value) {
+            setState(() {
+              _selectedDepartment = value;
+              _currentPage = 1;
+            });
+            _loadSubjects();
+          },
+        ),
       ),
     );
   }
@@ -852,11 +1110,30 @@ class _SubjectsManagementViewState extends State<SubjectsManagementView> {
       onEdit: () {
         showDialog(
           context: context,
-          builder: (context) => EditSubjectModal(subject: subject),
+          builder: (context) => EditSubjectModal(
+            subject: subject,
+            onSubjectUpdated: _loadSubjects,
+          ),
         );
       },
-      onDelete: () {
-        // TODO: handle delete
+      onDelete: () async {
+        try {
+          await _apiService.deleteSubject(subject.apiId);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Xóa môn học thành công'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          _loadSubjects(); // Reload subjects
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Lỗi khi xóa môn học: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       },
     );
   }

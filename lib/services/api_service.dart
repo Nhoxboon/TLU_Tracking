@@ -54,7 +54,10 @@ class ApiService {
           accessToken: loginResponse.accessToken,
           tokenType: loginResponse.tokenType,
         );
-        return ApiResponse.success(loginResponse, message: 'Login successful');
+        return ApiResponse.success(
+          loginResponse,
+          message: 'Đăng nhập thành công',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -64,7 +67,6 @@ class ApiService {
       }
     } catch (e) {
       // Fallback to mock data when API is not available
-      print('API not available, using mock data: ${e.toString()}');
       return MockApiService.mockLogin(request.email, request.password);
     }
   }
@@ -90,7 +92,9 @@ class ApiService {
         statusCode: response.statusCode,
       );
     } catch (e) {
-      return ApiResponse.error('Failed to fetch current user: ${e.toString()}');
+      return ApiResponse.error(
+        'Lỗi khi lấy thông tin người dùng hiện tại: ${e.toString()}',
+      );
     }
   }
 
@@ -116,7 +120,9 @@ class ApiService {
         );
       }
     } catch (e) {
-      return ApiResponse.error('Failed to fetch students: ${e.toString()}');
+      return ApiResponse.error(
+        'Lỗi khi lấy danh sách sinh viên: ${e.toString()}',
+      );
     }
   }
 
@@ -136,8 +142,9 @@ class ApiService {
       if (facultyId != null) queryParams['faculty_id'] = facultyId;
       if (majorId != null) queryParams['major_id'] = majorId;
       if (cohortId != null) queryParams['cohort_id'] = cohortId;
-      if (className != null && className.isNotEmpty)
+      if (className != null && className.isNotEmpty) {
         queryParams['class_name'] = className;
+      }
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
 
       final uri = Uri.parse('$baseUrl/users/students').replace(
@@ -208,7 +215,9 @@ class ApiService {
         );
       }
     } catch (e) {
-      return ApiResponse.error('Failed to fetch students: ${e.toString()}');
+      return ApiResponse.error(
+        'Lỗi khi lấy danh sách sinh viên: ${e.toString()}',
+      );
     }
   }
 
@@ -274,11 +283,11 @@ class ApiService {
         if (responseData['success'] == true) {
           return ApiResponse.success(
             student,
-            message: responseData['message'] ?? 'Student created successfully',
+            message: responseData['message'] ?? 'Tạo sinh viên thành công',
           );
         } else {
           return ApiResponse.error(
-            responseData['message'] ?? 'Failed to create student',
+            responseData['message'] ?? 'Lỗi khi tạo sinh viên',
           );
         }
       } else {
@@ -336,11 +345,11 @@ class ApiService {
         if (responseData['success'] == true) {
           return ApiResponse.success(
             student,
-            message: responseData['message'] ?? 'Student updated successfully',
+            message: responseData['message'] ?? 'Cập nhật sinh viên thành công',
           );
         } else {
           return ApiResponse.error(
-            responseData['message'] ?? 'Failed to update student',
+            responseData['message'] ?? 'Lỗi khi cập nhật sinh viên',
           );
         }
       } else {
@@ -393,21 +402,18 @@ class ApiService {
       if (response.statusCode == 200 || response.statusCode == 204) {
         // For 204 No Content, there's no response body
         if (response.statusCode == 204) {
-          return ApiResponse.success(
-            null,
-            message: 'Student deleted successfully',
-          );
+          return ApiResponse.success(null, message: 'Xóa sinh viên thành công');
         }
 
         final responseData = jsonDecode(response.body);
         if (responseData['success'] == true) {
           return ApiResponse.success(
             null,
-            message: responseData['message'] ?? 'Student deleted successfully',
+            message: responseData['message'] ?? 'Xóa sinh viên thành công',
           );
         } else {
           return ApiResponse.error(
-            responseData['message'] ?? 'Failed to delete student',
+            responseData['message'] ?? 'Lỗi khi xóa sinh viên',
           );
         }
       } else {
@@ -447,7 +453,6 @@ class ApiService {
       }
     } catch (e) {
       // Fallback to mock data
-      print('API not available, using mock teachers data: ${e.toString()}');
       return ApiResponse.success(MockApiService.mockTeachers);
     }
   }
@@ -521,7 +526,6 @@ class ApiService {
       }
     } catch (e) {
       // Fallback to mock data
-      print('API not available, using mock teacher data: ${e.toString()}');
       final mockTeacher = MockApiService.mockTeachers
           .where((t) => t.id == teacherId)
           .firstOrNull;
@@ -546,7 +550,7 @@ class ApiService {
         final createdTeacher = Teacher.fromJson(data);
         return ApiResponse.success(
           createdTeacher,
-          message: 'Teacher created successfully',
+          message: 'Tạo giáo viên thành công',
         );
       } else {
         final error = jsonDecode(response.body);
@@ -603,7 +607,7 @@ class ApiService {
         final updatedTeacher = Teacher.fromJson(data);
         return ApiResponse.success(
           updatedTeacher,
-          message: 'Teacher updated successfully',
+          message: 'Cập nhật giáo viên thành công',
         );
       } else {
         final error = jsonDecode(response.body);
@@ -629,7 +633,7 @@ class ApiService {
         body: jsonEncode(teacherData),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
         return ApiResponse.success(data);
       } else {
@@ -653,10 +657,7 @@ class ApiService {
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        return ApiResponse.success(
-          null,
-          message: 'Teacher deleted successfully',
-        );
+        return ApiResponse.success(null, message: 'Xóa giáo viên thành công');
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -719,7 +720,6 @@ class ApiService {
       }
     } catch (e) {
       // Fallback to mock data
-      print('API not available, using mock subjects data: ${e.toString()}');
       return ApiResponse.success(MockApiService.mockSubjects);
     }
   }
@@ -745,7 +745,6 @@ class ApiService {
       }
     } catch (e) {
       // Fallback to mock data
-      print('API not available, using mock subject data: ${e.toString()}');
       final mockSubject = MockApiService.mockSubjects
           .where((s) => s.id == subjectId)
           .firstOrNull;
@@ -770,7 +769,7 @@ class ApiService {
         final createdSubject = Subject.fromJson(data);
         return ApiResponse.success(
           createdSubject,
-          message: 'Subject created successfully',
+          message: 'Tạo môn học thành công',
         );
       } else {
         final error = jsonDecode(response.body);
@@ -801,7 +800,7 @@ class ApiService {
         final updatedSubject = Subject.fromJson(data);
         return ApiResponse.success(
           updatedSubject,
-          message: 'Subject updated successfully',
+          message: 'Cập nhật môn học thành công',
         );
       } else {
         final error = jsonDecode(response.body);
@@ -824,10 +823,7 @@ class ApiService {
       );
 
       if (response.statusCode == 204) {
-        return ApiResponse.success(
-          null,
-          message: 'Subject deleted successfully',
-        );
+        return ApiResponse.success(null, message: 'Xóa môn học thành công');
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -838,6 +834,71 @@ class ApiService {
     } catch (e) {
       return ApiResponse.error('Failed to delete subject: ${e.toString()}');
     }
+  }
+
+  // Create subject with Map data (for forms)
+  Future<ApiResponse<Map<String, dynamic>>> createSubjectData(
+    Map<String, dynamic> subjectData,
+  ) async {
+    try {
+      final response = await _client.post(
+        Uri.parse('$baseUrl/academic/subjects'),
+        headers: _headers,
+        body: jsonEncode(subjectData),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return ApiResponse.success(data, message: 'Tạo môn học thành công');
+      } else {
+        final errorData = response.body.isNotEmpty
+            ? jsonDecode(response.body)
+            : {};
+        return ApiResponse.error(
+          errorData['detail'] ??
+              errorData['message'] ??
+              'Failed to create subject (Status: ${response.statusCode})',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to create subject: ${e.toString()}');
+    }
+  }
+
+  // Update subject with Map data (for forms)
+  Future<ApiResponse<Map<String, dynamic>>> updateSubjectData(
+    String subjectId,
+    Map<String, dynamic> subjectData,
+  ) async {
+    try {
+      final response = await _client.put(
+        Uri.parse('$baseUrl/academic/subjects/$subjectId'),
+        headers: _headers,
+        body: jsonEncode(subjectData),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return ApiResponse.success(
+          data,
+          message: 'Cập nhật môn học thành công',
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to update subject',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to update subject: ${e.toString()}');
+    }
+  }
+
+  // Delete subject by int ID
+  Future<ApiResponse<void>> deleteSubjectById(int subjectId) async {
+    return deleteSubject(subjectId.toString());
   }
 
   // Get all teaching sessions
@@ -862,7 +923,6 @@ class ApiService {
       }
     } catch (e) {
       // Fallback to mock data
-      print('API not available, using mock sessions data: ${e.toString()}');
       return ApiResponse.success(MockApiService.mockTeachingSessions);
     }
   }
@@ -890,7 +950,6 @@ class ApiService {
       }
     } catch (e) {
       // Fallback to mock data
-      print('API not available, using mock session data: ${e.toString()}');
       final mockSession = MockApiService.mockTeachingSessions
           .where((s) => s.id == sessionId)
           .firstOrNull;
@@ -915,10 +974,7 @@ class ApiService {
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         final session = TeachingSession.fromJson(data);
-        return ApiResponse.success(
-          session,
-          message: 'Teaching session created successfully',
-        );
+        return ApiResponse.success(session, message: 'Tạo buổi học thành công');
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -950,7 +1006,7 @@ class ApiService {
         final session = TeachingSession.fromJson(data);
         return ApiResponse.success(
           session,
-          message: 'Teaching session updated successfully',
+          message: 'Cập nhật buổi học thành công',
         );
       } else {
         final error = jsonDecode(response.body);
@@ -975,10 +1031,7 @@ class ApiService {
       );
 
       if (response.statusCode == 204) {
-        return ApiResponse.success(
-          null,
-          message: 'Teaching session deleted successfully',
-        );
+        return ApiResponse.success(null, message: 'Xóa buổi học thành công');
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -1032,10 +1085,7 @@ class ApiService {
     String otp,
   ) async {
     try {
-      print('DEBUG - Verifying OTP: email=$email, otp=$otp');
-
       final requestBody = jsonEncode({'email': email, 'token': otp});
-      print('DEBUG - Request body: $requestBody');
 
       final response = await _client
           .post(
@@ -1048,12 +1098,8 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 10));
 
-      print('DEBUG - Response status: ${response.statusCode}');
-      print('DEBUG - Response body: ${response.body}');
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('DEBUG - Parsed data: $data');
         return ApiResponse.success(data, message: 'Xác thực OTP thành công');
       } else {
         final error = jsonDecode(response.body);
@@ -1063,7 +1109,6 @@ class ApiService {
         );
       }
     } catch (e) {
-      print('DEBUG - Exception in verifyOtp: $e');
       return ApiResponse.error('Lỗi xác thực OTP: ${e.toString()}');
     }
   }
@@ -1144,12 +1189,17 @@ class ApiService {
     int page = 1,
     int limit = 100,
     int? facultyId,
+    String? search,
   }) async {
     try {
       final queryParams = {'page': page.toString(), 'limit': limit.toString()};
 
       if (facultyId != null) {
         queryParams['faculty_id'] = facultyId.toString();
+      }
+
+      if (search != null && search.isNotEmpty) {
+        queryParams['search'] = search;
       }
 
       final uri = Uri.parse(
@@ -1251,18 +1301,10 @@ class ApiService {
       );
       final response = await http.Response.fromStream(streamedResponse);
 
-      print('Teachers bulk import response status: ${response.statusCode}');
-      print('Response headers: ${response.headers}');
-      print('Response body length: ${response.body.length}');
-      print(
-        'Response body preview: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}',
-      );
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Try to decode response safely
         try {
           final data = jsonDecode(response.body);
-          print('Parsed teachers response data: $data');
 
           // Check if the response contains error information even with 200 status
           if (data is Map<String, dynamic>) {
@@ -1286,7 +1328,7 @@ class ApiService {
 
             if (failedCount > 0 && successCount == 0) {
               return ApiResponse.error(
-                'All teacher imports failed. ${data['message'] ?? 'Please check your data format and try again.'}',
+                'Tất cả giáo viên import thất bại. ${data['message'] ?? 'Vui lòng kiểm tra định dạng dữ liệu và thử lại.'}',
                 statusCode: response.statusCode,
               );
             }
@@ -1294,9 +1336,6 @@ class ApiService {
 
           return ApiResponse.success(data);
         } catch (decodeError) {
-          print('JSON decode error in teachers import: $decodeError');
-          print('Response body: ${response.body}');
-
           // Check if response body contains error keywords even if JSON parsing fails
           final bodyLower = response.body.toLowerCase();
           if (bodyLower.contains('error') ||
@@ -1314,7 +1353,7 @@ class ApiService {
                 'Teacher import may have completed, but response format was unexpected',
             'status': 'partial_success',
             'raw_response': response.body.length > 500
-                ? response.body.substring(0, 500) + '...'
+                ? '${response.body.substring(0, 500)}...'
                 : response.body,
           });
         }
@@ -1360,10 +1399,7 @@ class ApiService {
         html.document.body?.children.remove(anchor);
         html.Url.revokeObjectUrl(url);
 
-        return ApiResponse.success(
-          null,
-          message: 'Sample file downloaded successfully',
-        );
+        return ApiResponse.success(null, message: 'Tải file mẫu thành công');
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -1611,6 +1647,201 @@ class ApiService {
     }
   }
 
+  // Create major with Map data (for forms)
+  Future<ApiResponse<Map<String, dynamic>>> createMajorData(
+    Map<String, dynamic> majorData,
+  ) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$baseUrl/academic/majors'),
+            headers: _headers,
+            body: jsonEncode(majorData),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      // Chấp nhận cả 200 và 201 cho success
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        try {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          return ApiResponse.success(data);
+        } catch (e) {
+          // Nếu không parse được JSON, nhưng status code thành công thì vẫn coi là success
+          return ApiResponse.success({'message': 'Tạo ngành học thành công'});
+        }
+      } else {
+        try {
+          final error = jsonDecode(response.body);
+          return ApiResponse.error(
+            error['detail'] ?? 'Failed to create major',
+            statusCode: response.statusCode,
+          );
+        } catch (e) {
+          return ApiResponse.error(
+            'Failed to create major - Status: ${response.statusCode}',
+            statusCode: response.statusCode,
+          );
+        }
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to create major: ${e.toString()}');
+    }
+  }
+
+  // Update major with Map data (for forms)
+  Future<ApiResponse<Map<String, dynamic>>> updateMajorData(
+    int majorId,
+    Map<String, dynamic> majorData,
+  ) async {
+    try {
+      final response = await _client
+          .put(
+            Uri.parse('$baseUrl/academic/majors/$majorId'),
+            headers: _headers,
+            body: jsonEncode(majorData),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(data);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to update major',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to update major: ${e.toString()}');
+    }
+  }
+
+  // Delete major by int ID
+  Future<ApiResponse<void>> deleteMajorById(int majorId) async {
+    try {
+      final response = await _client
+          .delete(
+            Uri.parse('$baseUrl/academic/majors/$majorId'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return ApiResponse.success(null);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to delete major',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to delete major: ${e.toString()}');
+    }
+  }
+
+  // Get faculty by ID
+  Future<ApiResponse<Map<String, dynamic>>> getFaculty(int facultyId) async {
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('$baseUrl/academic/faculties/$facultyId'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(data);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to fetch faculty',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to fetch faculty: ${e.toString()}');
+    }
+  }
+
+  // Create faculty
+  Future<ApiResponse<Map<String, dynamic>>> createFacultyData(
+    Map<String, dynamic> facultyData,
+  ) async {
+    try {
+      final response = await _client.post(
+        Uri.parse('$baseUrl/academic/faculties'),
+        headers: _headers,
+        body: jsonEncode(facultyData),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(data);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ??
+              'Failed to create faculty (Status: ${response.statusCode})',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to create faculty: ${e.toString()}');
+    }
+  }
+
+  // Update faculty
+  Future<ApiResponse<Map<String, dynamic>>> updateFacultyData(
+    int facultyId,
+    Map<String, dynamic> facultyData,
+  ) async {
+    try {
+      final response = await _client.put(
+        Uri.parse('$baseUrl/academic/faculties/$facultyId'),
+        headers: _headers,
+        body: jsonEncode(facultyData),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(data);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to update faculty',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to update faculty: ${e.toString()}');
+    }
+  }
+
+  // Delete faculty by ID
+  Future<ApiResponse<void>> deleteFacultyById(int facultyId) async {
+    try {
+      final response = await _client.delete(
+        Uri.parse('$baseUrl/academic/faculties/$facultyId'),
+        headers: _headers,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return ApiResponse.success(null);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to delete faculty',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to delete faculty: ${e.toString()}');
+    }
+  }
+
   // Get cohort by ID
   Future<ApiResponse<Map<String, dynamic>>> getCohort(int cohortId) async {
     try {
@@ -1660,19 +1891,24 @@ class ApiService {
 
       if (teacherId != null) queryParams['teacher_id'] = teacherId.toString();
       if (subjectId != null) queryParams['subject_id'] = subjectId.toString();
-      if (semesterId != null)
+      if (semesterId != null) {
         queryParams['semester_id'] = semesterId.toString();
+      }
       if (facultyId != null) queryParams['faculty_id'] = facultyId.toString();
-      if (departmentId != null)
+      if (departmentId != null) {
         queryParams['department_id'] = departmentId.toString();
+      }
       if (majorId != null) queryParams['major_id'] = majorId.toString();
       if (cohortId != null) queryParams['cohort_id'] = cohortId.toString();
-      if (academicYearId != null)
+      if (academicYearId != null) {
         queryParams['academic_year_id'] = academicYearId.toString();
-      if (studyPhaseId != null)
+      }
+      if (studyPhaseId != null) {
         queryParams['study_phase_id'] = studyPhaseId.toString();
-      if (activeOnly != null)
+      }
+      if (activeOnly != null) {
         queryParams['active_only'] = activeOnly.toString();
+      }
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
 
       final uri = Uri.parse(
@@ -1809,7 +2045,7 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
         return ApiResponse.success(responseData);
       } else {
@@ -1838,7 +2074,7 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
         return ApiResponse.success(responseData);
       } else {
@@ -1866,8 +2102,9 @@ class ApiService {
         'limit': limit.toString(),
       };
 
-      if (departmentId != null)
+      if (departmentId != null) {
         queryParams['department_id'] = departmentId.toString();
+      }
       if (facultyId != null) queryParams['faculty_id'] = facultyId.toString();
 
       final uri = Uri.parse(
@@ -1906,8 +2143,9 @@ class ApiService {
         'limit': limit.toString(),
       };
 
-      if (semesterId != null)
+      if (semesterId != null) {
         queryParams['semester_id'] = semesterId.toString();
+      }
 
       final uri = Uri.parse(
         '$baseUrl/academic/study-phases',
@@ -2046,6 +2284,7 @@ class ApiService {
     int page = 1,
     int limit = 100,
     int? academicYearId,
+    String? search,
   }) async {
     try {
       final queryParams = <String, String>{
@@ -2053,8 +2292,10 @@ class ApiService {
         'limit': limit.toString(),
       };
 
-      if (academicYearId != null)
+      if (academicYearId != null) {
         queryParams['academic_year_id'] = academicYearId.toString();
+      }
+      if (search != null && search.isNotEmpty) queryParams['search'] = search;
 
       final uri = Uri.parse(
         '$baseUrl/academic/semesters',
@@ -2277,7 +2518,7 @@ class ApiService {
       if (response.statusCode == 200) {
         return ApiResponse.success(
           null,
-          message: 'Student removed successfully',
+          message: 'Xóa sinh viên khỏi lớp thành công',
         );
       } else {
         final error = jsonDecode(response.body);
@@ -2306,7 +2547,10 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return ApiResponse.success(data, message: 'Student added successfully');
+        return ApiResponse.success(
+          data,
+          message: 'Thêm sinh viên vào lớp thành công',
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -2454,6 +2698,232 @@ class ApiService {
         return ApiResponse.success(null);
       } else {
         return ApiResponse.error('Some academic years could not be deleted');
+      }
+    } catch (e) {
+      return ApiResponse.error('Network error: $e');
+    }
+  }
+
+  // ===================== COHORT MANAGEMENT METHODS =====================
+
+  // Create cohort with Map data
+  Future<ApiResponse<Map<String, dynamic>>> createCohort(
+    Map<String, dynamic> cohortData,
+  ) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$baseUrl/academic/cohorts'),
+            headers: _headers,
+            body: json.encode(cohortData),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return ApiResponse.success(data);
+      } else {
+        final error = json.decode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to create cohort: ${response.statusCode}',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Network error: $e');
+    }
+  }
+
+  // Update cohort with Map data
+  Future<ApiResponse<Map<String, dynamic>>> updateCohort(
+    int cohortId,
+    Map<String, dynamic> cohortData,
+  ) async {
+    try {
+      final response = await _client
+          .put(
+            Uri.parse('$baseUrl/academic/cohorts/$cohortId'),
+            headers: _headers,
+            body: json.encode(cohortData),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return ApiResponse.success(data);
+      } else {
+        final error = json.decode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to update cohort: ${response.statusCode}',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Network error: $e');
+    }
+  }
+
+  // Delete cohort by ID
+  Future<ApiResponse<void>> deleteCohort(int cohortId) async {
+    try {
+      final response = await _client
+          .delete(
+            Uri.parse('$baseUrl/academic/cohorts/$cohortId'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return ApiResponse.success(null);
+      } else {
+        final error = json.decode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to delete cohort: ${response.statusCode}',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Network error: $e');
+    }
+  }
+
+  // Delete multiple cohorts by IDs
+  Future<ApiResponse<void>> deleteCohorts(List<int> cohortIds) async {
+    try {
+      final List<Future<ApiResponse<void>>> futures = cohortIds
+          .map((id) => deleteCohort(id))
+          .toList();
+
+      final results = await Future.wait(futures);
+
+      // Check if all deletions were successful
+      final failedDeletions = results
+          .where((result) => !result.success)
+          .toList();
+
+      if (failedDeletions.isEmpty) {
+        return ApiResponse.success(null);
+      } else {
+        return ApiResponse.error('Some cohorts could not be deleted');
+      }
+    } catch (e) {
+      return ApiResponse.error('Network error: $e');
+    }
+  }
+
+  // Create department with Map data (for forms)
+  Future<ApiResponse<Map<String, dynamic>>> createDepartmentData(
+    Map<String, dynamic> departmentData,
+  ) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$baseUrl/academic/departments'),
+            headers: _headers,
+            body: jsonEncode(departmentData),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      // Accept both 200 and 201 for success
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        try {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          return ApiResponse.success(data);
+        } catch (e) {
+          return ApiResponse.success(<String, dynamic>{
+            'message': 'Tạo khoa thành công',
+          });
+        }
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to create department',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to create department: ${e.toString()}');
+    }
+  }
+
+  // Update department with Map data (for forms)
+  Future<ApiResponse<Map<String, dynamic>>> updateDepartmentData(
+    int departmentId,
+    Map<String, dynamic> departmentData,
+  ) async {
+    try {
+      final response = await _client
+          .put(
+            Uri.parse('$baseUrl/academic/departments/$departmentId'),
+            headers: _headers,
+            body: jsonEncode(departmentData),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        try {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          return ApiResponse.success(data);
+        } catch (e) {
+          return ApiResponse.success(<String, dynamic>{
+            'message': 'Cập nhật khoa thành công',
+          });
+        }
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to update department',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to update department: ${e.toString()}');
+    }
+  }
+
+  // Delete department by ID
+  Future<ApiResponse<void>> deleteDepartment(int departmentId) async {
+    try {
+      final response = await _client
+          .delete(
+            Uri.parse('$baseUrl/academic/departments/$departmentId'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return ApiResponse.success(null);
+      } else {
+        final error = json.decode(response.body);
+        return ApiResponse.error(
+          error['detail'] ??
+              'Failed to delete department: ${response.statusCode}',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Network error: $e');
+    }
+  }
+
+  // Delete multiple departments by IDs
+  Future<ApiResponse<void>> deleteDepartments(List<int> departmentIds) async {
+    try {
+      final List<Future<ApiResponse<void>>> futures = departmentIds
+          .map((id) => deleteDepartment(id))
+          .toList();
+
+      final results = await Future.wait(futures);
+
+      // Check if all deletions were successful
+      final failedDeletions = results
+          .where((result) => !result.success)
+          .toList();
+
+      if (failedDeletions.isEmpty) {
+        return ApiResponse.success(null);
+      } else {
+        return ApiResponse.error('Some departments could not be deleted');
       }
     } catch (e) {
       return ApiResponse.error('Network error: $e');

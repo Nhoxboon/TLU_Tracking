@@ -1,9 +1,13 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
 import 'package:android_app/screens/admin/dashboard/course_management/add_course_modal.dart';
 import 'package:android_app/screens/admin/dashboard/course_management/edit_course_modal.dart';
+import 'package:android_app/services/api_service.dart';
+import 'package:android_app/models/cohort.dart';
 
 class CoursesManagementView extends StatefulWidget {
   const CoursesManagementView({super.key});
@@ -14,28 +18,164 @@ class CoursesManagementView extends StatefulWidget {
 
 class _CoursesManagementViewState extends State<CoursesManagementView> {
   final TextEditingController _searchController = TextEditingController();
+  final ApiService _apiService = ApiService();
 
   // Pagination variables
   int _currentPage = 1;
   final int _itemsPerPage = 10;
 
-  // Sample data for courses
-  final List<CourseData> _courses = [
-    CourseData(id: 1, name: 'K65', admissionYear: '2019', endYear: '2023'),
-    CourseData(id: 2, name: 'K66', admissionYear: '2020', endYear: '2024'),
-    CourseData(id: 3, name: 'K67', admissionYear: '2021', endYear: '2025'),
-    CourseData(id: 4, name: 'K68', admissionYear: '2022', endYear: '2026'),
-    CourseData(id: 5, name: 'K69', admissionYear: '2023', endYear: '2027'),
-    CourseData(id: 6, name: 'K70', admissionYear: '2024', endYear: '2028'),
-    CourseData(id: 7, name: 'K71', admissionYear: '2025', endYear: '2029'),
-    CourseData(id: 8, name: 'K72', admissionYear: '2026', endYear: '2030'),
-    CourseData(id: 9, name: 'K73', admissionYear: '2027', endYear: '2031'),
-    CourseData(id: 10, name: 'K74', admissionYear: '2028', endYear: '2032'),
-    CourseData(id: 11, name: 'K75', admissionYear: '2029', endYear: '2033'),
-    CourseData(id: 12, name: 'K76', admissionYear: '2030', endYear: '2034'),
-  ];
+  // API data for cohorts
+  List<Cohort> _cohorts = [];
+  bool _isLoading = false;
+  int _totalPages = 0;
+  String? _errorMessage;
 
-  final Set<int> _selectedCourses = <int>{};
+  // Mapping from uniqueId to original cohort ID for API operations
+  final Map<int, int> _cohortIdMapping = {};
+
+  final Set<int> _selectedCohorts = <int>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCohorts();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    // Since we don't have search functionality in the API yet, we'll implement basic filtering
+    if (_searchController.text.length >= 3 || _searchController.text.isEmpty) {
+      setState(() {
+        _currentPage = 1; // Reset to first page when searching
+      });
+      _loadCohorts();
+    }
+  }
+
+  Future<void> _loadCohorts() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _apiService.getCohortsPaginated(
+        page: _currentPage,
+        limit: _itemsPerPage,
+      );
+
+      if (result.success && result.data != null) {
+        final List<Cohort> cohorts = (result.data!.items)
+            .map((item) => Cohort.fromJson(item))
+            .toList();
+
+        setState(() {
+          _cohorts = cohorts;
+          _totalPages = (result.data!.total / _itemsPerPage).ceil();
+          _isLoading = false;
+          _cohortIdMapping.clear();
+          // Build mapping for UI IDs to API IDs
+          for (int i = 0; i < cohorts.length; i++) {
+            final sequentialId = (_currentPage - 1) * _itemsPerPage + i + 1;
+            if (cohorts[i].id != null) {
+              _cohortIdMapping[sequentialId] = cohorts[i].id!;
+            }
+          }
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = result.message;
+          _cohorts = [];
+          _totalPages = 0;
+          _cohortIdMapping.clear();
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Lỗi kết nối mạng: $e';
+        _cohorts = [];
+        _totalPages = 0;
+        _cohortIdMapping.clear();
+      });
+    }
+  }
+
+  // Convert Cohort model to CourseData for UI
+  CourseData _cohortToCourseData(
+    Cohort cohort,
+    int sequentialId,
+    int uniqueId,
+  ) {
+    // Store mapping from uniqueId to real API cohort ID for API operations
+    if (cohort.id != null) {
+      _cohortIdMapping[uniqueId] = cohort.id!;
+    }
+    return CourseData(
+      id: uniqueId, // Use sequential ID for UI
+      name: cohort.name,
+      admissionYear: cohort.startYear.toString(),
+      endYear: cohort.endYear.toString(),
+      apiId: cohort.id ?? 0, // Store original API ID for operations
+    );
+  }
+
+  Future<void> _handleDeleteSelectedCohorts() async {
+    try {
+      // Convert UI IDs to API IDs
+      final List<int> apiIds = _selectedCohorts
+          .map((uiId) => _cohortIdMapping[uiId])
+          .where((apiId) => apiId != null)
+          .cast<int>()
+          .toList();
+
+      if (apiIds.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No cohorts selected for deletion'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final result = await _apiService.deleteCohorts(apiIds);
+
+      if (!mounted) return;
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Xóa thành công ${_selectedCohorts.length} khóa học'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _selectedCohorts.clear();
+        _loadCohorts(); // Refresh the list
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.message), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting cohorts: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   // Column configuration for courses table
   static const List<TableColumn> _courseColumns = [
@@ -71,15 +211,20 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
   ];
 
   // Pagination getters and methods
-  int get totalPages => (_courses.length / _itemsPerPage).ceil();
+  int get totalPages => _totalPages;
 
+  // Since we're getting paginated data from API, just return current page data
+  List<Cohort> get currentPageCohorts => _cohorts;
+
+  // Get current page as CourseData objects with sequential IDs
   List<CourseData> get currentPageCourses {
-    final startIndex = (_currentPage - 1) * _itemsPerPage;
-    final endIndex = startIndex + _itemsPerPage;
-    return _courses.sublist(
-      startIndex,
-      endIndex > _courses.length ? _courses.length : endIndex,
-    );
+    return _cohorts.asMap().entries.map((entry) {
+      final index = entry.key;
+      final cohort = entry.value;
+      final sequentialId = (_currentPage - 1) * _itemsPerPage + index + 1;
+      final uniqueId = sequentialId; // Use sequential ID as unique ID for UI
+      return _cohortToCourseData(cohort, sequentialId, uniqueId);
+    }).toList();
   }
 
   void _goToPreviousPage() {
@@ -87,6 +232,7 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
       setState(() {
         _currentPage--;
       });
+      _loadCohorts();
     }
   }
 
@@ -95,6 +241,7 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
       setState(() {
         _currentPage++;
       });
+      _loadCohorts();
     }
   }
 
@@ -114,7 +261,7 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
             ),
           ),
           content: Text(
-            'Bạn có chắc chắn muốn xóa ${_selectedCourses.length} khóa học đã chọn? Hành động này không thể hoàn tác.',
+            'Bạn có chắc chắn muốn xóa ${_selectedCohorts.length} khóa học đã chọn? Hành động này không thể hoàn tác.',
             style: const TextStyle(
               fontFamily: 'Inter',
               fontSize: 14,
@@ -139,16 +286,8 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
             ElevatedButton(
               onPressed: () {
                 // Handle delete action
-                setState(() {
-                  _courses.removeWhere(
-                    (course) => _selectedCourses.contains(course.id),
-                  );
-                  _selectedCourses.clear();
-                  // Reset to first page if current page is empty
-                  if (currentPageCourses.isEmpty && _currentPage > 1) {
-                    _currentPage = 1;
-                  }
-                });
+                Navigator.of(context).pop();
+                _handleDeleteSelectedCohorts();
                 Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(
@@ -219,315 +358,356 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                   ),
                 ],
               ),
-              child: Column(
-                children: [
-                  // Action bar
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 16,
-                    ),
-                    child: _selectedCourses.isEmpty
-                        ? Row(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _errorMessage != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _errorMessage!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 16,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _loadCohorts,
+                            child: const Text('Thử lại'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        // Action bar
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 16,
+                          ),
+                          child: _selectedCohorts.isEmpty
+                              ? Row(
+                                  children: [
+                                    // Search field
+                                    CustomSearchBar(
+                                      controller: _searchController,
+                                      hintText: 'Tìm kiếm...',
+                                      onChanged: (value) {
+                                        // Handle search logic here
+                                        setState(() {
+                                          _currentPage = 1;
+                                        });
+                                      },
+                                      onClear: () {
+                                        setState(() {
+                                          _currentPage = 1;
+                                        });
+                                      },
+                                    ),
+                                    const Spacer(),
+                                    // Add course button
+                                    SizedBox(
+                                      height: 38,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () async {
+                                          final result = await showDialog<bool>(
+                                            context: context,
+                                            builder: (context) =>
+                                                const AddCourseModal(),
+                                          );
+                                          if (result == true) {
+                                            _loadCohorts(); // Refresh the list
+                                          }
+                                        },
+                                        icon: const Icon(Icons.add, size: 16),
+                                        label: const Text(
+                                          'Thêm khóa học',
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                            letterSpacing: 0.28,
+                                          ),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(
+                                            0xFF2264E5,
+                                          ),
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    // Selected items count
+                                    Text(
+                                      '${_selectedCohorts.length} khóa học đã chọn',
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF1F2937),
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    // Delete button
+                                    SizedBox(
+                                      height: 38,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () {
+                                          _showDeleteConfirmationDialog();
+                                        },
+                                        icon: const Icon(
+                                          Icons.delete_outline,
+                                          size: 16,
+                                        ),
+                                        label: const Text(
+                                          'Xóa',
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                            letterSpacing: 0.28,
+                                          ),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(
+                                            0xFFEF4444,
+                                          ),
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+
+                        // Divider
+                        Container(height: 1, color: const Color(0xFFE9EDF5)),
+
+                        // Table
+                        Expanded(
+                          child: Column(
                             children: [
-                              // Search field
-                              CustomSearchBar(
-                                controller: _searchController,
-                                hintText: 'Tìm kiếm...',
-                                onChanged: (value) {
-                                  // Handle search logic here
-                                  setState(() {
-                                    _currentPage = 1;
-                                  });
-                                },
-                                onClear: () {
-                                  setState(() {
-                                    _currentPage = 1;
-                                  });
-                                },
+                              // Fixed Table header
+                              Container(
+                                color: const Color(0xFFF9FAFC),
+                                child: _buildTableHeader(),
                               ),
-                              const Spacer(),
-                              // Add course button
-                              SizedBox(
-                                height: 38,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) =>
-                                          const AddCourseModal(),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.add, size: 16),
-                                  label: const Text(
-                                    'Thêm khóa học',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      letterSpacing: 0.28,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF2264E5),
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
+
+                              // Table rows - using Flexible to prevent overflow
+                              Flexible(
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    children: [
+                                      // Table rows
+                                      ...List.generate(_itemsPerPage, (index) {
+                                        if (index < currentPageCourses.length) {
+                                          final course =
+                                              currentPageCourses[index];
+                                          final isEven = index % 2 == 0;
+                                          return _buildTableRow(course, isEven);
+                                        } else {
+                                          // Empty row to maintain consistent height
+                                          return Container(
+                                            height: 64,
+                                            color: index % 2 == 0
+                                                ? Colors.white
+                                                : const Color(0xFFF9FAFC),
+                                          );
+                                        }
+                                      }),
+                                    ],
                                   ),
                                 ),
                               ),
                             ],
-                          )
-                        : Row(
+                          ),
+                        ),
+
+                        // Pagination
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFFF4F7FC,
+                            ).withValues(alpha: .75),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              // Selected items count
+                              // Left side: Items count
                               Text(
-                                '${_selectedCourses.length} khóa học đã chọn',
+                                '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageCourses.length} of ${_cohorts.length}',
                                 style: const TextStyle(
                                   fontFamily: 'Inter',
-                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
-                                  color: Color(0xFF1F2937),
+                                  fontSize: 12,
+                                  letterSpacing: 0.36,
+                                  color: Color(0xFF687182),
                                 ),
                               ),
-                              const Spacer(),
-                              // Delete button
-                              SizedBox(
-                                height: 38,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    _showDeleteConfirmationDialog();
-                                  },
-                                  icon: const Icon(
-                                    Icons.delete_outline,
-                                    size: 16,
+
+                              // Right side: Navigation controls
+                              Row(
+                                children: [
+                                  // Previous button
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (_currentPage > 1) {
+                                        _goToPreviousPage();
+                                      }
+                                    },
+                                    child: Container(
+                                      width: 20,
+                                      height: 20,
+                                      decoration: BoxDecoration(
+                                        color: _currentPage > 1
+                                            ? Colors.white
+                                            : const Color(0xFFF7F9FC),
+                                        borderRadius: BorderRadius.circular(6),
+                                        boxShadow: _currentPage > 1
+                                            ? [
+                                                BoxShadow(
+                                                  color: const Color(
+                                                    0xFF596078,
+                                                  ).withValues(alpha: 0.1),
+                                                  blurRadius: 5,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                                BoxShadow(
+                                                  color: const Color(
+                                                    0xFF464F60,
+                                                  ).withValues(alpha: 0.16),
+                                                  blurRadius: 0,
+                                                  offset: const Offset(0, 0),
+                                                  spreadRadius: 1,
+                                                ),
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withValues(alpha: .1),
+                                                  blurRadius: 1,
+                                                  offset: const Offset(0, 1),
+                                                ),
+                                              ]
+                                            : [],
+                                      ),
+                                      child: Icon(
+                                        Icons.chevron_left,
+                                        size: 16,
+                                        color: _currentPage > 1
+                                            ? const Color(0xFF464F60)
+                                            : const Color(0xFF868FA0),
+                                      ),
+                                    ),
                                   ),
-                                  label: const Text(
-                                    'Xóa',
-                                    style: TextStyle(
+                                  const SizedBox(width: 16),
+
+                                  // Page info
+                                  Text(
+                                    '$_currentPage/$totalPages',
+                                    style: const TextStyle(
                                       fontFamily: 'Inter',
-                                      fontSize: 14,
                                       fontWeight: FontWeight.w500,
-                                      letterSpacing: 0.28,
+                                      fontSize: 12,
+                                      letterSpacing: 0.36,
+                                      color: Color(0xFF687182),
                                     ),
                                   ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFEF4444),
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
+                                  const SizedBox(width: 16),
+
+                                  // Next button
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (_currentPage < totalPages) {
+                                        _goToNextPage();
+                                      }
+                                    },
+                                    child: Container(
+                                      width: 20,
+                                      height: 20,
+                                      decoration: BoxDecoration(
+                                        color: _currentPage < totalPages
+                                            ? Colors.white
+                                            : const Color(0xFFF7F9FC),
+                                        borderRadius: BorderRadius.circular(6),
+                                        boxShadow: _currentPage < totalPages
+                                            ? [
+                                                BoxShadow(
+                                                  color: const Color(
+                                                    0xFF596078,
+                                                  ).withValues(alpha: 0.1),
+                                                  blurRadius: 5,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                                BoxShadow(
+                                                  color: const Color(
+                                                    0xFF464F60,
+                                                  ).withValues(alpha: 0.16),
+                                                  blurRadius: 0,
+                                                  offset: const Offset(0, 0),
+                                                  spreadRadius: 1,
+                                                ),
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withValues(alpha: .1),
+                                                  blurRadius: 1,
+                                                  offset: const Offset(0, 1),
+                                                ),
+                                              ]
+                                            : [],
+                                      ),
+                                      child: Icon(
+                                        Icons.chevron_right,
+                                        size: 16,
+                                        color: _currentPage < totalPages
+                                            ? const Color(0xFF464F60)
+                                            : const Color(0xFF868FA0),
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
-                  ),
-
-                  // Divider
-                  Container(height: 1, color: const Color(0xFFE9EDF5)),
-
-                  // Table
-                  Expanded(
-                    child: Column(
-                      children: [
-                        // Fixed Table header
-                        Container(
-                          color: const Color(0xFFF9FAFC),
-                          child: _buildTableHeader(),
-                        ),
-
-                        // Table rows - using Flexible to prevent overflow
-                        Flexible(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                // Table rows
-                                ...List.generate(_itemsPerPage, (index) {
-                                  if (index < currentPageCourses.length) {
-                                    final course = currentPageCourses[index];
-                                    final isEven = index % 2 == 0;
-                                    return _buildTableRow(course, isEven);
-                                  } else {
-                                    // Empty row to maintain consistent height
-                                    return Container(
-                                      height: 64,
-                                      color: index % 2 == 0
-                                          ? Colors.white
-                                          : const Color(0xFFF9FAFC),
-                                    );
-                                  }
-                                }),
-                              ],
-                            ),
-                          ),
                         ),
                       ],
                     ),
-                  ),
-
-                  // Pagination
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF4F7FC).withValues(alpha: .75),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Left side: Items count
-                        Text(
-                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageCourses.length} of ${_courses.length}',
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 12,
-                            letterSpacing: 0.36,
-                            color: Color(0xFF687182),
-                          ),
-                        ),
-
-                        // Right side: Navigation controls
-                        Row(
-                          children: [
-                            // Previous button
-                            GestureDetector(
-                              onTap: () {
-                                if (_currentPage > 1) {
-                                  _goToPreviousPage();
-                                }
-                              },
-                              child: Container(
-                                width: 20,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  color: _currentPage > 1
-                                      ? Colors.white
-                                      : const Color(0xFFF7F9FC),
-                                  borderRadius: BorderRadius.circular(6),
-                                  boxShadow: _currentPage > 1
-                                      ? [
-                                          BoxShadow(
-                                            color: const Color(
-                                              0xFF596078,
-                                            ).withValues(alpha: 0.1),
-                                            blurRadius: 5,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                          BoxShadow(
-                                            color: const Color(
-                                              0xFF464F60,
-                                            ).withValues(alpha: 0.16),
-                                            blurRadius: 0,
-                                            offset: const Offset(0, 0),
-                                            spreadRadius: 1,
-                                          ),
-                                          BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: .1,
-                                            ),
-                                            blurRadius: 1,
-                                            offset: const Offset(0, 1),
-                                          ),
-                                        ]
-                                      : [],
-                                ),
-                                child: Icon(
-                                  Icons.chevron_left,
-                                  size: 16,
-                                  color: _currentPage > 1
-                                      ? const Color(0xFF464F60)
-                                      : const Color(0xFF868FA0),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-
-                            // Page info
-                            Text(
-                              '$_currentPage/$totalPages',
-                              style: const TextStyle(
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                                fontSize: 12,
-                                letterSpacing: 0.36,
-                                color: Color(0xFF687182),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-
-                            // Next button
-                            GestureDetector(
-                              onTap: () {
-                                if (_currentPage < totalPages) {
-                                  _goToNextPage();
-                                }
-                              },
-                              child: Container(
-                                width: 20,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  color: _currentPage < totalPages
-                                      ? Colors.white
-                                      : const Color(0xFFF7F9FC),
-                                  borderRadius: BorderRadius.circular(6),
-                                  boxShadow: _currentPage < totalPages
-                                      ? [
-                                          BoxShadow(
-                                            color: const Color(
-                                              0xFF596078,
-                                            ).withValues(alpha: 0.1),
-                                            blurRadius: 5,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                          BoxShadow(
-                                            color: const Color(
-                                              0xFF464F60,
-                                            ).withValues(alpha: 0.16),
-                                            blurRadius: 0,
-                                            offset: const Offset(0, 0),
-                                            spreadRadius: 1,
-                                          ),
-                                          BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: .1,
-                                            ),
-                                            blurRadius: 1,
-                                            offset: const Offset(0, 1),
-                                          ),
-                                        ]
-                                      : [],
-                                ),
-                                child: Icon(
-                                  Icons.chevron_right,
-                                  size: 16,
-                                  color: _currentPage < totalPages
-                                      ? const Color(0xFF464F60)
-                                      : const Color(0xFF868FA0),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
         ],
@@ -548,17 +728,17 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
                 width: 32,
                 child: Checkbox(
                   value: currentPageCourses.every(
-                    (course) => _selectedCourses.contains(course.id),
+                    (course) => _selectedCohorts.contains(course.id),
                   ),
                   onChanged: (bool? value) {
                     setState(() {
                       if (value == true) {
-                        _selectedCourses.addAll(
+                        _selectedCohorts.addAll(
                           currentPageCourses.map((c) => c.id),
                         );
                       } else {
                         for (final course in currentPageCourses) {
-                          _selectedCourses.remove(course.id);
+                          _selectedCohorts.remove(course.id);
                         }
                       }
                     });
@@ -691,7 +871,7 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
   }
 
   Widget _buildTableRow(CourseData course, bool isEven) {
-    final isSelected = _selectedCourses.contains(course.id);
+    final isSelected = _selectedCohorts.contains(course.id);
 
     return DataTableRow<CourseData>(
       data: course,
@@ -701,20 +881,48 @@ class _CoursesManagementViewState extends State<CoursesManagementView> {
       onSelectionChanged: () {
         setState(() {
           if (isSelected) {
-            _selectedCourses.remove(course.id);
+            _selectedCohorts.remove(course.id);
           } else {
-            _selectedCourses.add(course.id);
+            _selectedCohorts.add(course.id);
           }
         });
       },
-      onEdit: () {
-        showDialog(
+      onEdit: () async {
+        final result = await showDialog<bool>(
           context: context,
           builder: (context) => EditCourseModal(course: course),
         );
+        if (result == true) {
+          _loadCohorts(); // Refresh the list
+        }
       },
-      onDelete: () {
-        // TODO: handle delete
+      onDelete: () async {
+        try {
+          final result = await _apiService.deleteCohort(course.apiId);
+          if (result.success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Xóa khóa học thành công'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            _loadCohorts(); // Refresh the list
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result.message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Lỗi kết nối: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       },
     );
   }
@@ -731,6 +939,8 @@ class CourseData implements CourseTableRowData {
   @override
   final String endYear;
 
+  final int apiId; // Store original API ID for operations
+
   // Required fields from TableRowData interface (courses don't have these)
   @override
   String get code => '';
@@ -746,5 +956,6 @@ class CourseData implements CourseTableRowData {
     required this.name,
     required this.admissionYear,
     required this.endYear,
+    required this.apiId,
   });
 }

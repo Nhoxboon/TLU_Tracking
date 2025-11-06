@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/models/subject.dart';
+import 'package:android_app/services/api_service.dart';
 
 class EditSubjectModal extends StatefulWidget {
   final SubjectData subject;
+  final VoidCallback? onSubjectUpdated;
 
-  const EditSubjectModal({super.key, required this.subject});
+  const EditSubjectModal({
+    super.key,
+    required this.subject,
+    this.onSubjectUpdated,
+  });
 
   @override
   State<EditSubjectModal> createState() => _EditSubjectModalState();
@@ -15,15 +21,16 @@ class _EditSubjectModalState extends State<EditSubjectModal> {
   late final TextEditingController _codeController;
   late final TextEditingController _nameController;
   late final TextEditingController _creditsController;
-  String? _selectedDepartment;
+  final ApiService _apiService = ApiService();
 
-  // Sample departments - TODO: Replace with actual data
-  final List<String> _departments = [
-    'Khoa học máy tính',
-    'Công nghệ thông tin',
-    'Hệ thống thông tin',
-    'Kỹ thuật phần mềm',
-  ];
+  Map<String, dynamic>? _selectedFaculty;
+  Map<String, dynamic>? _selectedDepartment;
+  bool _isLoading = false;
+
+  // API data
+  List<Map<String, dynamic>> _faculties = [];
+  List<Map<String, dynamic>> _departments = [];
+  bool _isLoadingData = false;
 
   @override
   void initState() {
@@ -32,9 +39,11 @@ class _EditSubjectModalState extends State<EditSubjectModal> {
     _codeController = TextEditingController(text: widget.subject.code);
     _nameController = TextEditingController(text: widget.subject.name);
     _creditsController = TextEditingController(
-      text: '3',
-    ); // TODO: Get from subject data
-    _selectedDepartment = _departments.first; // TODO: Get from subject data
+      text: widget.subject.credits.toString(),
+    );
+
+    // Load faculties and departments from API
+    _loadFaculties();
   }
 
   @override
@@ -45,26 +54,135 @@ class _EditSubjectModalState extends State<EditSubjectModal> {
     super.dispose();
   }
 
-  void _handleConfirm() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Implement actual subject update logic here
-      // This is where the real logic for updating the subject should be implemented
-      // - Validate all form fields
-      // - Update subject object with new data
-      // - Update in database/API
-      // - Update the subjects list in parent widget
-      // - Show success message
-      // - Close the modal
+  Future<void> _loadFaculties() async {
+    setState(() {
+      _isLoadingData = true;
+    });
 
-      Navigator.of(context).pop();
+    try {
+      final result = await _apiService.getFacultiesPaginated(limit: 100);
+      if (result.success && result.data != null) {
+        setState(() {
+          _faculties = result.data!.items;
+          _isLoadingData = false;
+        });
+        // Load departments for the current subject
+        await _loadDepartments(facultyId: widget.subject.departmentId);
 
-      // For now, just show a placeholder message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('TODO: Implement subject update logic'),
-          backgroundColor: Colors.orange,
-        ),
+        // Set the current department if available
+        if (widget.subject.departmentId != null) {
+          final currentDept = _departments.firstWhere(
+            (dept) => dept['id'] == widget.subject.departmentId,
+            orElse: () => <String, dynamic>{},
+          );
+          if (currentDept.isNotEmpty) {
+            setState(() {
+              _selectedDepartment = currentDept;
+              // Find and set the faculty for this department
+              final facultyId = currentDept['faculty_id'];
+              if (facultyId != null) {
+                _selectedFaculty = _faculties.firstWhere(
+                  (faculty) => faculty['id'] == facultyId,
+                  orElse: () => <String, dynamic>{},
+                );
+                if (_selectedFaculty!.isEmpty) {
+                  _selectedFaculty = null;
+                }
+              }
+            });
+          }
+        }
+      } else {
+        setState(() {
+          _isLoadingData = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingData = false;
+      });
+    }
+  }
+
+  Future<void> _loadDepartments({int? facultyId}) async {
+    try {
+      final result = await _apiService.getDepartmentsPaginated(
+        limit: 100,
+        facultyId: facultyId,
       );
+      if (result.success && result.data != null) {
+        setState(() {
+          _departments = result.data!.items;
+          // Reset selected department when faculty changes (except during initialization)
+          if (facultyId != null && facultyId != widget.subject.departmentId) {
+            _selectedDepartment = null;
+          }
+        });
+      }
+    } catch (e) {
+      // Handle error
+    }
+  }
+
+  Future<void> _handleConfirm() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Prepare subject data for API update
+        final subjectData = {
+          'code': _codeController.text.trim(),
+          'name': _nameController.text.trim(),
+          'credits': int.tryParse(_creditsController.text.trim()) ?? 0,
+          'department_id': _selectedDepartment?['id'] ?? 0,
+        };
+
+        final result = await _apiService.updateSubjectData(
+          widget.subject.apiId,
+          subjectData,
+        );
+
+        if (!mounted) return;
+
+        if (result.success) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cập nhật môn học thành công'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Call the callback to refresh the parent view
+          if (widget.onSubjectUpdated != null) {
+            widget.onSubjectUpdated!();
+          }
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -184,23 +302,12 @@ class _EditSubjectModalState extends State<EditSubjectModal> {
             ),
             const SizedBox(height: 16),
 
+            // Faculty Dropdown Field
+            _buildFacultyField(),
+            const SizedBox(height: 16),
+
             // Department Dropdown Field
-            _buildDropdownField(
-              label: 'Bộ môn*',
-              value: _selectedDepartment,
-              items: _departments,
-              onChanged: (value) {
-                setState(() {
-                  _selectedDepartment = value;
-                });
-              },
-              validator: (value) {
-                if (value == null) {
-                  return 'Vui lòng chọn bộ môn';
-                }
-                return null;
-              },
-            ),
+            _buildDepartmentField(),
             const SizedBox(height: 16),
 
             // Credits Field
@@ -284,19 +391,13 @@ class _EditSubjectModalState extends State<EditSubjectModal> {
     );
   }
 
-  Widget _buildDropdownField({
-    required String label,
-    required String? value,
-    required List<String> items,
-    required void Function(String?) onChanged,
-    String? Function(String?)? validator,
-  }) {
+  Widget _buildFacultyField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
+        const Text(
+          'Khoa*',
+          style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 14,
             fontWeight: FontWeight.w500,
@@ -305,9 +406,14 @@ class _EditSubjectModalState extends State<EditSubjectModal> {
           ),
         ),
         const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          value: value,
-          validator: validator,
+        DropdownButtonFormField<Map<String, dynamic>>(
+          initialValue: _selectedFaculty,
+          validator: (value) {
+            if (value == null) {
+              return 'Vui lòng chọn khoa';
+            }
+            return null;
+          },
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
@@ -339,10 +445,96 @@ class _EditSubjectModalState extends State<EditSubjectModal> {
             color: Color(0xFF181D27),
           ),
           icon: const Icon(Icons.keyboard_arrow_down),
-          items: items.map((String item) {
-            return DropdownMenuItem<String>(value: item, child: Text(item));
-          }).toList(),
-          onChanged: onChanged,
+          items: _isLoadingData
+              ? []
+              : _faculties.map((faculty) {
+                  return DropdownMenuItem<Map<String, dynamic>>(
+                    value: faculty,
+                    child: Text(faculty['name'] ?? ''),
+                  );
+                }).toList(),
+          onChanged: (value) {
+            setState(() {
+              _selectedFaculty = value;
+              _selectedDepartment =
+                  null; // Reset department when faculty changes
+            });
+            if (value != null) {
+              _loadDepartments(facultyId: value['id']);
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDepartmentField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Bộ môn*',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            height: 1.43,
+            color: Color(0xFF414651),
+          ),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<Map<String, dynamic>>(
+          initialValue: _selectedDepartment,
+          validator: (value) {
+            if (value == null) {
+              return 'Vui lòng chọn bộ môn';
+            }
+            return null;
+          },
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF2264E5)),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            fillColor: Colors.white,
+            filled: true,
+          ),
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF181D27),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down),
+          items: _isLoadingData
+              ? []
+              : _departments.map((department) {
+                  return DropdownMenuItem<Map<String, dynamic>>(
+                    value: department,
+                    child: Text(department['name'] ?? ''),
+                  );
+                }).toList(),
+          onChanged: (value) {
+            setState(() {
+              _selectedDepartment = value;
+            });
+          },
         ),
       ],
     );
@@ -394,14 +586,14 @@ class _EditSubjectModalState extends State<EditSubjectModal> {
           // Confirm Button
           Expanded(
             child: InkWell(
-              onTap: _handleConfirm,
+              onTap: _isLoading ? null : _handleConfirm,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 18,
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2264E5),
+                  color: _isLoading ? Colors.grey : const Color(0xFF2264E5),
                   border: Border.all(color: const Color(0xFF7F56D9)),
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
@@ -412,16 +604,27 @@ class _EditSubjectModalState extends State<EditSubjectModal> {
                     ),
                   ],
                 ),
-                child: const Center(
-                  child: Text(
-                    'Xác nhận',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
+                child: Center(
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text(
+                          'Xác nhận',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ),

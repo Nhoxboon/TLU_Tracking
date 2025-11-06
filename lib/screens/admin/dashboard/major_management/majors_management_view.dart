@@ -4,6 +4,8 @@ import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
 import 'package:android_app/screens/admin/dashboard/major_management/add_major_modal.dart';
 import 'package:android_app/screens/admin/dashboard/major_management/edit_major_modal.dart';
+import 'package:android_app/services/api_service.dart';
+import 'package:android_app/models/major.dart';
 
 class MajorsManagementView extends StatefulWidget {
   const MajorsManagementView({super.key});
@@ -14,88 +16,28 @@ class MajorsManagementView extends StatefulWidget {
 
 class _MajorsManagementViewState extends State<MajorsManagementView> {
   final TextEditingController _searchController = TextEditingController();
+  final ApiService _apiService = ApiService();
 
   // Pagination variables
   int _currentPage = 1;
   final int _itemsPerPage = 10;
 
-  // Sample data for majors
-  final List<MajorData> _majors = [
-    MajorData(
-      id: 1,
-      code: 'CNTT',
-      name: 'Công nghệ thông tin',
-      department: 'Công nghệ thông tin',
-    ),
-    MajorData(
-      id: 2,
-      code: 'KHMT',
-      name: 'Khoa học máy tính',
-      department: 'Công nghệ thông tin',
-    ),
-    MajorData(
-      id: 3,
-      code: 'HTTT',
-      name: 'Hệ thống thông tin',
-      department: 'Công nghệ thông tin',
-    ),
-    MajorData(
-      id: 4,
-      code: 'KTPM',
-      name: 'Kỹ thuật phần mềm',
-      department: 'Công nghệ thông tin',
-    ),
-    MajorData(
-      id: 5,
-      code: 'ATTT',
-      name: 'An toàn thông tin',
-      department: 'Công nghệ thông tin',
-    ),
-    MajorData(
-      id: 6,
-      code: 'KTDK',
-      name: 'Kỹ thuật điện tử',
-      department: 'Điện - Điện tử',
-    ),
-    MajorData(
-      id: 7,
-      code: 'KTDT',
-      name: 'Kỹ thuật điện tử viễn thông',
-      department: 'Điện - Điện tử',
-    ),
-    MajorData(
-      id: 8,
-      code: 'CNXD',
-      name: 'Công nghệ xây dựng',
-      department: 'Xây dựng',
-    ),
-    MajorData(
-      id: 9,
-      code: 'KTCK',
-      name: 'Kỹ thuật cơ khí',
-      department: 'Cơ khí',
-    ),
-    MajorData(
-      id: 10,
-      code: 'QTKD',
-      name: 'Quản trị kinh doanh',
-      department: 'Kinh tế',
-    ),
-    MajorData(
-      id: 11,
-      code: 'TCNH',
-      name: 'Tài chính ngân hàng',
-      department: 'Kinh tế',
-    ),
-    MajorData(
-      id: 12,
-      code: 'KTKT',
-      name: 'Kế toán kiểm toán',
-      department: 'Kinh tế',
-    ),
-  ];
+  // API data for majors
+  List<Major> _majors = [];
+  bool _isLoading = false;
+  int _totalMajors = 0;
+  int _totalPages = 0;
+  String? _errorMessage;
+
+  // Cache for faculty names
+  final Map<int, String> _facultyCache = {};
 
   final Set<int> _selectedMajors = <int>{};
+
+  // Filter data
+  List<Map<String, dynamic>> _faculties = [];
+  Map<String, dynamic>? _selectedFaculty;
+  bool _isLoadingFilters = false;
 
   // Column configuration for majors table - simplified structure
   static const List<TableColumn> _majorColumns = [
@@ -126,16 +68,181 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
     ),
   ];
 
-  // Pagination getters and methods
-  int get totalPages => (_majors.length / _itemsPerPage).ceil();
+  @override
+  void initState() {
+    super.initState();
+    _loadMajors();
+    _loadFaculties();
+    _searchController.addListener(_onSearchChanged);
+  }
 
-  List<MajorData> get currentPageMajors {
-    final startIndex = (_currentPage - 1) * _itemsPerPage;
-    final endIndex = startIndex + _itemsPerPage;
-    return _majors.sublist(
-      startIndex,
-      endIndex > _majors.length ? _majors.length : endIndex,
-    );
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    // Debounce search
+    if (_searchController.text.length >= 3 || _searchController.text.isEmpty) {
+      setState(() {
+        _currentPage = 1; // Reset to first page when searching
+      });
+      _loadMajors();
+    }
+  }
+
+  Future<void> _loadMajors() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _apiService.getMajorsPaginated(
+        page: _currentPage,
+        limit: _itemsPerPage,
+        facultyId: _selectedFaculty?['id'],
+      );
+
+      if (result.success && result.data != null) {
+        // Parse majors first
+        final majors = result.data!.items.map((item) {
+          return Major.fromJson(item);
+        }).toList();
+
+        // Load faculty names for majors
+        await _loadFacultyNames(
+          result.data!.items.cast<Map<String, dynamic>>(),
+        );
+
+        setState(() {
+          _majors = majors;
+          _totalMajors = result.data!.total;
+          _totalPages = result.data!.totalPages;
+          _isLoading = false;
+          _selectedMajors.clear();
+        });
+      } else {
+        setState(() {
+          _majors = [];
+          _totalMajors = 0;
+          _totalPages = 0;
+          _isLoading = false;
+          _errorMessage = result.message;
+          _selectedMajors.clear();
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _majors = [];
+        _totalMajors = 0;
+        _totalPages = 0;
+        _isLoading = false;
+        _errorMessage = 'Đã xảy ra lỗi khi tải dữ liệu: ${e.toString()}';
+        _selectedMajors.clear();
+      });
+    }
+  }
+
+  Future<void> _loadFacultyNames(List<Map<String, dynamic>> majors) async {
+    // Get unique faculty IDs that we haven't cached yet
+    final facultyIds = majors
+        .map((major) => major['faculty_id'] as int?)
+        .where((id) => id != null && !_facultyCache.containsKey(id))
+        .cast<int>()
+        .toSet();
+
+    // Load faculty names concurrently
+    final futures = facultyIds.map((id) async {
+      try {
+        final result = await _apiService.getFaculty(id);
+        if (result.success && result.data != null) {
+          _facultyCache[id] =
+              result.data!['name'] ??
+              'Không rõ'; // API trả về 'name' không phải 'faculty_name'
+        }
+      } catch (e) {
+        _facultyCache[id] = 'Không rõ';
+      }
+    });
+
+    await Future.wait(futures);
+  }
+
+  Future<void> _loadFaculties() async {
+    setState(() {
+      _isLoadingFilters = true;
+    });
+
+    try {
+      final result = await _apiService.getFacultiesPaginated(limit: 100);
+      if (result.success && result.data != null) {
+        setState(() {
+          _faculties = result.data!.items.cast<Map<String, dynamic>>();
+          _isLoadingFilters = false;
+        });
+      } else {
+        setState(() {
+          _faculties = [];
+          _isLoadingFilters = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _faculties = [];
+        _isLoadingFilters = false;
+      });
+    }
+  }
+
+  String _getFacultyName(int? facultyId) {
+    if (facultyId == null) return 'Chưa phân khoa';
+    final cachedName = _facultyCache[facultyId];
+    if (cachedName != null) return cachedName;
+
+    // If not cached, start loading in background
+    _loadSingleFaculty(facultyId);
+    return 'Đang tải...';
+  }
+
+  Future<void> _loadSingleFaculty(int facultyId) async {
+    if (_facultyCache.containsKey(facultyId)) return;
+
+    try {
+      final result = await _apiService.getFaculty(facultyId);
+      if (result.success && result.data != null) {
+        setState(() {
+          _facultyCache[facultyId] =
+              result.data!['name'] ??
+              'Không rõ'; // API trả về 'name' không phải 'faculty_name'
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _facultyCache[facultyId] = 'Không rõ';
+      });
+    }
+  }
+
+  // Pagination getters and methods
+  int get totalPages => _totalPages;
+
+  // Since we're getting paginated data from API, just return current page data
+  List<Major> get currentPageMajors => _majors;
+
+  // Get current page as MajorData objects with sequential IDs
+  List<MajorData> get currentPageMajorData {
+    return _majors.asMap().entries.map((entry) {
+      final index = entry.key;
+      final major = entry.value;
+      return _majorToMajorDataWithUniqueId(
+        major,
+        index + 1, // Sequential ID for display (1, 2, 3...)
+        major.id, // Keep original API ID for operations
+      );
+    }).toList();
   }
 
   void _goToPreviousPage() {
@@ -143,6 +250,7 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
       setState(() {
         _currentPage--;
       });
+      _loadMajors();
     }
   }
 
@@ -151,6 +259,60 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
       setState(() {
         _currentPage++;
       });
+      _loadMajors();
+    }
+  }
+
+  // Convert Major model to MajorData with unique ID for UI
+  MajorData _majorToMajorDataWithUniqueId(
+    Major major,
+    int sequentialId,
+    int uniqueId,
+  ) {
+    return MajorData(
+      id: sequentialId,
+      code: major.majorCode,
+      name: major.majorName,
+      department: _getFacultyName(major.facultyId),
+      apiId: uniqueId,
+      facultyId: major.facultyId,
+    );
+  }
+
+  Future<void> _handleDeleteSelectedMajors() async {
+    try {
+      // Get API IDs from selected major data
+      final selectedApiIds = currentPageMajorData
+          .where((major) => _selectedMajors.contains(major.id))
+          .map((major) => major.apiId)
+          .toList();
+
+      // Delete each selected major
+      for (final apiId in selectedApiIds) {
+        await _apiService.deleteMajorById(apiId);
+      }
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Đã xóa ${selectedApiIds.length} ngành thành công'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      // Reload the data
+      await _loadMajors();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi khi xóa ngành: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -163,9 +325,10 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
           title: const Text(
             'Xác nhận xóa',
             style: TextStyle(
-              fontFamily: 'Nunito Sans',
-              fontWeight: FontWeight.w700,
-              fontSize: 18,
+              fontFamily: 'Inter',
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              height: 1.25,
               color: Color(0xFF1F2937),
             ),
           ),
@@ -174,6 +337,8 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
             style: const TextStyle(
               fontFamily: 'Inter',
               fontSize: 14,
+              fontWeight: FontWeight.w400,
+              height: 1.43,
               color: Color(0xFF6B7280),
             ),
           ),
@@ -182,35 +347,34 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF6B7280),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+              ),
               child: const Text(
                 'Hủy',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF6B7280),
                 ),
               ),
             ),
             ElevatedButton(
               onPressed: () {
-                // Handle delete action
-                setState(() {
-                  _majors.removeWhere(
-                    (major) => _selectedMajors.contains(major.id),
-                  );
-                  _selectedMajors.clear();
-                  // Reset to first page if current page is empty
-                  if (currentPageMajors.isEmpty && _currentPage > 1) {
-                    _currentPage = 1;
-                  }
-                });
                 Navigator.of(context).pop();
+                _handleDeleteSelectedMajors();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFEF4444),
                 foregroundColor: Colors.white,
-                elevation: 0,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -227,6 +391,77 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildFacultyDropdown() {
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: const Color(0xFF687182).withValues(alpha: 0.16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF687182).withValues(alpha: 0.08),
+            blurRadius: 1,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<Map<String, dynamic>?>(
+          value: _selectedFaculty,
+          hint: const Text(
+            'Tất cả khoa',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              height: 1.43,
+              color: Color(0xFF717680),
+            ),
+          ),
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            size: 16,
+            color: Color(0xFF717680),
+          ),
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            height: 1.43,
+            color: Color(0xFF717680),
+          ),
+          items: [
+            const DropdownMenuItem<Map<String, dynamic>?>(
+              value: null,
+              child: Text('Tất cả khoa'),
+            ),
+            ..._faculties.map((faculty) {
+              return DropdownMenuItem<Map<String, dynamic>?>(
+                value: faculty,
+                child: Text(
+                  faculty['name'] ?? 'Không rõ',
+                ), // API trả về 'name' không phải 'faculty_name'
+              );
+            }),
+          ],
+          onChanged: _isLoadingFilters
+              ? null
+              : (Map<String, dynamic>? newValue) {
+                  setState(() {
+                    _selectedFaculty = newValue;
+                    _currentPage = 1; // Reset to first page when filtering
+                  });
+                  _loadMajors();
+                },
+        ),
+      ),
     );
   }
 
@@ -304,20 +539,23 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                               ),
                               const SizedBox(width: 16),
 
-                              // Filter button
-                              _buildFilterButton('Lọc theo khoa'),
+                              // Faculty filter dropdown
+                              _buildFacultyDropdown(),
                               const Spacer(),
 
                               // Add major button
                               SizedBox(
                                 height: 32,
                                 child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
+                                  onPressed: () async {
+                                    final result = await showDialog<bool>(
                                       context: context,
                                       builder: (context) =>
                                           const AddMajorModal(),
                                     );
+                                    if (result == true) {
+                                      _loadMajors(); // Refresh list on success
+                                    }
                                   },
                                   icon: const Icon(Icons.add, size: 12),
                                   label: const Text(
@@ -411,28 +649,59 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
 
                         // Table rows - using Flexible to prevent overflow
                         Flexible(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                // Table rows
-                                ...List.generate(_itemsPerPage, (index) {
-                                  if (index < currentPageMajors.length) {
-                                    final major = currentPageMajors[index];
-                                    final isEven = index % 2 == 0;
-                                    return _buildTableRow(major, isEven);
-                                  } else {
-                                    // Empty row to maintain consistent height
-                                    return Container(
-                                      height: 64,
-                                      color: index % 2 == 0
-                                          ? Colors.white
-                                          : const Color(0xFFF9FAFC),
-                                    );
-                                  }
-                                }),
-                              ],
-                            ),
-                          ),
+                          child: _isLoading
+                              ? const Center(child: CircularProgressIndicator())
+                              : _errorMessage != null
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.error_outline,
+                                        size: 48,
+                                        color: Colors.red[300],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        _errorMessage!,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      ElevatedButton(
+                                        onPressed: _loadMajors,
+                                        child: const Text('Thử lại'),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : SingleChildScrollView(
+                                  child: Column(
+                                    children: [
+                                      // Table rows
+                                      ...List.generate(_itemsPerPage, (index) {
+                                        if (index <
+                                            currentPageMajorData.length) {
+                                          final major =
+                                              currentPageMajorData[index];
+                                          final isEven = index % 2 == 0;
+                                          return _buildTableRow(major, isEven);
+                                        } else {
+                                          // Empty row to maintain consistent height
+                                          return Container(
+                                            height: 64,
+                                            color: index % 2 == 0
+                                                ? Colors.white
+                                                : const Color(0xFFF9FAFC),
+                                          );
+                                        }
+                                      }),
+                                    ],
+                                  ),
+                                ),
                         ),
                       ],
                     ),
@@ -452,7 +721,7 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
                       children: [
                         // Show results info
                         Text(
-                          '${(_currentPage - 1) * _itemsPerPage + 1}-${_currentPage * _itemsPerPage > _majors.length ? _majors.length : _currentPage * _itemsPerPage} of ${_majors.length}',
+                          '${(_currentPage - 1) * _itemsPerPage + 1}-${_currentPage * _itemsPerPage > _totalMajors ? _totalMajors : _currentPage * _itemsPerPage} of $_totalMajors',
                           style: const TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
@@ -572,47 +841,6 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
     );
   }
 
-  Widget _buildFilterButton(String text) {
-    return Container(
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: const Color(0xFF687182).withValues(alpha: 0.16),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 2,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            text,
-            style: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              color: Color(0xFFA1A9B8),
-            ),
-          ),
-          const SizedBox(width: 8),
-          const Icon(
-            Icons.keyboard_arrow_down,
-            size: 16,
-            color: Color(0xFF717680),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTableHeader() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -625,18 +853,18 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
               SizedBox(
                 width: 32,
                 child: Checkbox(
-                  value: currentPageMajors.every(
+                  value: currentPageMajorData.every(
                     (major) => _selectedMajors.contains(major.id),
                   ),
                   onChanged: (bool? value) {
                     setState(() {
                       if (value == true) {
                         _selectedMajors.addAll(
-                          currentPageMajors.map((m) => m.id),
+                          currentPageMajorData.map((m) => m.id),
                         );
                       } else {
                         _selectedMajors.removeAll(
-                          currentPageMajors.map((m) => m.id),
+                          currentPageMajorData.map((m) => m.id),
                         );
                       }
                     });
@@ -783,14 +1011,40 @@ class _MajorsManagementViewState extends State<MajorsManagementView> {
           }
         });
       },
-      onEdit: () {
-        showDialog(
+      onEdit: () async {
+        final result = await showDialog<bool>(
           context: context,
-          builder: (context) => EditMajorModal(major: major),
+          builder: (context) => EditMajorModal(
+            majorId: major.apiId,
+            onUpdate: () => _loadMajors(),
+          ),
         );
+        if (result == true) {
+          _loadMajors(); // Refresh list on success
+        }
       },
-      onDelete: () {
-        // TODO: handle delete
+      onDelete: () async {
+        try {
+          await _apiService.deleteMajorById(major.apiId);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Xóa ngành thành công'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+          _loadMajors();
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Có lỗi xảy ra khi xóa: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
       },
     );
   }
@@ -805,6 +1059,9 @@ class MajorData implements MajorTableRowData {
   final String name;
   @override
   final String department;
+
+  final int apiId; // Store original API ID for operations
+  final int? facultyId;
 
   // Required fields from TableRowData interface (not used for majors)
   @override
@@ -821,5 +1078,7 @@ class MajorData implements MajorTableRowData {
     required this.code,
     required this.name,
     required this.department,
+    required this.apiId,
+    this.facultyId,
   });
 }

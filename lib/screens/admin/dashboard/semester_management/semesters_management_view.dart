@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
+import 'package:android_app/widgets/common/confirmation_dialog.dart';
 import 'package:android_app/screens/admin/dashboard/semester_management/add_semester_modal.dart';
 import 'package:android_app/screens/admin/dashboard/semester_management/edit_semester_modal.dart';
 import 'package:android_app/services/api_service.dart';
@@ -21,18 +22,6 @@ class _SemestersManagementViewState extends State<SemestersManagementView> {
   // Pagination variables
   int _currentPage = 1;
   final int _itemsPerPage = 10;
-
-  // Academic years list (should come from a service in production)
-  final List<String> _academicYears = [
-    '2024-2025',
-    '2023-2024',
-    '2022-2023',
-    '2021-2022',
-    '2020-2021',
-    '2019-2020',
-    '2018-2019',
-    '2017-2018',
-  ];
 
   // API-backed data for semesters
   List<SemesterData> _semesters = [];
@@ -106,76 +95,43 @@ class _SemestersManagementViewState extends State<SemestersManagementView> {
     }
   }
 
-  void _showDeleteConfirmationDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          title: const Text(
-            'Xác nhận xóa',
-            style: TextStyle(
-              fontFamily: 'Nunito Sans',
-              fontWeight: FontWeight.w700,
-              fontSize: 18,
-              color: Color(0xFF1F2937),
-            ),
-          ),
-          content: Text(
-            'Bạn có chắc chắn muốn xóa ${_selectedSemesters.length} học kì đã chọn? Hành động này không thể hoàn tác.',
-            style: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14,
-              color: Color(0xFF6B7280),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text(
-                'Hủy',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await _handleBulkDelete();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              child: const Text(
-                'Xóa',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+  Future<void> _showDeleteConfirmationDialog() async {
+    final result = await ConfirmationDialog.show(
+      context,
+      title: 'Xác nhận xóa',
+      message:
+          'Bạn có chắc chắn muốn xóa ${_selectedSemesters.length} học kì đã chọn? Hành động này không thể hoàn tác.',
+      confirmText: 'Xóa',
+      cancelText: 'Hủy',
     );
+
+    if (result == true) {
+      await _handleBulkDelete();
+    }
   }
 
   @override
   void initState() {
     super.initState();
     _loadSemesters();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    // Debounce search
+    if (_searchController.text.length >= 3 || _searchController.text.isEmpty) {
+      setState(() {
+        _currentPage = 1; // Reset to first page when searching
+      });
+      _loadSemesters();
+    }
   }
 
   Future<void> _loadSemesters() async {
@@ -187,6 +143,7 @@ class _SemestersManagementViewState extends State<SemestersManagementView> {
     final result = await _apiService.getSemestersPaginated(
       page: _currentPage,
       limit: _itemsPerPage,
+      search: _searchController.text.isNotEmpty ? _searchController.text : null,
     );
 
     if (!mounted) return;
@@ -321,7 +278,7 @@ class _SemestersManagementViewState extends State<SemestersManagementView> {
         _loadSemesters();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Đã xóa học kì đã chọn'),
+            content: Text('Đã xóa học kì được chọn'),
             backgroundColor: Colors.green,
           ),
         );
@@ -419,9 +376,8 @@ class _SemestersManagementViewState extends State<SemestersManagementView> {
                                   onPressed: () async {
                                     final result = await showDialog(
                                       context: context,
-                                      builder: (context) => AddSemesterModal(
-                                        academicYears: _academicYears,
-                                      ),
+                                      builder: (context) =>
+                                          const AddSemesterModal(),
                                     );
                                     if (result == true) {
                                       _currentPage = 1;
@@ -893,14 +849,14 @@ class _SemestersManagementViewState extends State<SemestersManagementView> {
           }
         });
       },
-      onEdit: () {
-        showDialog(
+      onEdit: () async {
+        final result = await showDialog(
           context: context,
-          builder: (context) => EditSemesterModal(
-            semester: semester,
-            academicYears: _academicYears,
-          ),
+          builder: (context) => EditSemesterModal(semester: semester),
         );
+        if (result == true) {
+          _loadSemesters();
+        }
       },
       onDelete: () async {
         try {

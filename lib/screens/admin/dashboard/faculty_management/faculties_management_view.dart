@@ -1,9 +1,12 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:android_app/utils/constants/app_theme.dart';
 import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
 import 'package:android_app/screens/admin/dashboard/faculty_management/add_faculty_modal.dart';
 import 'package:android_app/screens/admin/dashboard/faculty_management/edit_faculty_modal.dart';
+import 'package:android_app/services/api_service.dart';
 
 class FacultiesManagementView extends StatefulWidget {
   const FacultiesManagementView({super.key});
@@ -15,26 +18,18 @@ class FacultiesManagementView extends StatefulWidget {
 
 class _FacultiesManagementViewState extends State<FacultiesManagementView> {
   final TextEditingController _searchController = TextEditingController();
+  final ApiService _apiService = ApiService();
 
   // Pagination variables
   int _currentPage = 1;
   final int _itemsPerPage = 10;
 
-  // Sample data for faculties
-  final List<FacultyData> _faculties = [
-    FacultyData(id: 1, code: 'CNTT', name: 'Công nghệ thông tin'),
-    FacultyData(id: 2, code: 'KTDN', name: 'Kinh tế doanh nghiệp'),
-    FacultyData(id: 3, code: 'NN', name: 'Ngoại ngữ'),
-    FacultyData(id: 4, code: 'KT', name: 'Kế toán'),
-    FacultyData(id: 5, code: 'QTKD', name: 'Quản trị kinh doanh'),
-    FacultyData(id: 6, code: 'DL', name: 'Du lịch'),
-    FacultyData(id: 7, code: 'TCNH', name: 'Tài chính ngân hàng'),
-    FacultyData(id: 8, code: 'TMQT', name: 'Thương mại quốc tế'),
-    FacultyData(id: 9, code: 'LTQT', name: 'Luật quốc tế'),
-    FacultyData(id: 10, code: 'KHMT', name: 'Khoa học máy tính'),
-    FacultyData(id: 11, code: 'HTTT', name: 'Hệ thống thông tin'),
-    FacultyData(id: 12, code: 'ATTT', name: 'An toàn thông tin'),
-  ];
+  // API data for faculties
+  List<FacultyData> _faculties = [];
+  bool _isLoading = false;
+  int _totalFaculties = 0;
+  int _totalPages = 0;
+  String? _errorMessage;
 
   final Set<int> _selectedFaculties = <int>{};
 
@@ -62,23 +57,86 @@ class _FacultiesManagementViewState extends State<FacultiesManagementView> {
     ),
   ];
 
-  // Pagination getters and methods
-  int get totalPages => (_faculties.length / _itemsPerPage).ceil();
-
-  List<FacultyData> get currentPageFaculties {
-    final startIndex = (_currentPage - 1) * _itemsPerPage;
-    final endIndex = startIndex + _itemsPerPage;
-    return _faculties.sublist(
-      startIndex,
-      endIndex > _faculties.length ? _faculties.length : endIndex,
-    );
+  @override
+  void initState() {
+    super.initState();
+    _loadFaculties();
+    _searchController.addListener(_onSearchChanged);
   }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    // Debounce search
+    if (_searchController.text.length >= 3 || _searchController.text.isEmpty) {
+      _currentPage = 1; // Reset to first page when searching
+      _loadFaculties();
+    }
+  }
+
+  Future<void> _loadFaculties() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _apiService.getFacultiesPaginated(
+        page: _currentPage,
+        limit: _itemsPerPage,
+      );
+
+      if (result.success && result.data != null) {
+        final facultiesData = result.data!.items.asMap().entries.map((entry) {
+          final index = entry.key;
+          final item = entry.value;
+          final sequentialNumber =
+              (_currentPage - 1) * _itemsPerPage + (index + 1);
+          return FacultyData(
+            id: sequentialNumber, // Use sequential number for display
+            code: item['code'] ?? '',
+            name: item['name'] ?? '',
+            apiId: item['id'], // Store API ID for operations
+          );
+        }).toList();
+
+        setState(() {
+          _faculties = facultiesData;
+          _totalFaculties = result.data!.total;
+          _totalPages = result.data!.totalPages;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = result.message;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Có lỗi xảy ra: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Pagination getters and methods
+  int get totalPages => _totalPages;
+
+  // Since we're getting paginated data from API, just return current page data
+  List<FacultyData> get currentPageFaculties => _faculties;
 
   void _goToPreviousPage() {
     if (_currentPage > 1) {
       setState(() {
         _currentPage--;
       });
+      _loadFaculties();
     }
   }
 
@@ -86,6 +144,56 @@ class _FacultiesManagementViewState extends State<FacultiesManagementView> {
     if (_currentPage < totalPages) {
       setState(() {
         _currentPage++;
+      });
+      _loadFaculties();
+    }
+  }
+
+  Future<void> _handleDeleteSelectedFaculties() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Delete each selected faculty
+      final futures = _selectedFaculties.map((facultyId) async {
+        return await _apiService.deleteFacultyById(facultyId);
+      });
+
+      final results = await Future.wait(futures);
+
+      // Check if all deletions were successful
+      final failed = results.where((result) => !result.success).toList();
+
+      if (failed.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Đã xóa thành công ${_selectedFaculties.length} khoa',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _selectedFaculties.clear();
+        _loadFaculties(); // Refresh the list
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Có lỗi xảy ra khi xóa: ${failed.first.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Có lỗi xảy ra: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
       });
     }
   }
@@ -130,18 +238,8 @@ class _FacultiesManagementViewState extends State<FacultiesManagementView> {
             ),
             ElevatedButton(
               onPressed: () {
-                // Handle delete action
-                setState(() {
-                  _faculties.removeWhere(
-                    (faculty) => _selectedFaculties.contains(faculty.id),
-                  );
-                  _selectedFaculties.clear();
-                  // Reset to first page if current page is empty
-                  if (currentPageFaculties.isEmpty && _currentPage > 1) {
-                    _currentPage = 1;
-                  }
-                });
                 Navigator.of(context).pop();
+                _handleDeleteSelectedFaculties();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFEF4444),
@@ -235,7 +333,10 @@ class _FacultiesManagementViewState extends State<FacultiesManagementView> {
                                     context: context,
                                     builder: (context) =>
                                         const AddFacultyModal(),
-                                  );
+                                  ).then((_) {
+                                    // Refresh data when modal is closed
+                                    _loadFaculties();
+                                  });
                                 },
                                 icon: const Icon(Icons.add, size: 20),
                                 label: const Text('Thêm khoa'),
@@ -297,13 +398,48 @@ class _FacultiesManagementViewState extends State<FacultiesManagementView> {
                       children: [
                         _buildTableHeader(),
                         Expanded(
-                          child: ListView.builder(
-                            itemCount: currentPageFaculties.length,
-                            itemBuilder: (context, index) {
-                              final faculty = currentPageFaculties[index];
-                              return _buildTableRow(faculty, index % 2 == 0);
-                            },
-                          ),
+                          child: _isLoading
+                              ? const Center(child: CircularProgressIndicator())
+                              : _errorMessage != null
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        _errorMessage!,
+                                        style: const TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      ElevatedButton(
+                                        onPressed: _loadFaculties,
+                                        child: const Text('Thử lại'),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : currentPageFaculties.isEmpty
+                              ? const Center(
+                                  child: Text(
+                                    'Không có dữ liệu',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  itemCount: currentPageFaculties.length,
+                                  itemBuilder: (context, index) {
+                                    final faculty = currentPageFaculties[index];
+                                    return _buildTableRow(
+                                      faculty,
+                                      index % 2 == 0,
+                                    );
+                                  },
+                                ),
                         ),
                       ],
                     ),
@@ -323,7 +459,7 @@ class _FacultiesManagementViewState extends State<FacultiesManagementView> {
                       children: [
                         // Items per page info
                         Text(
-                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage * _itemsPerPage) > _faculties.length ? _faculties.length : (_currentPage * _itemsPerPage)} of ${_faculties.length}',
+                          '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage * _itemsPerPage) > _totalFaculties ? _totalFaculties : (_currentPage * _itemsPerPage)} of $_totalFaculties',
                           style: const TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
@@ -509,7 +645,7 @@ class _FacultiesManagementViewState extends State<FacultiesManagementView> {
   }
 
   Widget _buildTableRow(FacultyData faculty, bool isEven) {
-    final isSelected = _selectedFaculties.contains(faculty.id);
+    final isSelected = _selectedFaculties.contains(faculty.apiId);
 
     return DataTableRow<FacultyData>(
       data: faculty,
@@ -519,9 +655,9 @@ class _FacultiesManagementViewState extends State<FacultiesManagementView> {
       onSelectionChanged: () {
         setState(() {
           if (isSelected) {
-            _selectedFaculties.remove(faculty.id);
+            _selectedFaculties.remove(faculty.apiId);
           } else {
-            _selectedFaculties.add(faculty.id);
+            _selectedFaculties.add(faculty.apiId);
           }
         });
       },
@@ -529,10 +665,38 @@ class _FacultiesManagementViewState extends State<FacultiesManagementView> {
         showDialog(
           context: context,
           builder: (context) => EditFacultyModal(faculty: faculty),
-        );
+        ).then((_) {
+          // Refresh data when modal is closed
+          _loadFaculties();
+        });
       },
-      onDelete: () {
-        // TODO: handle delete
+      onDelete: () async {
+        try {
+          final result = await _apiService.deleteFacultyById(faculty.apiId);
+          if (result.success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Xóa khoa thành công'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            _loadFaculties(); // Refresh the list
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Có lỗi xảy ra: ${result.message}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Có lỗi xảy ra: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       },
     );
   }
@@ -545,6 +709,7 @@ class FacultyData implements FacultyTableRowData {
   final String code;
   @override
   final String name;
+  final int apiId; // Store original API ID for operations
 
   // Required fields from TableRowData interface (not used for faculties)
   @override
@@ -554,5 +719,10 @@ class FacultyData implements FacultyTableRowData {
   @override
   String get birthDate => '';
 
-  FacultyData({required this.id, required this.code, required this.name});
+  FacultyData({
+    required this.id,
+    required this.code,
+    required this.name,
+    required this.apiId,
+  });
 }

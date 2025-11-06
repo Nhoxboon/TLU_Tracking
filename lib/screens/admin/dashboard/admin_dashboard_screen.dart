@@ -18,6 +18,7 @@ import 'package:android_app/screens/admin/dashboard/faculty_management/faculties
 import 'package:android_app/screens/admin/dashboard/department_management/departments_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/change_password_view.dart';
 import '../../../services/user_session.dart';
+import '../../../services/api_service.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -27,12 +28,86 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  String get adminName => UserSession().adminData?.fullName ?? UserSession().username ?? "Admin";
+  String get adminName =>
+      UserSession().adminData?.fullName ?? UserSession().username ?? "Admin";
   DashboardTab _currentTab = DashboardTab.dashboard;
+  DashboardTab? _previousTab;
+
+  // Dashboard counts
+  int _totalTeachers = 0;
+  int _totalStudents = 0;
+  int _totalClasses = 0;
+  int _totalSubjects = 0;
+  int _totalMajors = 0;
+  int _totalCohorts = 0;
+  int _totalDepartments = 0;
+  int _totalFaculties = 0;
+  int _totalAcademicYears = 0;
+  bool _isLoadingCounts = true;
+
+  final ApiService _apiService = ApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardCounts();
+  }
+
+  Future<void> _loadDashboardCounts() async {
+    setState(() {
+      _isLoadingCounts = true;
+    });
+
+    try {
+      // Fetch all data in parallel to get total counts
+      final futures = await Future.wait([
+        _apiService.getTeachersPaginated(
+          limit: 1,
+        ), // We only need the total count
+        _apiService.getStudentsPaginated(limit: 1),
+        _apiService.getClassesPaginated(limit: 1),
+        _apiService.getSubjectsPaginated(limit: 1),
+        _apiService.getMajorsPaginated(limit: 1),
+        _apiService.getCohortsPaginated(limit: 1),
+        _apiService.getDepartmentsPaginated(limit: 1),
+        _apiService.getFacultiesPaginated(limit: 1),
+        _apiService.getAcademicYearsPaginated(limit: 1),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _totalTeachers = futures[0].success ? futures[0].data!.total : 0;
+          _totalStudents = futures[1].success ? futures[1].data!.total : 0;
+          _totalClasses = futures[2].success ? futures[2].data!.total : 0;
+          _totalSubjects = futures[3].success ? futures[3].data!.total : 0;
+          _totalMajors = futures[4].success ? futures[4].data!.total : 0;
+          _totalCohorts = futures[5].success ? futures[5].data!.total : 0;
+          _totalDepartments = futures[6].success ? futures[6].data!.total : 0;
+          _totalFaculties = futures[7].success ? futures[7].data!.total : 0;
+          _totalAcademicYears = futures[8].success ? futures[8].data!.total : 0;
+          _isLoadingCounts = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingCounts = false;
+        });
+      }
+    }
+  }
 
   Widget _buildMainContent() {
     switch (_currentTab) {
       case DashboardTab.dashboard:
+        // Refresh data when returning to dashboard from another tab
+        if (_previousTab != null && _previousTab != DashboardTab.dashboard) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!_isLoadingCounts) {
+              _loadDashboardCounts();
+            }
+          });
+        }
         return _buildDashboardContent();
       case DashboardTab.teachers:
         return const TeachersManagementView();
@@ -87,7 +162,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               // Card for total teachers
               DashboardCard(
                 title: 'Tổng giảng viên',
-                value: '40',
+                value: _isLoadingCounts ? '...' : '$_totalTeachers',
                 iconColor: AppColors.purple,
                 iconType: DashboardIconType.user,
               ),
@@ -96,7 +171,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               // Card for total students
               DashboardCard(
                 title: 'Tổng sinh viên',
-                value: '40',
+                value: _isLoadingCounts ? '...' : '$_totalStudents',
                 iconColor: const Color(0xFFFF8082),
                 iconType: DashboardIconType.users,
               ),
@@ -105,7 +180,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               // Card for total classes
               DashboardCard(
                 title: 'Tổng lớp học',
-                value: '100',
+                value: _isLoadingCounts ? '...' : '$_totalClasses',
                 iconColor: const Color(0xFFFEC53D),
                 iconType: DashboardIconType.server,
               ),
@@ -119,7 +194,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               // Card for total subjects
               DashboardCard(
                 title: 'Tổng môn học',
-                value: '40',
+                value: _isLoadingCounts ? '...' : '$_totalSubjects',
                 iconColor: const Color(0xFF8B0507),
                 iconType: DashboardIconType.book,
               ),
@@ -128,7 +203,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               // Card for total majors
               DashboardCard(
                 title: 'Tổng ngành',
-                value: '40',
+                value: _isLoadingCounts ? '...' : '$_totalMajors',
                 iconColor: const Color(0xFF80A4FF),
                 iconType: DashboardIconType.briefcase,
               ),
@@ -137,7 +212,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               // Card for total courses/years
               DashboardCard(
                 title: 'Tổng khóa',
-                value: '40',
+                value: _isLoadingCounts ? '...' : '$_totalCohorts',
                 iconColor: const Color(0xFFFFC280),
                 iconType: DashboardIconType.award,
               ),
@@ -151,7 +226,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               // Card for total departments
               DashboardCard(
                 title: 'Tổng bộ môn',
-                value: '40',
+                value: _isLoadingCounts ? '...' : '$_totalDepartments',
                 iconColor: const Color(0xFF4CAF50),
                 iconType: DashboardIconType.department,
               ),
@@ -160,7 +235,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               // Card for total faculties
               DashboardCard(
                 title: 'Tổng khoa',
-                value: '40',
+                value: _isLoadingCounts ? '...' : '$_totalFaculties',
                 iconColor: const Color(0xFF9C27B0),
                 iconType: DashboardIconType.faculty,
               ),
@@ -169,7 +244,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               // Card for total academic years
               DashboardCard(
                 title: 'Tổng năm học',
-                value: '40',
+                value: _isLoadingCounts ? '...' : '$_totalAcademicYears',
                 iconColor: const Color(0xFF00BCD4),
                 iconType: DashboardIconType.calendar,
               ),
@@ -223,6 +298,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   isActive: _currentTab == DashboardTab.dashboard,
                   onTap: () {
                     setState(() {
+                      _previousTab = _currentTab;
                       _currentTab = DashboardTab.dashboard;
                     });
                   },
@@ -232,6 +308,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   isActive: _currentTab == DashboardTab.teachers,
                   onTap: () {
                     setState(() {
+                      _previousTab = _currentTab;
                       _currentTab = DashboardTab.teachers;
                     });
                   },
@@ -241,6 +318,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   isActive: _currentTab == DashboardTab.students,
                   onTap: () {
                     setState(() {
+                      _previousTab = _currentTab;
                       _currentTab = DashboardTab.students;
                     });
                   },
@@ -250,6 +328,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   isActive: _currentTab == DashboardTab.classes,
                   onTap: () {
                     setState(() {
+                      _previousTab = _currentTab;
                       _currentTab = DashboardTab.classes;
                     });
                   },
@@ -259,6 +338,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   isActive: _currentTab == DashboardTab.subjects,
                   onTap: () {
                     setState(() {
+                      _previousTab = _currentTab;
                       _currentTab = DashboardTab.subjects;
                     });
                   },
@@ -268,6 +348,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   isActive: _currentTab == DashboardTab.majors,
                   onTap: () {
                     setState(() {
+                      _previousTab = _currentTab;
                       _currentTab = DashboardTab.majors;
                     });
                   },
@@ -277,6 +358,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   isActive: _currentTab == DashboardTab.cohorts,
                   onTap: () {
                     setState(() {
+                      _previousTab = _currentTab;
                       _currentTab = DashboardTab.cohorts;
                     });
                   },
@@ -286,6 +368,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   isActive: _currentTab == DashboardTab.departments,
                   onTap: () {
                     setState(() {
+                      _previousTab = _currentTab;
                       _currentTab = DashboardTab.departments;
                     });
                   },
@@ -295,6 +378,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   isActive: _currentTab == DashboardTab.faculties,
                   onTap: () {
                     setState(() {
+                      _previousTab = _currentTab;
                       _currentTab = DashboardTab.faculties;
                     });
                   },
@@ -304,6 +388,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   isActive: _currentTab == DashboardTab.learningPeriods,
                   onTap: () {
                     setState(() {
+                      _previousTab = _currentTab;
                       _currentTab = DashboardTab.learningPeriods;
                     });
                   },
@@ -313,6 +398,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   isActive: _currentTab == DashboardTab.semesters,
                   onTap: () {
                     setState(() {
+                      _previousTab = _currentTab;
                       _currentTab = DashboardTab.semesters;
                     });
                   },
@@ -322,6 +408,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   isActive: _currentTab == DashboardTab.academicYears,
                   onTap: () {
                     setState(() {
+                      _previousTab = _currentTab;
                       _currentTab = DashboardTab.academicYears;
                     });
                   },
@@ -355,6 +442,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         adminName: adminName,
                         onTabChange: (tab) {
                           setState(() {
+                            _previousTab = _currentTab;
                             _currentTab = tab;
                           });
                         },

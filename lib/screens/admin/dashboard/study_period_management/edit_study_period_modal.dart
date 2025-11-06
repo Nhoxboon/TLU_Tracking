@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:android_app/screens/admin/dashboard/study_period_management/study_periods_management_view.dart';
 import 'package:intl/intl.dart';
@@ -5,7 +7,7 @@ import 'package:android_app/services/api_service.dart';
 
 class EditStudyPeriodModal extends StatefulWidget {
   final StudyPeriodData studyPeriod;
-  final List<String>? academicYears;
+  final List<Map<String, dynamic>>? academicYears;
 
   const EditStudyPeriodModal({
     super.key,
@@ -27,15 +29,17 @@ class _EditStudyPeriodModalState extends State<EditStudyPeriodModal> {
   late TextEditingController _startDateController;
   late TextEditingController _endDateController;
 
-  final List<String> _semesters = ['1', '2'];
+  List<Map<String, dynamic>> _semesters = [];
+  List<Map<String, dynamic>> _filteredSemesters = [];
   final List<String> _periods = ['1', '2'];
   final ApiService _apiService = ApiService();
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _selectedAcademicYear = widget.studyPeriod.academicYear;
-    _selectedSemester = widget.studyPeriod.semester;
+    _selectedSemester = widget.studyPeriod.semesterId?.toString();
     _selectedPeriod = widget.studyPeriod.period;
     _startDate = widget.studyPeriod.startDate;
     _endDate = widget.studyPeriod.endDate;
@@ -46,22 +50,21 @@ class _EditStudyPeriodModalState extends State<EditStudyPeriodModal> {
       text: DateFormat('dd/MM/yyyy').format(widget.studyPeriod.endDate),
     );
 
-    // Ensure dropdowns contain the current values to avoid assertion errors
-    if (_selectedSemester != null &&
-        _selectedSemester!.isNotEmpty &&
-        !_semesters.contains(_selectedSemester)) {
-      _semesters.add(_selectedSemester!);
-    }
+    // Load semesters from API
+    _loadSemesters();
     if (_selectedPeriod != null &&
         _selectedPeriod!.isNotEmpty &&
         !_periods.contains(_selectedPeriod)) {
       _periods.add(_selectedPeriod!);
     }
-    // If academic year is not in provided list, clear selection to avoid mismatch
-    if (_selectedAcademicYear != null &&
-        widget.academicYears != null &&
-        !widget.academicYears!.contains(_selectedAcademicYear)) {
-      _selectedAcademicYear = null;
+    // Find academic year in list by name and set selected value
+    if (_selectedAcademicYear != null && widget.academicYears != null) {
+      final matchingAcademicYear = widget.academicYears!
+          .where((ay) => ay['name'] == _selectedAcademicYear)
+          .firstOrNull;
+      if (matchingAcademicYear == null) {
+        _selectedAcademicYear = null;
+      }
     }
   }
 
@@ -70,6 +73,67 @@ class _EditStudyPeriodModalState extends State<EditStudyPeriodModal> {
     _startDateController.dispose();
     _endDateController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSemesters() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final result = await _apiService.getSemestersPaginated(limit: 100);
+      if (result.success && result.data != null) {
+        setState(() {
+          _semesters = result.data!.items;
+          _filteredSemesters =
+              result.data!.items; // Initialize filtered semesters
+          _isLoading = false;
+        });
+        _filterSemesters();
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _filterSemesters() {
+    if (_selectedAcademicYear == null || widget.academicYears == null) {
+      _filteredSemesters = _semesters;
+      return;
+    }
+
+    // Find selected academic year ID
+    final academicYear = widget.academicYears!.firstWhere(
+      (ay) => ay['name'] == _selectedAcademicYear,
+      orElse: () => <String, dynamic>{},
+    );
+    final academicYearId = academicYear['id'] as int?;
+
+    if (academicYearId == null) {
+      _filteredSemesters = _semesters;
+      return;
+    }
+
+    // Filter semesters by academic year ID
+    _filteredSemesters = _semesters
+        .where((semester) => semester['academic_year_id'] == academicYearId)
+        .toList();
+
+    // Reset semester selection if current selection is not in filtered list
+    if (_selectedSemester != null) {
+      final currentSemesterExists = _filteredSemesters.any(
+        (semester) => semester['id'].toString() == _selectedSemester,
+      );
+      if (!currentSemesterExists) {
+        _selectedSemester = null;
+      }
+    }
   }
 
   Future<void> _selectStartDate(BuildContext context) async {
@@ -184,11 +248,17 @@ class _EditStudyPeriodModalState extends State<EditStudyPeriodModal> {
                                     ),
                                   ),
                                 ),
-                                items: _semesters.map((String semester) {
+                                items: _filteredSemesters.map((
+                                  Map<String, dynamic> semester,
+                                ) {
+                                  final id = semester['id'].toString();
+                                  final name =
+                                      semester['name'] as String? ??
+                                      'Học kì $id';
                                   return DropdownMenuItem<String>(
-                                    value: semester,
+                                    value: id,
                                     child: Text(
-                                      semester,
+                                      name,
                                       style: const TextStyle(
                                         fontFamily: 'Inter',
                                         fontSize: 16,
@@ -249,12 +319,14 @@ class _EditStudyPeriodModalState extends State<EditStudyPeriodModal> {
                                   ),
                                 ),
                                 items: (widget.academicYears ?? []).map((
-                                  String year,
+                                  Map<String, dynamic> academicYear,
                                 ) {
+                                  final name =
+                                      academicYear['name'] as String? ?? '';
                                   return DropdownMenuItem<String>(
-                                    value: year,
+                                    value: name,
                                     child: Text(
-                                      year,
+                                      name,
                                       style: const TextStyle(
                                         fontFamily: 'Inter',
                                         fontSize: 16,
@@ -265,6 +337,7 @@ class _EditStudyPeriodModalState extends State<EditStudyPeriodModal> {
                                 onChanged: (String? newValue) {
                                   setState(() {
                                     _selectedAcademicYear = newValue;
+                                    _filterSemesters();
                                   });
                                 },
                                 validator: (value) {
@@ -494,65 +567,90 @@ class _EditStudyPeriodModalState extends State<EditStudyPeriodModal> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () async {
-                          if (_formKey.currentState!.validate()) {
-                            try {
-                              final payload = <String, dynamic>{};
-                              if (_selectedPeriod != null) {
-                                payload['name'] = 'Đợt ${_selectedPeriod}';
-                              }
-                              if (_startDate != null) {
-                                payload['start_date'] = DateFormat(
-                                  'yyyy-MM-dd',
-                                ).format(_startDate!);
-                              }
-                              if (_endDate != null) {
-                                payload['end_date'] = DateFormat(
-                                  'yyyy-MM-dd',
-                                ).format(_endDate!);
-                              }
-                              if (_selectedSemester != null) {
-                                payload['semester_id'] = int.tryParse(
-                                  _selectedSemester!,
-                                );
-                              }
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                if (_formKey.currentState!.validate()) {
+                                  setState(() {
+                                    _isLoading = true;
+                                  });
 
-                              final apiId = widget.studyPeriod.apiId;
-                              if (apiId == null) {
-                                throw Exception('Thiếu ID đợt học để cập nhật');
-                              }
+                                  try {
+                                    final payload = <String, dynamic>{};
+                                    if (_selectedPeriod != null) {
+                                      payload['name'] = _selectedPeriod!;
+                                    }
+                                    if (_startDate != null) {
+                                      payload['start_date'] = DateFormat(
+                                        'yyyy-MM-dd',
+                                      ).format(_startDate!);
+                                    }
+                                    if (_endDate != null) {
+                                      payload['end_date'] = DateFormat(
+                                        'yyyy-MM-dd',
+                                      ).format(_endDate!);
+                                    }
+                                    if (_selectedSemester != null) {
+                                      payload['semester_id'] = int.tryParse(
+                                        _selectedSemester!,
+                                      );
+                                    }
 
-                              final res = await _apiService.updateStudyPhase(
-                                apiId,
-                                payload,
-                              );
-                              if (res.success) {
-                                if (mounted) {
-                                  Navigator.of(context).pop(true);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Cập nhật đợt học thành công',
+                                    final apiId = widget.studyPeriod.apiId;
+                                    if (apiId == null) {
+                                      throw Exception(
+                                        'Thiếu ID đợt học để cập nhật',
+                                      );
+                                    }
+
+                                    final res = await _apiService
+                                        .updateStudyPhase(apiId, payload);
+
+                                    if (!mounted) return;
+
+                                    if (res.success) {
+                                      Navigator.of(context).pop(true);
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Cập nhật đợt học thành công',
+                                          ),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    } else {
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Lỗi: ${res.message}'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (!mounted) return;
+
+                                    setState(() {
+                                      _isLoading = false;
+                                    });
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Lỗi kết nối: ${e.toString()}',
+                                        ),
+                                        backgroundColor: Colors.red,
                                       ),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
+                                    );
+                                  }
                                 }
-                              } else {
-                                throw Exception(res.message);
-                              }
-                            } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Lỗi: ${e.toString()}'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            }
-                          }
-                        },
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2264E5),
                           foregroundColor: Colors.white,
@@ -566,14 +664,25 @@ class _EditStudyPeriodModalState extends State<EditStudyPeriodModal> {
                             side: const BorderSide(color: Color(0xFF7F56D9)),
                           ),
                         ),
-                        child: const Text(
-                          'Xác nhận',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text(
+                                'Xác nhận',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
                   ],
