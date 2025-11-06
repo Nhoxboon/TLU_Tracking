@@ -3,13 +3,16 @@ import 'package:android_app/utils/constants/app_theme.dart';
 import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
 import 'package:android_app/screens/admin/dashboard/class_management/add_student_to_class_modal.dart';
+import 'package:android_app/services/api_service.dart';
 
 class ClassStudentsView extends StatefulWidget {
+  final int classId;
   final String classCode;
   final String className;
 
   const ClassStudentsView({
     super.key,
+    required this.classId,
     required this.classCode,
     required this.className,
   });
@@ -20,154 +23,17 @@ class ClassStudentsView extends StatefulWidget {
 
 class _ClassStudentsViewState extends State<ClassStudentsView> {
   final TextEditingController _searchController = TextEditingController();
+  final ApiService _apiService = ApiService();
 
   // Pagination variables
   int _currentPage = 1;
   final int _itemsPerPage = 12;
 
-  // Sample data for students
-  final List<StudentData> _students = [
-    StudentData(
-      id: 1,
-      studentCode: '20210001',
-      name: 'Ann Culhane',
-      major: 'Công nghệ thông tin',
-      phone: '11111111111',
-      email: 'ann.culhane@example.com',
-      birthDate: '12/05/2004',
-      course: 'K65',
-    ),
-    StudentData(
-      id: 2,
-      studentCode: '20210002',
-      name: 'Tatiana Mango',
-      major: 'Công nghệ thông tin',
-      phone: '11111111111',
-      email: 'tatiana.mango@example.com',
-      birthDate: '12/05/2004',
-      course: 'K65',
-    ),
-    StudentData(
-      id: 3,
-      studentCode: '20210003',
-      name: 'Ahmad Rosser',
-      major: 'Công nghệ thông tin',
-      phone: '11111111111',
-      email: 'ahmad.rosser@example.com',
-      birthDate: '12/05/2004',
-      course: 'K65',
-    ),
-    StudentData(
-      id: 4,
-      studentCode: '20210004',
-      name: 'Phillip Stanton',
-      major: 'Công nghệ thông tin',
-      phone: '11111111111',
-      email: 'phillip.stanton@example.com',
-      birthDate: '12/05/2004',
-      course: 'K65',
-    ),
-    StudentData(
-      id: 5,
-      studentCode: '20210005',
-      name: 'Zain Calzoni',
-      major: 'Công nghệ thông tin',
-      phone: '11111111111',
-      email: 'zain.calzoni@example.com',
-      birthDate: '12/05/2004',
-      course: 'K65',
-    ),
-    StudentData(
-      id: 6,
-      studentCode: '20210006',
-      name: 'Leo Stanton',
-      major: 'Công nghệ thông tin',
-      phone: '11111111111',
-      email: 'leo.stanton@example.com',
-      birthDate: '12/05/2004',
-      course: 'K65',
-    ),
-    StudentData(
-      id: 7,
-      studentCode: '20210007',
-      name: 'Kaiya Vetrovs',
-      major: 'Công nghệ thông tin',
-      phone: '11111111111',
-      email: 'kaiya.vetrovs@example.com',
-      birthDate: '12/05/2004',
-      course: 'K65',
-    ),
-    StudentData(
-      id: 8,
-      studentCode: '20210008',
-      name: 'Ryan Westervelt',
-      major: 'Công nghệ thông tin',
-      phone: '11111111111',
-      email: 'ryan.westervelt@example.com',
-      birthDate: '12/05/2004',
-      course: 'K65',
-    ),
-    StudentData(
-      id: 9,
-      studentCode: '20210009',
-      name: 'Corey Stanton',
-      major: 'Công nghệ thông tin',
-      phone: '11111111111',
-      email: 'corey.stanton@example.com',
-      birthDate: '12/05/2004',
-      course: 'K65',
-    ),
-    StudentData(
-      id: 10,
-      studentCode: '20210010',
-      name: 'Adison Aminoff',
-      major: 'Công nghệ thông tin',
-      phone: '11111111111',
-      email: 'adison.aminoff@example.com',
-      birthDate: '12/05/2004',
-      course: 'K65',
-    ),
-    StudentData(
-      id: 11,
-      studentCode: '20210011',
-      name: 'Alfredo Aminoff',
-      major: 'Công nghệ thông tin',
-      phone: '11111111111',
-      email: 'alfredo.aminoff@example.com',
-      birthDate: '12/05/2004',
-      course: 'K65',
-    ),
-    StudentData(
-      id: 12,
-      studentCode: '20210012',
-      name: 'Allison Botosh',
-      major: 'Công nghệ thông tin',
-      phone: '11111111111',
-      email: 'allison.botosh@example.com',
-      birthDate: '12/05/2004',
-      course: 'K65',
-    ),
-    StudentData(
-      id: 13,
-      studentCode: '20210013',
-      name: 'Allison Botosh',
-      major: 'Công nghệ thông tin',
-      phone: '11111111111',
-      email: 'allison.botosh@example.com',
-      birthDate: '12/05/2004',
-      course: 'K65',
-    ),
-    StudentData(
-      id: 14,
-      studentCode: '20210014',
-      name: 'Allison Botosh',
-      major: 'Công nghệ thông tin',
-      phone: '11111111111',
-      email: 'allison.botosh@example.com',
-      birthDate: '12/05/2004',
-      course: 'K65',
-    ),
-  ];
+  // API data for students
+  List<StudentData> _students = [];
+  List<StudentData> _filteredStudents = [];
+  bool _isLoading = false;
+  String? _errorMessage;
 
   final Set<int> _selectedStudents = <int>{};
 
@@ -224,15 +90,198 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
     ),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadStudents();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    // Debounce search
+    _filterStudents();
+  }
+
+  void _filterStudents() {
+    setState(() {
+      if (_searchController.text.isEmpty) {
+        _filteredStudents = _students;
+      } else {
+        final searchQuery = _searchController.text.toLowerCase();
+        _filteredStudents = _students.where((student) {
+          return student.name.toLowerCase().contains(searchQuery) ||
+              student.code.toLowerCase().contains(searchQuery) ||
+              student.email.toLowerCase().contains(searchQuery) ||
+              student.phone.contains(searchQuery);
+        }).toList();
+      }
+      _currentPage = 1; // Reset to first page when filtering
+    });
+  }
+
+  Future<void> _loadStudents() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _apiService.getClassStudents(widget.classId);
+
+      if (result.success && result.data != null) {
+        setState(() {
+          _students = result.data!.asMap().entries.map((entry) {
+            final index = entry.key + 1;
+            final student = entry.value;
+            return StudentData(
+              id: student['student_id'] ?? index,
+              studentCode: student['student_code'] ?? '',
+              name: student['student_name'] ?? 'Không xác định',
+              major: 'Chưa cập nhật', // API doesn't return major info
+              phone: student['student_phone'] ?? '',
+              email: student['student_email'] ?? '',
+              birthDate: _formatDate(student['enrolled_at']),
+              course: 'Chưa cập nhật', // API doesn't return course info
+              enrollmentId: student['id'], // Store enrollment ID for deletion
+            );
+          }).toList();
+          _filteredStudents = _students;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = result.message;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Lỗi kết nối: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatDate(String? dateTimeString) {
+    if (dateTimeString == null) return 'Không xác định';
+    try {
+      final dateTime = DateTime.parse(dateTimeString);
+      return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
+    } catch (e) {
+      return 'Không xác định';
+    }
+  }
+
+  Future<void> _removeSelectedStudentsFromClass() async {
+    if (_selectedStudents.isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final selectedStudentData = _students
+          .where((student) => _selectedStudents.contains(student.id))
+          .toList();
+
+      // Remove students from class using API
+      for (final student in selectedStudentData) {
+        await _apiService.removeStudentFromClass(widget.classId, student.id);
+      }
+
+      // Reload the students list after successful removal
+      await _loadStudents();
+
+      setState(() {
+        _selectedStudents.clear();
+        _isLoading = false;
+      });
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Đã xóa ${selectedStudentData.length} sinh viên khỏi lớp thành công',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi khi xóa sinh viên: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeIndividualStudent(StudentData student) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _apiService.removeStudentFromClass(widget.classId, student.id);
+
+      // Reload the students list after successful removal
+      await _loadStudents();
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Đã xóa sinh viên ${student.name} khỏi lớp thành công',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi khi xóa sinh viên: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   // Pagination getters and methods
-  int get totalPages => (_students.length / _itemsPerPage).ceil();
+  int get totalPages => (_filteredStudents.length / _itemsPerPage).ceil();
 
   List<StudentData> get currentPageStudents {
     final startIndex = (_currentPage - 1) * _itemsPerPage;
     final endIndex = startIndex + _itemsPerPage;
-    return _students.sublist(
+    return _filteredStudents.sublist(
       startIndex,
-      endIndex > _students.length ? _students.length : endIndex,
+      endIndex > _filteredStudents.length ? _filteredStudents.length : endIndex,
     );
   }
 
@@ -292,18 +341,8 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
             ),
             ElevatedButton(
               onPressed: () {
-                // Handle remove from class action
-                setState(() {
-                  _students.removeWhere(
-                    (student) => _selectedStudents.contains(student.id),
-                  );
-                  _selectedStudents.clear();
-                  // Reset to first page if current page is empty
-                  if (currentPageStudents.isEmpty && _currentPage > 1) {
-                    _currentPage = 1;
-                  }
-                });
                 Navigator.of(context).pop();
+                _removeSelectedStudentsFromClass();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFEF4444),
@@ -539,15 +578,21 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
                                 SizedBox(
                                   height: 38,
                                   child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      showDialog(
+                                    onPressed: () async {
+                                      final result = await showDialog<bool>(
                                         context: context,
                                         builder: (context) =>
                                             AddStudentToClassModal(
+                                              classId: widget.classId,
                                               classCode: widget.classCode,
                                               className: widget.className,
                                             ),
                                       );
+
+                                      // If student was added successfully, reload the list
+                                      if (result == true) {
+                                        _loadStudents();
+                                      }
                                     },
                                     icon: const Icon(Icons.add, size: 16),
                                     label: const Text(
@@ -561,6 +606,37 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
                                     ),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF2264E5),
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+
+                                // Refresh button
+                                SizedBox(
+                                  height: 38,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _loadStudents,
+                                    icon: const Icon(Icons.refresh, size: 16),
+                                    label: const Text(
+                                      'Làm mới',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: 0.28,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF6B7280),
                                       foregroundColor: Colors.white,
                                       elevation: 0,
                                       shape: RoundedRectangleBorder(
@@ -639,34 +715,91 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
                             child: _buildTableHeader(),
                           ),
 
-                          // Table rows - using Flexible to prevent overflow
+                          // Table content
                           Flexible(
-                            child: SingleChildScrollView(
-                              child: Column(
-                                children: [
-                                  // Table rows
-                                  ...List.generate(_itemsPerPage, (index) {
-                                    if (index < currentPageStudents.length) {
-                                      final studentData =
-                                          currentPageStudents[index];
-                                      final isEven = index % 2 == 0;
-                                      return _buildTableRow(
-                                        studentData,
-                                        isEven,
-                                      );
-                                    } else {
-                                      // Empty row to maintain consistent height
-                                      return Container(
-                                        height: 64,
-                                        color: index % 2 == 0
-                                            ? Colors.white
-                                            : const Color(0xFFF9FAFC),
-                                      );
-                                    }
-                                  }),
-                                ],
-                              ),
-                            ),
+                            child: _isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                : _errorMessage != null
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.error_outline,
+                                          size: 48,
+                                          color: Colors.red[400],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'Lỗi: $_errorMessage',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.red,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        ElevatedButton(
+                                          onPressed: _loadStudents,
+                                          child: const Text('Thử lại'),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : currentPageStudents.isEmpty
+                                ? const Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.people_outline,
+                                          size: 48,
+                                          color: Colors.grey,
+                                        ),
+                                        SizedBox(height: 16),
+                                        Text(
+                                          'Không có sinh viên nào trong lớp',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : SingleChildScrollView(
+                                    child: Column(
+                                      children: [
+                                        // Table rows
+                                        ...List.generate(_itemsPerPage, (
+                                          index,
+                                        ) {
+                                          if (index <
+                                              currentPageStudents.length) {
+                                            final studentData =
+                                                currentPageStudents[index];
+                                            final isEven = index % 2 == 0;
+                                            return _buildTableRow(
+                                              studentData,
+                                              isEven,
+                                            );
+                                          } else {
+                                            // Empty row to maintain consistent height
+                                            return Container(
+                                              height: 64,
+                                              color: index % 2 == 0
+                                                  ? Colors.white
+                                                  : const Color(0xFFF9FAFC),
+                                            );
+                                          }
+                                        }),
+                                      ],
+                                    ),
+                                  ),
                           ),
                         ],
                       ),
@@ -686,7 +819,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
                         children: [
                           // Left side: Items count
                           Text(
-                            '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageStudents.length} of ${_students.length}',
+                            '${(_currentPage - 1) * _itemsPerPage + 1}-${(_currentPage - 1) * _itemsPerPage + currentPageStudents.length} of ${_filteredStudents.length}',
                             style: const TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 12,
@@ -985,7 +1118,7 @@ class _ClassStudentsViewState extends State<ClassStudentsView> {
         });
       },
       onDelete: () {
-        // TODO: handle delete student
+        _removeIndividualStudent(studentData);
       },
     );
   }
@@ -1009,6 +1142,9 @@ class StudentData implements StudentTableRowData {
   @override
   final String course;
 
+  // Additional fields for API operations
+  final int? enrollmentId;
+
   StudentData({
     required this.id,
     required String studentCode,
@@ -1018,5 +1154,6 @@ class StudentData implements StudentTableRowData {
     required this.email,
     required this.birthDate,
     required this.course,
+    this.enrollmentId,
   }) : code = studentCode;
 }

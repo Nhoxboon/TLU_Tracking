@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:android_app/services/api_service.dart';
 
 class AddClassModal extends StatefulWidget {
-  const AddClassModal({super.key});
+  final VoidCallback? onSuccess; // Callback khi tạo thành công
+
+  const AddClassModal({super.key, this.onSuccess});
 
   @override
   State<AddClassModal> createState() => _AddClassModalState();
@@ -11,53 +14,34 @@ class _AddClassModalState extends State<AddClassModal> {
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
   final _nameController = TextEditingController();
+  final ApiService _apiService = ApiService();
 
-  String? _selectedTeacher;
-  String? _selectedDepartment;
-  String? _selectedSubject;
-  String? _selectedCourse;
-  String? _selectedAcademicYear;
-  String? _selectedSemester;
-  String? _selectedPeriod;
+  Map<String, dynamic>? _selectedTeacher;
+  Map<String, dynamic>? _selectedFaculty;
+  Map<String, dynamic>? _selectedDepartment;
+  Map<String, dynamic>? _selectedSubject;
+  Map<String, dynamic>? _selectedCohort;
+  Map<String, dynamic>? _selectedAcademicYear;
+  Map<String, dynamic>? _selectedSemester;
+  Map<String, dynamic>? _selectedStudyPhase;
+  bool _isLoading = false;
 
-  // Sample data for dropdowns
-  final List<String> _teachers = [
-    'Nguyễn Văn A',
-    'Trần Thị B',
-    'Lê Văn C',
-    'Phạm Thị D',
-    'Hoàng Văn E',
-    'Nguyễn Thị F',
-  ];
+  // API data
+  List<Map<String, dynamic>> _teachers = [];
+  List<Map<String, dynamic>> _faculties = [];
+  List<Map<String, dynamic>> _departments = [];
+  List<Map<String, dynamic>> _subjects = [];
+  List<Map<String, dynamic>> _cohorts = [];
+  List<Map<String, dynamic>> _academicYears = [];
+  List<Map<String, dynamic>> _semesters = [];
+  List<Map<String, dynamic>> _studyPhases = [];
+  bool _isLoadingData = false;
 
-  final List<String> _departments = [
-    'Công nghệ phần mềm',
-    'Khoa học máy tính',
-    'Hệ thống thông tin',
-    'An toàn thông tin',
-    'Trí tuệ nhân tạo',
-  ];
-
-  final List<String> _subjects = [
-    'Lập trình',
-    'Khoa học máy tính',
-    'Cơ sở dữ liệu',
-    'Mạng',
-    'Hệ thống',
-    'Web',
-    'Thuật toán',
-    'AI',
-    'Bảo mật',
-    'Phần mềm',
-  ];
-
-  final List<String> _courses = ['K65', 'K66', 'K67', 'K68', 'K69'];
-
-  final List<String> _academicYears = ['2024-2025', '2025-2026', '2026-2027'];
-
-  final List<String> _semesters = ['1', '2'];
-
-  final List<String> _periods = ['1', '2'];
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialData();
+  }
 
   @override
   void dispose() {
@@ -66,26 +50,184 @@ class _AddClassModalState extends State<AddClassModal> {
     super.dispose();
   }
 
-  void _handleConfirm() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Implement actual class addition logic here
-      // This is where the real logic for adding a new class should be implemented
-      // - Validate all form fields
-      // - Create new class object
-      // - Add to database/API
-      // - Update the classes list
-      // - Show success message
-      // - Close the modal
+  Future<void> _loadInitialData() async {
+    setState(() {
+      _isLoadingData = true;
+    });
 
-      Navigator.of(context).pop();
+    try {
+      // Load all filter data concurrently
+      final futures = [
+        _apiService.getFacultiesPaginated(limit: 100),
+        _apiService.getDepartmentsPaginated(limit: 100),
+        _apiService.getTeachersPaginated(limit: 100),
+        _apiService.getSubjectsPaginated(limit: 100),
+        _apiService.getCohortsPaginated(limit: 100),
+        _apiService.getAcademicYearsPaginated(limit: 100),
+        _apiService.getSemestersPaginated(limit: 100),
+        _apiService.getStudyPhasesPaginated(limit: 100),
+      ];
 
-      // For now, just show a placeholder message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('TODO: Implement class addition logic'),
-          backgroundColor: Colors.orange,
-        ),
+      final results = await Future.wait(futures);
+
+      setState(() {
+        if (results[0].success && results[0].data != null) {
+          _faculties = results[0].data!.items;
+        }
+        if (results[1].success && results[1].data != null) {
+          _departments = results[1].data!.items;
+        }
+        if (results[2].success && results[2].data != null) {
+          _teachers = results[2].data!.items;
+        }
+        if (results[3].success && results[3].data != null) {
+          _subjects = results[3].data!.items;
+        }
+        if (results[4].success && results[4].data != null) {
+          _cohorts = results[4].data!.items;
+        }
+        if (results[5].success && results[5].data != null) {
+          _academicYears = results[5].data!.items;
+        }
+        if (results[6].success && results[6].data != null) {
+          _semesters = results[6].data!.items;
+        }
+        if (results[7].success && results[7].data != null) {
+          _studyPhases = results[7].data!.items;
+        }
+        _isLoadingData = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingData = false;
+      });
+    }
+  }
+
+  // Cascade loading methods
+  Future<void> _loadDepartments({int? facultyId}) async {
+    try {
+      final result = await _apiService.getDepartmentsPaginated(
+        limit: 100,
+        facultyId: facultyId,
       );
+      if (result.success && result.data != null) {
+        setState(() {
+          _departments = result.data!.items;
+          // Reset selected department when faculty changes
+          if (facultyId != null) {
+            _selectedDepartment = null;
+          }
+        });
+      }
+    } catch (e) {
+      // Handle error silently
+    }
+  }
+
+  Future<void> _loadSemesters({int? academicYearId}) async {
+    try {
+      final result = await _apiService.getSemestersPaginated(
+        limit: 100,
+        academicYearId: academicYearId,
+      );
+      if (result.success && result.data != null) {
+        setState(() {
+          _semesters = result.data!.items;
+          // Reset selected semester when academic year changes
+          if (academicYearId != null) {
+            _selectedSemester = null;
+          }
+        });
+      }
+    } catch (e) {
+      // Handle error silently
+    }
+  }
+
+  Future<void> _loadStudyPhases({int? semesterId}) async {
+    try {
+      final result = await _apiService.getStudyPhasesPaginated(
+        limit: 100,
+        semesterId: semesterId,
+      );
+      if (result.success && result.data != null) {
+        setState(() {
+          _studyPhases = result.data!.items;
+          // Reset selected study phase when semester changes
+          if (semesterId != null) {
+            _selectedStudyPhase = null;
+          }
+        });
+      }
+    } catch (e) {
+      // Handle error silently
+    }
+  }
+
+  Future<void> _handleConfirm() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Prepare class data for API (matching the API schema)
+        final classData = {
+          'name': _nameController.text.trim(),
+          'code': _codeController.text.trim(),
+          'subject_id': _selectedSubject?['id'],
+          'teacher_id': _selectedTeacher?['id'],
+          'faculty_id': _selectedFaculty?['id'],
+          'department_id': _selectedDepartment?['id'],
+          'cohort_id': _selectedCohort?['id'],
+          'academic_year_id': _selectedAcademicYear?['id'],
+          'semester_id': _selectedSemester?['id'],
+          'study_phase_id': _selectedStudyPhase?['id'],
+        };
+
+        final result = await _apiService.createClassData(classData);
+
+        if (!mounted) return;
+
+        if (result.success) {
+          // Gọi callback để refresh danh sách
+          widget.onSuccess?.call();
+
+          Navigator.of(context).pop(true); // Return true to indicate success
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tạo lớp học thành công!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Lỗi tạo lớp học: ${result.message}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi kết nối: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -206,17 +348,19 @@ class _AddClassModalState extends State<AddClassModal> {
             const SizedBox(height: 16),
 
             // Teacher Dropdown Field
-            _buildDropdownField(
+            _buildApiDropdownField(
               label: 'Giảng viên phụ trách*',
               value: _selectedTeacher,
               items: _teachers,
+              hintText: 'Chọn giảng viên',
+              displayField: 'full_name', // Specify field for teacher name
               onChanged: (value) {
                 setState(() {
                   _selectedTeacher = value;
                 });
               },
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (value == null) {
                   return 'Vui lòng chọn giảng viên';
                 }
                 return null;
@@ -224,23 +368,31 @@ class _AddClassModalState extends State<AddClassModal> {
             ),
             const SizedBox(height: 16),
 
-            // Department and Subject Row
+            // Faculty and Department Row
             Row(
               children: [
-                // Department Dropdown Field
+                // Faculty Dropdown Field
                 Expanded(
-                  child: _buildDropdownField(
-                    label: 'Bộ môn*',
-                    value: _selectedDepartment,
-                    items: _departments,
+                  child: _buildApiDropdownField(
+                    label: 'Khoa*',
+                    value: _selectedFaculty,
+                    items: _faculties,
+                    hintText: 'Chọn khoa',
                     onChanged: (value) {
                       setState(() {
-                        _selectedDepartment = value;
+                        _selectedFaculty = value;
+                        _selectedDepartment = null;
                       });
+                      // Load departments for selected faculty
+                      if (value != null) {
+                        _loadDepartments(facultyId: value['id']);
+                      } else {
+                        _loadDepartments();
+                      }
                     },
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Vui lòng chọn bộ môn';
+                      if (value == null) {
+                        return 'Vui lòng chọn khoa';
                       }
                       return null;
                     },
@@ -248,20 +400,21 @@ class _AddClassModalState extends State<AddClassModal> {
                 ),
                 const SizedBox(width: 16),
 
-                // Subject Dropdown Field
+                // Department Dropdown Field
                 Expanded(
-                  child: _buildDropdownField(
-                    label: 'Môn học*',
-                    value: _selectedSubject,
-                    items: _subjects,
+                  child: _buildApiDropdownField(
+                    label: 'Bộ môn*',
+                    value: _selectedDepartment,
+                    items: _departments,
+                    hintText: 'Chọn bộ môn',
                     onChanged: (value) {
                       setState(() {
-                        _selectedSubject = value;
+                        _selectedDepartment = value;
                       });
                     },
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Vui lòng chọn môn học';
+                      if (value == null) {
+                        return 'Vui lòng chọn bộ môn';
                       }
                       return null;
                     },
@@ -271,37 +424,60 @@ class _AddClassModalState extends State<AddClassModal> {
             ),
             const SizedBox(height: 16),
 
-            // Course Dropdown Field
-            _buildDropdownField(
-              label: 'Khóa*',
-              value: _selectedCourse,
-              items: _courses,
+            // Subject Dropdown Field
+            _buildApiDropdownField(
+              label: 'Môn học*',
+              value: _selectedSubject,
+              items: _subjects,
+              hintText: 'Chọn môn học',
               onChanged: (value) {
                 setState(() {
-                  _selectedCourse = value;
+                  _selectedSubject = value;
                 });
               },
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Vui lòng chọn khóa';
+                if (value == null) {
+                  return 'Vui lòng chọn môn học';
                 }
                 return null;
               },
             ),
             const SizedBox(height: 16),
 
+            // Cohort Dropdown Field
+            _buildApiDropdownField(
+              label: 'Khóa',
+              value: _selectedCohort,
+              items: _cohorts,
+              hintText: 'Chọn khóa',
+              onChanged: (value) {
+                setState(() {
+                  _selectedCohort = value;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+
             // Academic Year Dropdown Field
-            _buildDropdownField(
+            _buildApiDropdownField(
               label: 'Năm học*',
               value: _selectedAcademicYear,
               items: _academicYears,
+              hintText: 'Chọn năm học',
               onChanged: (value) {
                 setState(() {
                   _selectedAcademicYear = value;
+                  _selectedSemester = null;
                 });
+                // Load semesters for selected academic year
+                if (value != null) {
+                  _loadSemesters(academicYearId: value['id']);
+                } else {
+                  _loadSemesters();
+                }
               },
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (value == null) {
                   return 'Vui lòng chọn năm học';
                 }
                 return null;
@@ -309,22 +485,30 @@ class _AddClassModalState extends State<AddClassModal> {
             ),
             const SizedBox(height: 16),
 
-            // Semester and Period Row
+            // Semester and Study Phase Row
             Row(
               children: [
                 // Semester Dropdown Field
                 Expanded(
-                  child: _buildDropdownField(
+                  child: _buildApiDropdownField(
                     label: 'Học kì*',
                     value: _selectedSemester,
                     items: _semesters,
+                    hintText: 'Chọn học kì',
                     onChanged: (value) {
                       setState(() {
                         _selectedSemester = value;
+                        _selectedStudyPhase = null;
                       });
+                      // Load study phases for selected semester
+                      if (value != null) {
+                        _loadStudyPhases(semesterId: value['id']);
+                      } else {
+                        _loadStudyPhases();
+                      }
                     },
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
+                      if (value == null) {
                         return 'Vui lòng chọn học kì';
                       }
                       return null;
@@ -333,22 +517,17 @@ class _AddClassModalState extends State<AddClassModal> {
                 ),
                 const SizedBox(width: 16),
 
-                // Period Dropdown Field
+                // Study Phase Dropdown Field
                 Expanded(
-                  child: _buildDropdownField(
-                    label: 'Đợt học*',
-                    value: _selectedPeriod,
-                    items: _periods,
+                  child: _buildApiDropdownField(
+                    label: 'Đợt học',
+                    value: _selectedStudyPhase,
+                    items: _studyPhases,
+                    hintText: 'Chọn đợt học',
                     onChanged: (value) {
                       setState(() {
-                        _selectedPeriod = value;
+                        _selectedStudyPhase = value;
                       });
-                    },
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Vui lòng chọn đợt học';
-                      }
-                      return null;
                     },
                   ),
                 ),
@@ -417,12 +596,31 @@ class _AddClassModalState extends State<AddClassModal> {
     );
   }
 
-  Widget _buildDropdownField({
+  String _getDisplayName(Map<String, dynamic> item, String? displayField) {
+    if (displayField != null) {
+      return item[displayField] ?? 'Không tên';
+    }
+
+    // Auto-detect field based on common patterns
+    if (item.containsKey('full_name')) {
+      return item['full_name'] ?? 'Không tên';
+    } else if (item.containsKey('name')) {
+      return item['name'] ?? 'Không tên';
+    } else if (item.containsKey('title')) {
+      return item['title'] ?? 'Không tên';
+    }
+
+    return 'Không tên';
+  }
+
+  Widget _buildApiDropdownField({
     required String label,
-    required String? value,
-    required List<String> items,
-    required void Function(String?) onChanged,
-    String? Function(String?)? validator,
+    required Map<String, dynamic>? value,
+    required List<Map<String, dynamic>> items,
+    required void Function(Map<String, dynamic>?) onChanged,
+    String? Function(Map<String, dynamic>?)? validator,
+    String hintText = 'Chọn...',
+    String? displayField, // Field để hiển thị tên
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,29 +636,29 @@ class _AddClassModalState extends State<AddClassModal> {
           ),
         ),
         const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField<Map<String, dynamic>>(
           initialValue: value,
-          onChanged: onChanged,
+          onChanged: _isLoadingData ? null : onChanged,
           validator: validator,
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
+              horizontal: 12,
               vertical: 10,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               borderSide: const BorderSide(color: Color(0xFFD5D7DA)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               borderSide: const BorderSide(color: Color(0xFF2264E5)),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               borderSide: const BorderSide(color: Colors.red),
             ),
             fillColor: Colors.white,
@@ -477,9 +675,25 @@ class _AddClassModalState extends State<AddClassModal> {
             size: 20,
             color: Color(0xFF717680),
           ),
-          items: items.map<DropdownMenuItem<String>>((String item) {
-            return DropdownMenuItem<String>(value: item, child: Text(item));
-          }).toList(),
+          hint: Text(hintText),
+          items: _isLoadingData
+              ? []
+              : items.map<DropdownMenuItem<Map<String, dynamic>>>((
+                  Map<String, dynamic> item,
+                ) {
+                  return DropdownMenuItem<Map<String, dynamic>>(
+                    value: item,
+                    child: Text(
+                      _getDisplayName(item, displayField),
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF181D27),
+                      ),
+                    ),
+                  );
+                }).toList(),
         ),
       ],
     );
@@ -531,14 +745,16 @@ class _AddClassModalState extends State<AddClassModal> {
           // Confirm Button
           Expanded(
             child: InkWell(
-              onTap: _handleConfirm,
+              onTap: _isLoading ? null : _handleConfirm,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 18,
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2264E5),
+                  color: _isLoading
+                      ? Colors.grey.shade400
+                      : const Color(0xFF2264E5),
                   border: Border.all(color: const Color(0xFF7F56D9)),
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
@@ -549,16 +765,27 @@ class _AddClassModalState extends State<AddClassModal> {
                     ),
                   ],
                 ),
-                child: const Center(
-                  child: Text(
-                    'Xác nhận',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
+                child: Center(
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text(
+                          'Xác nhận',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ),

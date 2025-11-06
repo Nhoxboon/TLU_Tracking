@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:android_app/services/api_service.dart';
+import 'package:android_app/models/academic_year.dart';
 
 class EditAcademicYearModal extends StatefulWidget {
   final dynamic academicYear;
@@ -12,10 +14,12 @@ class EditAcademicYearModal extends StatefulWidget {
 
 class _EditAcademicYearModalState extends State<EditAcademicYearModal> {
   final _formKey = GlobalKey<FormState>();
+  final ApiService _apiService = ApiService();
   DateTime? _startDate;
   DateTime? _endDate;
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
+  bool _isLoading = false;
 
   String get academicYearName {
     if (_startDate != null && _endDate != null) {
@@ -67,6 +71,85 @@ class _EditAcademicYearModalState extends State<EditAcademicYearModal> {
         _endDate = picked;
         _endDateController.text = DateFormat('dd/MM/yyyy').format(picked);
       });
+    }
+  }
+
+  Future<void> _handleConfirm() async {
+    if (_formKey.currentState!.validate()) {
+      if (_startDate == null || _endDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vui lòng chọn ngày bắt đầu và ngày kết thúc'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      if (_endDate!.isBefore(_startDate!)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ngày kết thúc phải sau ngày bắt đầu'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Prepare academic year data for API
+        final academicYearData = AcademicYear(
+          name: academicYearName,
+          startDate: _startDate!,
+          endDate: _endDate!,
+        ).toUpdateJson();
+
+        final result = await _apiService.updateAcademicYear(
+          widget
+              .academicYear
+              .apiId, // Use the API ID from the academic year object
+          academicYearData,
+        );
+
+        if (!mounted) return;
+
+        if (result.success) {
+          Navigator.of(context).pop(true); // Pass true to indicate success
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cập nhật năm học thành công'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi kết nối: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -397,12 +480,7 @@ class _EditAcademicYearModalState extends State<EditAcademicYearModal> {
                     // Confirm button
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            // TODO: Handle update logic
-                            Navigator.of(context).pop();
-                          }
-                        },
+                        onPressed: _isLoading ? null : _handleConfirm,
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 18,
@@ -422,15 +500,26 @@ class _EditAcademicYearModalState extends State<EditAcademicYearModal> {
                             ),
                           ),
                         ),
-                        child: const Text(
-                          'Xác nhận',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                            height: 1.5,
-                          ),
-                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text(
+                                'Xác nhận',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                  height: 1.5,
+                                ),
+                              ),
                       ),
                     ),
                   ],
