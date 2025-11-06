@@ -1933,6 +1933,114 @@ class ApiService {
     }
   }
 
+  // Get a study phase by ID
+  Future<ApiResponse<Map<String, dynamic>>> getStudyPhase(
+    int studyPhaseId,
+  ) async {
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('$baseUrl/academic/study-phases/$studyPhaseId'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(data);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to fetch study phase',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to fetch study phase: ${e.toString()}');
+    }
+  }
+
+  // Create a study phase
+  Future<ApiResponse<Map<String, dynamic>>> createStudyPhase(
+    Map<String, dynamic> studyPhaseData,
+  ) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$baseUrl/academic/study-phases'),
+            headers: _headers,
+            body: jsonEncode(studyPhaseData),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(data);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to create study phase',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to create study phase: ${e.toString()}');
+    }
+  }
+
+  // Update a study phase
+  Future<ApiResponse<Map<String, dynamic>>> updateStudyPhase(
+    int studyPhaseId,
+    Map<String, dynamic> studyPhaseData,
+  ) async {
+    try {
+      final response = await _client
+          .put(
+            Uri.parse('$baseUrl/academic/study-phases/$studyPhaseId'),
+            headers: _headers,
+            body: jsonEncode(studyPhaseData),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(data);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to update study phase',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to update study phase: ${e.toString()}');
+    }
+  }
+
+  // Delete a study phase
+  Future<ApiResponse<void>> deleteStudyPhase(int studyPhaseId) async {
+    try {
+      final response = await _client
+          .delete(
+            Uri.parse('$baseUrl/academic/study-phases/$studyPhaseId'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return ApiResponse.success(null);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to delete study phase',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to delete study phase: ${e.toString()}');
+    }
+  }
+
   // Get semesters with pagination and optional filters
   Future<ApiResponse<PaginatedResponse>> getSemestersPaginated({
     int page = 1,
@@ -1969,6 +2077,114 @@ class ApiService {
       }
     } catch (e) {
       return ApiResponse.error('Failed to fetch semesters: ${e.toString()}');
+    }
+  }
+
+  // ==================== SEMESTER ENDPOINTS ====================
+
+  // Get a semester by ID
+  Future<ApiResponse<Map<String, dynamic>>> getSemester(int semesterId) async {
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('$baseUrl/academic/semesters/$semesterId'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(data);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to fetch semester',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to fetch semester: ${e.toString()}');
+    }
+  }
+
+  // Create a semester
+  Future<ApiResponse<Map<String, dynamic>>> createSemester(
+    Map<String, dynamic> semesterData,
+  ) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$baseUrl/academic/semesters'),
+            headers: _headers,
+            body: jsonEncode(semesterData),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(data);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to create semester',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to create semester: ${e.toString()}');
+    }
+  }
+
+  // Update a semester
+  Future<ApiResponse<Map<String, dynamic>>> updateSemester(
+    int semesterId,
+    Map<String, dynamic> semesterData,
+  ) async {
+    try {
+      final response = await _client
+          .put(
+            Uri.parse('$baseUrl/academic/semesters/$semesterId'),
+            headers: _headers,
+            body: jsonEncode(semesterData),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(data);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to update semester',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to update semester: ${e.toString()}');
+    }
+  }
+
+  // Delete a semester
+  Future<ApiResponse<void>> deleteSemester(int semesterId) async {
+    try {
+      final response = await _client
+          .delete(
+            Uri.parse('$baseUrl/academic/semesters/$semesterId'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return ApiResponse.success(null);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to delete semester',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to delete semester: ${e.toString()}');
     }
   }
 
