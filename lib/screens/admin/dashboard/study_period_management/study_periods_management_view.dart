@@ -4,6 +4,7 @@ import 'package:android_app/widgets/common/custom_search_bar.dart';
 import 'package:android_app/widgets/common/data_table_row.dart';
 import 'package:android_app/screens/admin/dashboard/study_period_management/add_study_period_modal.dart';
 import 'package:android_app/screens/admin/dashboard/study_period_management/edit_study_period_modal.dart';
+import 'package:android_app/services/api_service.dart';
 
 class StudyPeriodsManagementView extends StatefulWidget {
   const StudyPeriodsManagementView({super.key});
@@ -16,6 +17,7 @@ class StudyPeriodsManagementView extends StatefulWidget {
 class _StudyPeriodsManagementViewState
     extends State<StudyPeriodsManagementView> {
   final TextEditingController _searchController = TextEditingController();
+  final ApiService _apiService = ApiService();
 
   // Pagination variables
   int _currentPage = 1;
@@ -33,105 +35,14 @@ class _StudyPeriodsManagementViewState
     '2017-2018',
   ];
 
-  // Sample data for study periods
-  final List<StudyPeriodData> _studyPeriods = [
-    StudyPeriodData(
-      id: 1,
-      academicYear: '2024-2025',
-      semester: '1',
-      period: '1',
-      startDate: DateTime(2024, 1, 1),
-      endDate: DateTime(2025, 1, 1),
-    ),
-    StudyPeriodData(
-      id: 2,
-      academicYear: '2024-2025',
-      semester: '1',
-      period: '1',
-      startDate: DateTime(2025, 1, 1),
-      endDate: DateTime(2025, 6, 1),
-    ),
-    StudyPeriodData(
-      id: 3,
-      academicYear: '2023-2024',
-      semester: '1',
-      period: '1',
-      startDate: DateTime(2023, 1, 1),
-      endDate: DateTime(2024, 1, 1),
-    ),
-    StudyPeriodData(
-      id: 4,
-      academicYear: '2023-2024',
-      semester: '1',
-      period: '1',
-      startDate: DateTime(2024, 1, 1),
-      endDate: DateTime(2024, 6, 1),
-    ),
-    StudyPeriodData(
-      id: 5,
-      academicYear: '2022-2023',
-      semester: '1',
-      period: '1',
-      startDate: DateTime(2022, 1, 1),
-      endDate: DateTime(2023, 1, 1),
-    ),
-    StudyPeriodData(
-      id: 6,
-      academicYear: '2022-2023',
-      semester: '1',
-      period: '1',
-      startDate: DateTime(2023, 1, 1),
-      endDate: DateTime(2023, 6, 1),
-    ),
-    StudyPeriodData(
-      id: 7,
-      academicYear: '2021-2022',
-      semester: '1',
-      period: '1',
-      startDate: DateTime(2021, 1, 1),
-      endDate: DateTime(2022, 1, 1),
-    ),
-    StudyPeriodData(
-      id: 8,
-      academicYear: '2021-2022',
-      semester: '1',
-      period: '1',
-      startDate: DateTime(2022, 1, 1),
-      endDate: DateTime(2022, 6, 1),
-    ),
-    StudyPeriodData(
-      id: 9,
-      academicYear: '2020-2021',
-      semester: '1',
-      period: '1',
-      startDate: DateTime(2020, 1, 1),
-      endDate: DateTime(2021, 1, 1),
-    ),
-    StudyPeriodData(
-      id: 10,
-      academicYear: '2020-2021',
-      semester: '1',
-      period: '1',
-      startDate: DateTime(2021, 1, 1),
-      endDate: DateTime(2021, 6, 1),
-    ),
-    StudyPeriodData(
-      id: 11,
-      academicYear: '2019-2020',
-      semester: '1',
-      period: '1',
-      startDate: DateTime(2019, 1, 1),
-      endDate: DateTime(2020, 1, 1),
-    ),
-    StudyPeriodData(
-      id: 12,
-      academicYear: '2019-2020',
-      semester: '1',
-      period: '1',
-      startDate: DateTime(2020, 1, 1),
-      endDate: DateTime(2020, 6, 1),
-    ),
-  ];
+  // API-backed data for study periods
+  List<StudyPeriodData> _studyPeriods = [];
+  bool _isLoading = false;
+  String? _errorMessage;
+  int _totalItems = 0;
+  int _totalPages = 0;
+  // Map UI row id -> API id
+  final Map<int, int> _studyPeriodIdMapping = {};
 
   final Set<int> _selectedStudyPeriods = <int>{};
 
@@ -175,15 +86,12 @@ class _StudyPeriodsManagementViewState
   ];
 
   // Pagination getters and methods
-  int get totalPages => (_studyPeriods.length / _itemsPerPage).ceil();
+  int get totalPages => _totalPages == 0
+      ? (_studyPeriods.length / _itemsPerPage).ceil()
+      : _totalPages;
 
   List<StudyPeriodData> get currentPageStudyPeriods {
-    final startIndex = (_currentPage - 1) * _itemsPerPage;
-    final endIndex = startIndex + _itemsPerPage;
-    return _studyPeriods.sublist(
-      startIndex,
-      endIndex > _studyPeriods.length ? _studyPeriods.length : endIndex,
-    );
+    return _studyPeriods;
   }
 
   void _goToPreviousPage() {
@@ -199,6 +107,7 @@ class _StudyPeriodsManagementViewState
       setState(() {
         _currentPage++;
       });
+      _loadStudyPhases();
     }
   }
 
@@ -241,20 +150,7 @@ class _StudyPeriodsManagementViewState
               ),
             ),
             ElevatedButton(
-              onPressed: () {
-                // Handle delete action
-                setState(() {
-                  _studyPeriods.removeWhere(
-                    (period) => _selectedStudyPeriods.contains(period.id),
-                  );
-                  _selectedStudyPeriods.clear();
-                  // Reset to first page if current page is empty
-                  if (currentPageStudyPeriods.isEmpty && _currentPage > 1) {
-                    _currentPage = 1;
-                  }
-                });
-                Navigator.of(context).pop();
-              },
+              onPressed: _handleBulkDelete,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFEF4444),
                 foregroundColor: Colors.white,
@@ -276,6 +172,103 @@ class _StudyPeriodsManagementViewState
         );
       },
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStudyPhases();
+  }
+
+  Future<void> _loadStudyPhases() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final result = await _apiService.getStudyPhasesPaginated(
+      page: _currentPage,
+      limit: _itemsPerPage,
+    );
+
+    if (mounted) {
+      if (result.success && result.data != null) {
+        final items = result.data!.items;
+        final List<StudyPeriodData> rows = [];
+        _studyPeriodIdMapping.clear();
+        for (int i = 0; i < items.length; i++) {
+          final item = items[i];
+          final apiId = (item['id'] as num).toInt();
+          final start = DateTime.tryParse(item['start_date'] as String? ?? '');
+          final end = DateTime.tryParse(item['end_date'] as String? ?? '');
+          final semesterId = item['semester_id'];
+          // Map API to UI row
+          final uiId = ((_currentPage - 1) * _itemsPerPage) + i + 1;
+          _studyPeriodIdMapping[uiId] = apiId;
+          rows.add(
+            StudyPeriodData(
+              id: uiId,
+              academicYear: '',
+              semester: semesterId?.toString() ?? '',
+              period: (item['name'] as String?) ?? '',
+              startDate: start ?? DateTime.now(),
+              endDate: end ?? DateTime.now(),
+              apiId: apiId,
+            ),
+          );
+        }
+
+        setState(() {
+          _studyPeriods = rows;
+          _totalItems = result.data!.total;
+          _totalPages = result.data!.totalPages;
+          _isLoading = false;
+          _selectedStudyPeriods.clear();
+        });
+      } else {
+        setState(() {
+          _studyPeriods = [];
+          _totalItems = 0;
+          _totalPages = 0;
+          _isLoading = false;
+          _errorMessage = result.message;
+          _selectedStudyPeriods.clear();
+        });
+      }
+    }
+  }
+
+  Future<void> _handleBulkDelete() async {
+    try {
+      final ids = _selectedStudyPeriods
+          .map((uiId) => _studyPeriodIdMapping[uiId])
+          .where((e) => e != null)
+          .cast<int>()
+          .toList();
+      for (final id in ids) {
+        await _apiService.deleteStudyPhase(id);
+      }
+      if (mounted) {
+        Navigator.of(context).pop();
+        _loadStudyPhases();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đã xóa đợt học đã chọn'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi khi xóa: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -325,6 +318,19 @@ class _StudyPeriodsManagementViewState
               ),
               child: Column(
                 children: [
+                  if (_errorMessage != null)
+                    Container(
+                      width: double.infinity,
+                      color: const Color(0xFFFFE2E2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: Color(0xFFB91C1C)),
+                      ),
+                    ),
                   // Action bar
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -351,13 +357,17 @@ class _StudyPeriodsManagementViewState
                               SizedBox(
                                 height: 32,
                                 child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
+                                  onPressed: () async {
+                                    final result = await showDialog(
                                       context: context,
                                       builder: (context) => AddStudyPeriodModal(
                                         academicYears: _academicYears,
                                       ),
                                     );
+                                    if (result == true) {
+                                      _currentPage = 1;
+                                      _loadStudyPhases();
+                                    }
                                   },
                                   icon: const Icon(Icons.add, size: 16),
                                   label: const Text(
@@ -434,34 +444,36 @@ class _StudyPeriodsManagementViewState
 
                   // Table
                   Expanded(
-                    child: Column(
-                      children: [
-                        // Fixed Table header
-                        Container(
-                          color: const Color(0xFFF9FAFC),
-                          child: _buildTableHeader(),
-                        ),
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : Column(
+                            children: [
+                              // Fixed Table header
+                              Container(
+                                color: const Color(0xFFF9FAFC),
+                                child: _buildTableHeader(),
+                              ),
 
-                        // Table rows - using Flexible to prevent overflow
-                        Flexible(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                for (
-                                  int i = 0;
-                                  i < currentPageStudyPeriods.length;
-                                  i++
-                                )
-                                  _buildTableRow(
-                                    currentPageStudyPeriods[i],
-                                    i % 2 == 0,
+                              // Table rows - using Flexible to prevent overflow
+                              Flexible(
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    children: [
+                                      for (
+                                        int i = 0;
+                                        i < currentPageStudyPeriods.length;
+                                        i++
+                                      )
+                                        _buildTableRow(
+                                          currentPageStudyPeriods[i],
+                                          i % 2 == 0,
+                                        ),
+                                    ],
                                   ),
-                              ],
-                            ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                   ),
 
                   // Pagination
@@ -478,7 +490,7 @@ class _StudyPeriodsManagementViewState
                       children: [
                         // Show results info
                         Text(
-                          '${(_currentPage - 1) * _itemsPerPage + 1}-${_currentPage * _itemsPerPage > _studyPeriods.length ? _studyPeriods.length : _currentPage * _itemsPerPage} of ${_studyPeriods.length}',
+                          '${(_currentPage - 1) * _itemsPerPage + 1}-${_currentPage * _itemsPerPage > _totalItems ? _totalItems : _currentPage * _itemsPerPage} of ${_totalItems}',
                           style: const TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
@@ -821,17 +833,48 @@ class _StudyPeriodsManagementViewState
           }
         });
       },
-      onEdit: () {
-        showDialog(
+      onEdit: () async {
+        final result = await showDialog(
           context: context,
           builder: (context) => EditStudyPeriodModal(
             studyPeriod: period,
             academicYears: _academicYears,
           ),
         );
+        if (result == true) {
+          _loadStudyPhases();
+        }
       },
-      onDelete: () {
-        // TODO: handle delete
+      onDelete: () async {
+        try {
+          final apiId = period.apiId ?? _studyPeriodIdMapping[period.id];
+          if (apiId == null) {
+            throw Exception('Không tìm thấy ID đợt học');
+          }
+          final res = await _apiService.deleteStudyPhase(apiId);
+          if (res.success) {
+            _loadStudyPhases();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Đã xóa đợt học thành công!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } else {
+            throw Exception(res.message);
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Lỗi khi xóa: ${e.toString()}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
       },
     );
   }
@@ -850,6 +893,8 @@ class StudyPeriodData implements StudyPeriodTableRowData {
   final DateTime startDate;
   @override
   final DateTime endDate;
+  // Keep track of API ID for operations
+  final int? apiId;
 
   // Required fields from TableRowData interface (not used for study periods)
   @override
@@ -870,5 +915,6 @@ class StudyPeriodData implements StudyPeriodTableRowData {
     required this.period,
     required this.startDate,
     required this.endDate,
+    this.apiId,
   });
 }

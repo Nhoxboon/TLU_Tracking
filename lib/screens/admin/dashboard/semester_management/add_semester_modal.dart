@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:android_app/services/api_service.dart';
 
 class AddSemesterModal extends StatefulWidget {
   final List<String>? academicYears;
@@ -20,6 +21,7 @@ class _AddSemesterModalState extends State<AddSemesterModal> {
   final _endDateController = TextEditingController();
 
   final List<String> _semesters = ['1', '2'];
+  final ApiService _apiService = ApiService();
 
   @override
   void dispose() {
@@ -395,10 +397,46 @@ class _AddSemesterModalState extends State<AddSemesterModal> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (_formKey.currentState!.validate()) {
-                            // TODO: Handle save action
-                            Navigator.of(context).pop();
+                            try {
+                              final payload = {
+                                'name': _selectedSemester != null
+                                    ? 'Học kì ${_selectedSemester}'
+                                    : 'Học kì',
+                                'start_date': _startDate != null
+                                    ? DateFormat('yyyy-MM-dd').format(_startDate!)
+                                    : null,
+                                'end_date': _endDate != null
+                                    ? DateFormat('yyyy-MM-dd').format(_endDate!)
+                                    : null,
+                                // In real flow, map academic year string to ID; leaving null if not available
+                              }..removeWhere((k, v) => v == null);
+
+                              final res = await _apiService.createSemester(payload);
+                              if (res.success) {
+                                if (mounted) {
+                                  Navigator.of(context).pop(true);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Thêm học kì thành công'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } else {
+                                throw Exception(res.message);
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Lỗi: ${e.toString()}'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(

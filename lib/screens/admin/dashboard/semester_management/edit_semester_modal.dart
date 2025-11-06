@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/screens/admin/dashboard/semester_management/semesters_management_view.dart';
 import 'package:intl/intl.dart';
+import 'package:android_app/services/api_service.dart';
 
 class EditSemesterModal extends StatefulWidget {
   final SemesterData semester;
@@ -26,6 +27,7 @@ class _EditSemesterModalState extends State<EditSemesterModal> {
   late TextEditingController _endDateController;
 
   final List<String> _semesters = ['1', '2'];
+  final ApiService _apiService = ApiService();
 
   @override
   void initState() {
@@ -40,6 +42,18 @@ class _EditSemesterModalState extends State<EditSemesterModal> {
     _endDateController = TextEditingController(
       text: DateFormat('dd/MM/yyyy').format(widget.semester.endDate),
     );
+
+    // Ensure dropdown contains current values
+    if (_selectedSemester != null &&
+        _selectedSemester!.isNotEmpty &&
+        !_semesters.contains(_selectedSemester)) {
+      _semesters.add(_selectedSemester!);
+    }
+    if (_selectedAcademicYear != null &&
+        widget.academicYears != null &&
+        !widget.academicYears!.contains(_selectedAcademicYear)) {
+      _selectedAcademicYear = null;
+    }
   }
 
   @override
@@ -400,10 +414,55 @@ class _EditSemesterModalState extends State<EditSemesterModal> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (_formKey.currentState!.validate()) {
-                            // TODO: Handle update action
-                            Navigator.of(context).pop();
+                            try {
+                              final payload = <String, dynamic>{};
+                              if (_selectedSemester != null) {
+                                payload['name'] = 'Học kì ${_selectedSemester}';
+                              }
+                              if (_startDate != null) {
+                                payload['start_date'] =
+                                    DateFormat('yyyy-MM-dd').format(_startDate!);
+                              }
+                              if (_endDate != null) {
+                                payload['end_date'] =
+                                    DateFormat('yyyy-MM-dd').format(_endDate!);
+                              }
+                              // academic_year_id mapping omitted (needs ID source)
+
+                              final apiId = widget.semester.apiId;
+                              if (apiId == null) {
+                                throw Exception('Thiếu ID học kì để cập nhật');
+                              }
+
+                              final res = await _apiService.updateSemester(
+                                apiId,
+                                payload,
+                              );
+                              if (res.success) {
+                                if (mounted) {
+                                  Navigator.of(context).pop(true);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Cập nhật học kì thành công'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } else {
+                                throw Exception(res.message);
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Lỗi: ${e.toString()}'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(

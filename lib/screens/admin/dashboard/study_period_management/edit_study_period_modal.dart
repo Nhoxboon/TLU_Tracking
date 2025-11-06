@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/screens/admin/dashboard/study_period_management/study_periods_management_view.dart';
 import 'package:intl/intl.dart';
+import 'package:android_app/services/api_service.dart';
 
 class EditStudyPeriodModal extends StatefulWidget {
   final StudyPeriodData studyPeriod;
@@ -28,6 +29,7 @@ class _EditStudyPeriodModalState extends State<EditStudyPeriodModal> {
 
   final List<String> _semesters = ['1', '2'];
   final List<String> _periods = ['1', '2'];
+  final ApiService _apiService = ApiService();
 
   @override
   void initState() {
@@ -43,6 +45,24 @@ class _EditStudyPeriodModalState extends State<EditStudyPeriodModal> {
     _endDateController = TextEditingController(
       text: DateFormat('dd/MM/yyyy').format(widget.studyPeriod.endDate),
     );
+
+    // Ensure dropdowns contain the current values to avoid assertion errors
+    if (_selectedSemester != null &&
+        _selectedSemester!.isNotEmpty &&
+        !_semesters.contains(_selectedSemester)) {
+      _semesters.add(_selectedSemester!);
+    }
+    if (_selectedPeriod != null &&
+        _selectedPeriod!.isNotEmpty &&
+        !_periods.contains(_selectedPeriod)) {
+      _periods.add(_selectedPeriod!);
+    }
+    // If academic year is not in provided list, clear selection to avoid mismatch
+    if (_selectedAcademicYear != null &&
+        widget.academicYears != null &&
+        !widget.academicYears!.contains(_selectedAcademicYear)) {
+      _selectedAcademicYear = null;
+    }
   }
 
   @override
@@ -474,10 +494,63 @@ class _EditStudyPeriodModalState extends State<EditStudyPeriodModal> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (_formKey.currentState!.validate()) {
-                            // TODO: Handle update action
-                            Navigator.of(context).pop();
+                            try {
+                              final payload = <String, dynamic>{};
+                              if (_selectedPeriod != null) {
+                                payload['name'] = 'Đợt ${_selectedPeriod}';
+                              }
+                              if (_startDate != null) {
+                                payload['start_date'] = DateFormat(
+                                  'yyyy-MM-dd',
+                                ).format(_startDate!);
+                              }
+                              if (_endDate != null) {
+                                payload['end_date'] = DateFormat(
+                                  'yyyy-MM-dd',
+                                ).format(_endDate!);
+                              }
+                              if (_selectedSemester != null) {
+                                payload['semester_id'] = int.tryParse(
+                                  _selectedSemester!,
+                                );
+                              }
+
+                              final apiId = widget.studyPeriod.apiId;
+                              if (apiId == null) {
+                                throw Exception('Thiếu ID đợt học để cập nhật');
+                              }
+
+                              final res = await _apiService.updateStudyPhase(
+                                apiId,
+                                payload,
+                              );
+                              if (res.success) {
+                                if (mounted) {
+                                  Navigator.of(context).pop(true);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Cập nhật đợt học thành công',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } else {
+                                throw Exception(res.message);
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Lỗi: ${e.toString()}'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(
