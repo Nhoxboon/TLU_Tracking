@@ -7,7 +7,8 @@ import 'user_session.dart';
 
 class ApiService {
   // static const String baseUrl = 'http://192.168.10.2:8000/api/v1';
-  static const String baseUrl = 'http://localhost:8000/api/v1'; //old address
+  // static const String baseUrl = 'http://localhost:8000/api/v1';
+  static const String baseUrl = 'http://tlutracking.duckdns.org/api/v1';
 
   // Singleton pattern
   static final ApiService _instance = ApiService._internal();

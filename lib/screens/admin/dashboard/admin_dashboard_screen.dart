@@ -17,7 +17,6 @@ import 'package:android_app/screens/admin/dashboard/academic_year_management/aca
 import 'package:android_app/screens/admin/dashboard/faculty_management/faculties_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/department_management/departments_management_view.dart';
 import 'package:android_app/screens/admin/dashboard/change_password_view.dart';
-import '../../../services/user_session.dart';
 import '../../../services/api_service.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -28,8 +27,8 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  String get adminName =>
-      UserSession().adminData?.fullName ?? UserSession().username ?? "Admin";
+  String get adminName => "Admin";
+
   DashboardTab _currentTab = DashboardTab.dashboard;
   DashboardTab? _previousTab;
 
