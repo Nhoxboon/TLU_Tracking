@@ -1636,6 +1636,614 @@ class ApiService {
     }
   }
 
+  // Get classes with pagination and filters
+  Future<ApiResponse<PaginatedResponse>> getClassesPaginated({
+    int page = 1,
+    int limit = 10,
+    int? teacherId,
+    int? subjectId,
+    int? semesterId,
+    int? facultyId,
+    int? departmentId,
+    int? majorId,
+    int? cohortId,
+    int? academicYearId,
+    int? studyPhaseId,
+    bool? activeOnly,
+    String? search,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      if (teacherId != null) queryParams['teacher_id'] = teacherId.toString();
+      if (subjectId != null) queryParams['subject_id'] = subjectId.toString();
+      if (semesterId != null)
+        queryParams['semester_id'] = semesterId.toString();
+      if (facultyId != null) queryParams['faculty_id'] = facultyId.toString();
+      if (departmentId != null)
+        queryParams['department_id'] = departmentId.toString();
+      if (majorId != null) queryParams['major_id'] = majorId.toString();
+      if (cohortId != null) queryParams['cohort_id'] = cohortId.toString();
+      if (academicYearId != null)
+        queryParams['academic_year_id'] = academicYearId.toString();
+      if (studyPhaseId != null)
+        queryParams['study_phase_id'] = studyPhaseId.toString();
+      if (activeOnly != null)
+        queryParams['active_only'] = activeOnly.toString();
+      if (search != null && search.isNotEmpty) queryParams['search'] = search;
+
+      final uri = Uri.parse(
+        '$baseUrl/classes',
+      ).replace(queryParameters: queryParams);
+
+      final response = await _client
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final paginatedResponse = PaginatedResponse.fromJson(data);
+        return ApiResponse.success(paginatedResponse);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to fetch classes',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to fetch classes: ${e.toString()}');
+    }
+  }
+
+  // Get class by ID
+  Future<ApiResponse<Map<String, dynamic>>> getClass(int classId) async {
+    try {
+      final response = await _client
+          .get(Uri.parse('$baseUrl/classes/$classId'), headers: _headers)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(data);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to fetch class',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to fetch class: ${e.toString()}');
+    }
+  }
+
+  // Get subject by ID
+  Future<ApiResponse<Map<String, dynamic>>> getSubjectById(
+    int subjectId,
+  ) async {
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('$baseUrl/academic/subjects/$subjectId'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(data);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to fetch subject',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to fetch subject: ${e.toString()}');
+    }
+  }
+
+  // Get teacher by ID
+  Future<ApiResponse<Map<String, dynamic>>> getTeacherById(
+    int teacherId,
+  ) async {
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('$baseUrl/users/teachers/$teacherId'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(data);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to fetch teacher',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to fetch teacher: ${e.toString()}');
+    }
+  }
+
+  // Delete class by ID
+  Future<ApiResponse<void>> deleteClass(int classId) async {
+    try {
+      final response = await _client
+          .delete(Uri.parse('$baseUrl/classes/$classId'), headers: _headers)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return ApiResponse.success(null);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to delete class',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to delete class: ${e.toString()}');
+    }
+  }
+
+  // Create class with Map data (for forms)
+  Future<ApiResponse<Map<String, dynamic>>> createClassData(
+    Map<String, dynamic> classData,
+  ) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$baseUrl/classes'),
+            headers: _headers,
+            body: jsonEncode(classData),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(responseData);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to create class',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to create class: ${e.toString()}');
+    }
+  }
+
+  // Update class with Map data (for forms)
+  Future<ApiResponse<Map<String, dynamic>>> updateClassData(
+    int classId,
+    Map<String, dynamic> classData,
+  ) async {
+    try {
+      final response = await _client
+          .put(
+            Uri.parse('$baseUrl/classes/$classId'),
+            headers: _headers,
+            body: jsonEncode(classData),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(responseData);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to update class',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to update class: ${e.toString()}');
+    }
+  }
+
+  // Get subjects with pagination and optional filters
+  Future<ApiResponse<PaginatedResponse>> getSubjectsPaginated({
+    int page = 1,
+    int limit = 100,
+    int? departmentId,
+    int? facultyId,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      if (departmentId != null)
+        queryParams['department_id'] = departmentId.toString();
+      if (facultyId != null) queryParams['faculty_id'] = facultyId.toString();
+
+      final uri = Uri.parse(
+        '$baseUrl/academic/subjects',
+      ).replace(queryParameters: queryParams);
+
+      final response = await _client
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final paginatedResponse = PaginatedResponse.fromJson(data);
+        return ApiResponse.success(paginatedResponse);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to fetch subjects',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to fetch subjects: ${e.toString()}');
+    }
+  }
+
+  // Get study phases with pagination and optional filters
+  Future<ApiResponse<PaginatedResponse>> getStudyPhasesPaginated({
+    int page = 1,
+    int limit = 100,
+    int? semesterId,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      if (semesterId != null)
+        queryParams['semester_id'] = semesterId.toString();
+
+      final uri = Uri.parse(
+        '$baseUrl/academic/study-phases',
+      ).replace(queryParameters: queryParams);
+
+      final response = await _client
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final paginatedResponse = PaginatedResponse.fromJson(data);
+        return ApiResponse.success(paginatedResponse);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to fetch study phases',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to fetch study phases: ${e.toString()}');
+    }
+  }
+
+  // Get semesters with pagination and optional filters
+  Future<ApiResponse<PaginatedResponse>> getSemestersPaginated({
+    int page = 1,
+    int limit = 100,
+    int? academicYearId,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      if (academicYearId != null)
+        queryParams['academic_year_id'] = academicYearId.toString();
+
+      final uri = Uri.parse(
+        '$baseUrl/academic/semesters',
+      ).replace(queryParameters: queryParams);
+
+      final response = await _client
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final paginatedResponse = PaginatedResponse.fromJson(data);
+        return ApiResponse.success(paginatedResponse);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to fetch semesters',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Failed to fetch semesters: ${e.toString()}');
+    }
+  }
+
+  // Get academic years with pagination
+  Future<ApiResponse<PaginatedResponse>> getAcademicYearsPaginated({
+    int page = 1,
+    int limit = 100,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      final uri = Uri.parse(
+        '$baseUrl/academic/academic-years',
+      ).replace(queryParameters: queryParams);
+
+      final response = await _client
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final paginatedResponse = PaginatedResponse.fromJson(data);
+        return ApiResponse.success(paginatedResponse);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to fetch academic years',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error(
+        'Failed to fetch academic years: ${e.toString()}',
+      );
+    }
+  }
+
+  // Get students in a class
+  Future<ApiResponse<List<Map<String, dynamic>>>> getClassStudents(
+    int classId, {
+    bool activeOnly = true,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (!activeOnly) {
+        queryParams['active_only'] = false;
+      }
+
+      final uri = Uri.parse('$baseUrl/classes/$classId/students').replace(
+        queryParameters: queryParams.isNotEmpty
+            ? queryParams.map((key, value) => MapEntry(key, value.toString()))
+            : null,
+      );
+
+      final response = await _client.get(uri, headers: _headers);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final List<Map<String, dynamic>> students = data
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+        return ApiResponse.success(students);
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to fetch class students',
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error(
+        'Failed to fetch class students: ${e.toString()}',
+      );
+    }
+  }
+
+  // Remove student from class
+  Future<ApiResponse<void>> removeStudentFromClass(
+    int classId,
+    int studentId,
+  ) async {
+    try {
+      final response = await _client.delete(
+        Uri.parse('$baseUrl/classes/$classId/students/$studentId'),
+        headers: _headers,
+      );
+
+      if (response.statusCode == 200) {
+        return ApiResponse.success(
+          null,
+          message: 'Student removed successfully',
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to remove student from class',
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error(
+        'Failed to remove student from class: ${e.toString()}',
+      );
+    }
+  }
+
+  // Add student to class
+  Future<ApiResponse<Map<String, dynamic>>> addStudentToClass(
+    int classId,
+    int studentId,
+  ) async {
+    try {
+      final response = await _client.post(
+        Uri.parse('$baseUrl/classes/$classId/students'),
+        headers: _headers,
+        body: jsonEncode({'student_id': studentId}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return ApiResponse.success(data, message: 'Student added successfully');
+      } else {
+        final error = jsonDecode(response.body);
+        return ApiResponse.error(
+          error['detail'] ?? 'Failed to add student to class',
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error(
+        'Failed to add student to class: ${e.toString()}',
+      );
+    }
+  }
+
+  // ==================== ACADEMIC YEAR ENDPOINTS ====================
+
+  // Get academic year by ID
+  Future<ApiResponse<Map<String, dynamic>>> getAcademicYear(
+    int academicYearId,
+  ) async {
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('$baseUrl/academic/academic-years/$academicYearId'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return ApiResponse.success(data);
+      } else {
+        final error = json.decode(response.body);
+        return ApiResponse.error(
+          error['detail'] ??
+              'Failed to get academic year: ${response.statusCode}',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Network error: $e');
+    }
+  }
+
+  // Create academic year with Map data
+  Future<ApiResponse<Map<String, dynamic>>> createAcademicYear(
+    Map<String, dynamic> academicYearData,
+  ) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$baseUrl/academic/academic-years'),
+            headers: _headers,
+            body: json.encode(academicYearData),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return ApiResponse.success(data);
+      } else {
+        final error = json.decode(response.body);
+        return ApiResponse.error(
+          error['detail'] ??
+              'Failed to create academic year: ${response.statusCode}',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Network error: $e');
+    }
+  }
+
+  // Update academic year with Map data
+  Future<ApiResponse<Map<String, dynamic>>> updateAcademicYear(
+    int academicYearId,
+    Map<String, dynamic> academicYearData,
+  ) async {
+    try {
+      final response = await _client
+          .put(
+            Uri.parse('$baseUrl/academic/academic-years/$academicYearId'),
+            headers: _headers,
+            body: json.encode(academicYearData),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return ApiResponse.success(data);
+      } else {
+        final error = json.decode(response.body);
+        return ApiResponse.error(
+          error['detail'] ??
+              'Failed to update academic year: ${response.statusCode}',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Network error: $e');
+    }
+  }
+
+  // Delete academic year by ID
+  Future<ApiResponse<void>> deleteAcademicYear(int academicYearId) async {
+    try {
+      final response = await _client
+          .delete(
+            Uri.parse('$baseUrl/academic/academic-years/$academicYearId'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return ApiResponse.success(null);
+      } else {
+        final error = json.decode(response.body);
+        return ApiResponse.error(
+          error['detail'] ??
+              'Failed to delete academic year: ${response.statusCode}',
+          statusCode: response.statusCode,
+        );
+      }
+    } catch (e) {
+      return ApiResponse.error('Network error: $e');
+    }
+  }
+
+  // Delete multiple academic years by IDs
+  Future<ApiResponse<void>> deleteAcademicYears(
+    List<int> academicYearIds,
+  ) async {
+    try {
+      final List<Future<ApiResponse<void>>> futures = academicYearIds
+          .map((id) => deleteAcademicYear(id))
+          .toList();
+
+      final results = await Future.wait(futures);
+
+      // Check if all deletions were successful
+      final failedDeletions = results
+          .where((result) => !result.success)
+          .toList();
+
+      if (failedDeletions.isEmpty) {
+        return ApiResponse.success(null);
+      } else {
+        return ApiResponse.error('Some academic years could not be deleted');
+      }
+    } catch (e) {
+      return ApiResponse.error('Network error: $e');
+    }
+  }
+
   // Cleanup method
   void dispose() {
     _client.close();

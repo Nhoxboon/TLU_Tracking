@@ -286,8 +286,9 @@ class _StudentsManagementViewState extends State<StudentsManagementView> {
   }
 
   Future<void> _loadSingleMajor(int majorId) async {
-    if (_majorCache.containsKey(majorId) || _loadingMajors.contains(majorId))
+    if (_majorCache.containsKey(majorId) || _loadingMajors.contains(majorId)) {
       return;
+    }
 
     _loadingMajors.add(majorId);
 
@@ -313,8 +314,9 @@ class _StudentsManagementViewState extends State<StudentsManagementView> {
 
   Future<void> _loadSingleCohort(int cohortId) async {
     if (_cohortCache.containsKey(cohortId) ||
-        _loadingCohorts.contains(cohortId))
+        _loadingCohorts.contains(cohortId)) {
       return;
+    }
 
     _loadingCohorts.add(cohortId);
 
@@ -1540,9 +1542,6 @@ class _StudentsManagementViewState extends State<StudentsManagementView> {
           final originalId = _studentIdMapping[student.apiId];
           if (originalId != null) {
             final studentIdToDelete = int.tryParse(originalId) ?? 0;
-            print(
-              'Attempting to delete student with ID: $studentIdToDelete (original: $originalId)',
-            );
             final result = await _apiService.deleteStudentById(
               studentIdToDelete,
             );

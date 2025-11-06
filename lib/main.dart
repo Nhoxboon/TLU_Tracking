@@ -53,12 +53,15 @@ class MyApp extends StatelessWidget {
               ModalRoute.of(context)!.settings.arguments
                   as Map<String, dynamic>;
           return ClassStudentsView(
+            classId: args['classId'] as int,
             classCode: args['classCode'] as String,
             className: args['className'] as String,
           );
         },
         '/class-detail': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>?;
           return TeacherClassDetailScreen(
             classId: args?['classId'] as int? ?? 1,
             classCode: args?['classCode'] as String? ?? 'CSE',
@@ -68,8 +71,12 @@ class MyApp extends StatelessWidget {
         '/student/login': (context) => const LoginScreen(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/teacher/dashboard': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-          return TeacherDashboardScreen(initialTab: args?['initialTab'] as int? ?? 0);
+          final args =
+              ModalRoute.of(context)?.settings.arguments
+                  as Map<String, dynamic>?;
+          return TeacherDashboardScreen(
+            initialTab: args?['initialTab'] as int? ?? 0,
+          );
         },
         // Student routes
         '/student/home': (context) => const StudentHomeScreen(),
