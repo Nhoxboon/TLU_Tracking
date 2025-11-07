@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
+// import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../models/api_models.dart';
 import 'mock_api_service.dart';
@@ -1268,6 +1268,9 @@ class ApiService {
   ) async {
     try {
       final htmlFile = platform.castToHtmlFile(file);
+      if (htmlFile == null) {
+        return ApiResponse(success: false, message: 'Invalid file provided');
+      }
       final bytes = await platform.readFileAsBytes(htmlFile);
 
       // Create multipart request
@@ -1401,6 +1404,9 @@ class ApiService {
   ) async {
     try {
       final htmlFile = platform.castToHtmlFile(file);
+      if (htmlFile == null) {
+        return ApiResponse(success: false, message: 'Invalid file provided');
+      }
       final bytes = await platform.readFileAsBytes(htmlFile);
 
       // Create multipart request
