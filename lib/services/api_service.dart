@@ -1,10 +1,11 @@
 import 'dart:convert';
-// import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import '../models/api_models.dart';
 import 'mock_api_service.dart';
 import 'user_session.dart';
-import 'platform/platform_service.dart' as platform;
+import '../utils/file_download_helper.dart';
 
 class ApiService {
   // static const String baseUrl = 'http://192.168.10.2:8000/api/v1';
@@ -1243,11 +1244,17 @@ class ApiService {
           .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        // Use platform service for download
-        final bytes = response.bodyBytes;
-        platform.downloadFile(bytes, 'teacher_sample.xlsx');
-
-        return ApiResponse.success(null);
+        if (kIsWeb) {
+          await triggerFileDownload(
+            response.bodyBytes,
+            fileName: 'teacher_sample.xlsx',
+          );
+          return ApiResponse.success(null);
+        }
+        return ApiResponse.error(
+          'Tính năng tải file mẫu hiện chỉ khả dụng trên phiên bản web.',
+          statusCode: response.statusCode,
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -1264,29 +1271,21 @@ class ApiService {
 
   // Bulk import teachers from Excel file
   Future<ApiResponse<Map<String, dynamic>>> bulkImportTeachers(
-    dynamic file,
+    List<int> fileBytes,
+    String fileName,
   ) async {
     try {
-      final htmlFile = platform.castToHtmlFile(file);
-      if (htmlFile == null) {
-        return ApiResponse(success: false, message: 'Invalid file provided');
-      }
-      final bytes = await platform.readFileAsBytes(htmlFile);
-
-      // Create multipart request
       final uri = Uri.parse('$baseUrl/users/teachers/bulk-import');
       final request = http.MultipartRequest('POST', uri);
 
-      // Add headers
       final token = UserSession().accessToken;
       final type = UserSession().tokenType ?? 'Bearer';
       if (token != null && token.isNotEmpty) {
         request.headers['Authorization'] = '$type $token';
       }
 
-      // Add file
       request.files.add(
-        http.MultipartFile.fromBytes('file', bytes, filename: file.name),
+        http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
       );
 
       final streamedResponse = await request.send().timeout(
@@ -1379,11 +1378,17 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        // Create download link
-        final bytes = response.bodyBytes;
-        platform.downloadFile(bytes, 'student_sample.xlsx');
-
-        return ApiResponse.success(null, message: 'Tải file mẫu thành công');
+        if (kIsWeb) {
+          await triggerFileDownload(
+            response.bodyBytes,
+            fileName: 'student_sample.xlsx',
+          );
+          return ApiResponse.success(null, message: 'Tải file mẫu thành công');
+        }
+        return ApiResponse.error(
+          'Tính năng tải file mẫu hiện chỉ khả dụng trên phiên bản web.',
+          statusCode: response.statusCode,
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -1400,29 +1405,21 @@ class ApiService {
 
   // Bulk import students from Excel file
   Future<ApiResponse<Map<String, dynamic>>> bulkImportStudents(
-    dynamic file,
+    List<int> fileBytes,
+    String fileName,
   ) async {
     try {
-      final htmlFile = platform.castToHtmlFile(file);
-      if (htmlFile == null) {
-        return ApiResponse(success: false, message: 'Invalid file provided');
-      }
-      final bytes = await platform.readFileAsBytes(htmlFile);
-
-      // Create multipart request
       final uri = Uri.parse('$baseUrl/users/students/bulk-import');
       final request = http.MultipartRequest('POST', uri);
 
-      // Add headers
       final token = UserSession().accessToken;
       final type = UserSession().tokenType ?? 'Bearer';
       if (token != null && token.isNotEmpty) {
         request.headers['Authorization'] = '$type $token';
       }
 
-      // Add file
       request.files.add(
-        http.MultipartFile.fromBytes('file', bytes, filename: file.name),
+        http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
       );
 
       final response = await request.send();
