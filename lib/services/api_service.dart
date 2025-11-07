@@ -1,9 +1,10 @@
 import 'dart:convert';
-import 'dart:html' as html;
+// import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../models/api_models.dart';
 import 'mock_api_service.dart';
 import 'user_session.dart';
+import 'platform/platform_service.dart' as platform;
 
 class ApiService {
   // static const String baseUrl = 'http://192.168.10.2:8000/api/v1';
@@ -1242,18 +1243,9 @@ class ApiService {
           .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        // For web, we'll create a download link
+        // Use platform service for download
         final bytes = response.bodyBytes;
-        final blob = html.Blob([bytes]);
-        final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.AnchorElement()
-          ..href = url
-          ..style.display = 'none'
-          ..download = 'teacher_sample.xlsx';
-        html.document.body!.children.add(anchor);
-        anchor.click();
-        html.document.body!.children.remove(anchor);
-        html.Url.revokeObjectUrl(url);
+        platform.downloadFile(bytes, 'teacher_sample.xlsx');
 
         return ApiResponse.success(null);
       } else {
@@ -1272,14 +1264,14 @@ class ApiService {
 
   // Bulk import teachers from Excel file
   Future<ApiResponse<Map<String, dynamic>>> bulkImportTeachers(
-    html.File file,
+    dynamic file,
   ) async {
     try {
-      final reader = html.FileReader();
-      reader.readAsArrayBuffer(file);
-      await reader.onLoad.first;
-
-      final bytes = reader.result as List<int>;
+      final htmlFile = platform.castToHtmlFile(file);
+      if (htmlFile == null) {
+        return ApiResponse(success: false, message: 'Invalid file provided');
+      }
+      final bytes = await platform.readFileAsBytes(htmlFile);
 
       // Create multipart request
       final uri = Uri.parse('$baseUrl/users/teachers/bulk-import');
@@ -1389,16 +1381,7 @@ class ApiService {
       if (response.statusCode == 200) {
         // Create download link
         final bytes = response.bodyBytes;
-        final blob = html.Blob([bytes]);
-        final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.document.createElement('a') as html.AnchorElement
-          ..href = url
-          ..style.display = 'none'
-          ..download = 'student_sample.xlsx';
-        html.document.body?.children.add(anchor);
-        anchor.click();
-        html.document.body?.children.remove(anchor);
-        html.Url.revokeObjectUrl(url);
+        platform.downloadFile(bytes, 'student_sample.xlsx');
 
         return ApiResponse.success(null, message: 'Tải file mẫu thành công');
       } else {
@@ -1417,14 +1400,14 @@ class ApiService {
 
   // Bulk import students from Excel file
   Future<ApiResponse<Map<String, dynamic>>> bulkImportStudents(
-    html.File file,
+    dynamic file,
   ) async {
     try {
-      final reader = html.FileReader();
-      reader.readAsArrayBuffer(file);
-      await reader.onLoad.first;
-
-      final bytes = reader.result as List<int>;
+      final htmlFile = platform.castToHtmlFile(file);
+      if (htmlFile == null) {
+        return ApiResponse(success: false, message: 'Invalid file provided');
+      }
+      final bytes = await platform.readFileAsBytes(htmlFile);
 
       // Create multipart request
       final uri = Uri.parse('$baseUrl/users/students/bulk-import');

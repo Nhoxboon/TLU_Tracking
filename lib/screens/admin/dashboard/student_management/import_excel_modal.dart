@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/services/api_service.dart';
-import 'dart:html' as html;
+import '../../../../services/platform/platform_service.dart' as platform;
 
 class ImportExcelModal extends StatefulWidget {
   const ImportExcelModal({super.key});
@@ -12,7 +12,7 @@ class ImportExcelModal extends StatefulWidget {
 class _ImportExcelModalState extends State<ImportExcelModal> {
   final ApiService _apiService = ApiService();
   String? _selectedFileName;
-  html.File? _selectedFile;
+  dynamic _selectedFile;
   bool _isUploading = false;
   bool _isDragOver = false;
 
@@ -281,7 +281,7 @@ class _ImportExcelModalState extends State<ImportExcelModal> {
 
   Future<void> _pickFile() async {
     try {
-      final uploadInput = html.FileUploadInputElement()
+      final uploadInput = platform.createFileUploadInput()
         ..accept = '.xlsx,.xls'
         ..multiple = false;
 
