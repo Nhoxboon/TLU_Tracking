@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import '../services/face_recognition_service.dart';
+import '../services/api_service.dart';
 
 enum ScanStatus {
   scanning,
+  recognizing,
   success,
   failed,
 }
@@ -32,7 +35,10 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
   int _consecutiveFaceFrames = 0;
   int _consecutiveNoFaceFrames = 0;
   late FaceDetector _faceDetector;
-  DateTime? _scanStartTime;
+  
+  // Student information for successful recognition
+  String? _studentName;
+  String? _studentCode;
 
   @override
   void initState() {
@@ -80,9 +86,6 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
     // Initialize camera
     _initializeCamera();
     
-    // Set scan start time
-    _scanStartTime = DateTime.now();
-    
     // Check for timeout after 15 seconds
     Future.delayed(const Duration(seconds: 15), () {
       if (mounted && _scanStatus == ScanStatus.scanning) {
@@ -112,7 +115,7 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
           frontCamera,
           ResolutionPreset.medium,
           enableAudio: false,
-          imageFormatGroup: ImageFormatGroup.yuv420,
+          imageFormatGroup: ImageFormatGroup.nv21,
         );
 
         await _cameraController!.initialize();
@@ -155,11 +158,22 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
 
     try {
       final camera = _cameraController;
-      if (camera == null || !camera.value.isInitialized) return;
+      if (camera == null || !camera.value.isInitialized) {
+        _isDetecting = false;
+        return;
+      }
+
+      // Validate image data
+      if (image.planes.isEmpty) {
+        debugPrint('Camera image has no planes');
+        _isDetecting = false;
+        return;
+      }
 
       final inputImage = _inputImageFromCameraImage(image, camera.description);
 
       if (inputImage == null) {
+        debugPrint('Failed to convert camera image to InputImage');
         _isDetecting = false;
         return;
       }
@@ -214,11 +228,12 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
     CameraDescription camera,
   ) {
     try {
-      final WriteBuffer allBytes = WriteBuffer();
-      for (final Plane plane in image.planes) {
-        allBytes.putUint8List(plane.bytes);
+      // Get image format
+      final format = InputImageFormatValue.fromRawValue(image.format.raw);
+      if (format == null) {
+        debugPrint('Unsupported image format: ${image.format.raw}');
+        return null;
       }
-      final bytes = allBytes.done().buffer.asUint8List();
 
       // Convert sensor orientation to InputImageRotation
       InputImageRotation rotation;
@@ -239,13 +254,20 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
           rotation = InputImageRotation.rotation0deg;
       }
 
+      // Create input image metadata
       final inputImageData = InputImageMetadata(
         size: Size(image.width.toDouble(), image.height.toDouble()),
         rotation: rotation,
-        format: InputImageFormatValue.fromRawValue(image.format.raw) ??
-            InputImageFormat.nv21,
-        bytesPerRow: image.planes.first.bytesPerRow,
+        format: format,
+        bytesPerRow: image.planes.isNotEmpty ? image.planes.first.bytesPerRow : image.width,
       );
+
+      // Convert image planes to bytes
+      final WriteBuffer allBytes = WriteBuffer();
+      for (final Plane plane in image.planes) {
+        allBytes.putUint8List(plane.bytes);
+      }
+      final bytes = allBytes.done().buffer.asUint8List();
 
       return InputImage.fromBytes(
         bytes: bytes,
@@ -269,18 +291,79 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
 
     if (mounted) {
       setState(() {
-        _scanStatus = ScanStatus.success;
+        _scanStatus = ScanStatus.recognizing;
       });
       _pulseController.stop();
-      _animationController.forward();
-      HapticFeedback.mediumImpact();
 
-      // Navigate back after success
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          Navigator.pop(context, {'attendanceSuccess': true});
+      // Capture image for face recognition
+      await _performFaceRecognition();
+    }
+  }
+
+  Future<void> _performFaceRecognition() async {
+    try {
+      if (_cameraController == null || !_cameraController!.value.isInitialized) {
+        _showErrorMessage('Camera không sẵn sàng');
+        return;
+      }
+
+      // Take picture
+      final XFile imageFile = await _cameraController!.takePicture();
+      final Uint8List imageBytes = await imageFile.readAsBytes();
+      
+      debugPrint('Captured image size: ${imageBytes.length} bytes');
+      debugPrint('Image file path: ${imageFile.path}');
+      
+      // Verify image starts with JPEG header
+      if (imageBytes.length > 2) {
+        debugPrint('Image header: ${imageBytes[0].toRadixString(16)}, ${imageBytes[1].toRadixString(16)}');
+      }
+
+      // Perform face recognition (backend will extract embedding and recognize)
+      final faceRecognitionService = FaceRecognitionService();
+      final result = await faceRecognitionService.recognizeFace(imageBytes, threshold: 0.69);
+
+      if (result != null && mounted) {
+        debugPrint('DEBUG - Face recognition result: Student ID ${result.studentId}, Confidence: ${result.confidence}');
+        
+        // Get student details
+        final apiService = ApiService();
+        final studentResponse = await apiService.getStudent(result.studentId.toString());
+
+        debugPrint('DEBUG - Student API response success: ${studentResponse.success}');
+        if (!studentResponse.success) {
+          debugPrint('DEBUG - Student API error: ${studentResponse.message}');
         }
-      });
+
+        if (studentResponse.success && studentResponse.data != null) {
+          setState(() {
+            _scanStatus = ScanStatus.success;
+            _studentName = studentResponse.data!.fullName;
+            _studentCode = studentResponse.data!.studentCode;
+          });
+          _animationController.forward();
+          HapticFeedback.mediumImpact();
+
+          // Navigate back with student data
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              Navigator.pop(context, {
+                'attendanceSuccess': true,
+                'student': studentResponse.data,
+                'confidence': result.confidence,
+                'similarityScore': result.similarity,
+              });
+            }
+          });
+        } else {
+          _showErrorMessage('Không tìm thấy thông tin sinh viên');
+        }
+      } else {
+        _showErrorMessage('Không nhận diện được khuôn mặt. Vui lòng thử lại.');
+      }
+    } catch (e) {
+      debugPrint('Face recognition error: $e');
+      _showErrorMessage('Lỗi nhận diện khuôn mặt: ${e.toString()}');
     }
   }
 
@@ -289,8 +372,9 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
       _scanStatus = ScanStatus.scanning;
       _consecutiveFaceFrames = 0;
       _consecutiveNoFaceFrames = 0;
+      _studentName = null;
+      _studentCode = null;
     });
-    _scanStartTime = DateTime.now();
     _animationController.reset();
     _pulseController.repeat(reverse: true);
 
@@ -518,8 +602,22 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
         textColor = const Color(0xFF8F99AD);
         shadows = null;
         break;
+      case ScanStatus.recognizing:
+        message = 'Đang nhận diện...';
+        textColor = const Color(0xFF2196F3);
+        shadows = [
+          const Shadow(
+            color: Color(0xFF2196F3),
+            blurRadius: 8,
+          ),
+        ];
+        break;
       case ScanStatus.success:
-        message = 'Điểm danh thành công';
+        if (_studentName != null && _studentCode != null) {
+          message = 'Điểm danh thành công\n$_studentName\nMSSV: $_studentCode';
+        } else {
+          message = 'Điểm danh thành công';
+        }
         textColor = const Color(0xFF4CAF50);
         shadows = [
           const Shadow(
@@ -542,12 +640,14 @@ class _FaceScannerScreenState extends State<FaceScannerScreen>
       child: Center(
         child: Text(
           message,
+          textAlign: TextAlign.center,
           style: TextStyle(
             fontFamily: 'Roboto',
-            fontSize: 20,
+            fontSize: _scanStatus == ScanStatus.success && (_studentName != null && _studentCode != null) ? 16 : 20,
             fontWeight: FontWeight.w500,
             color: textColor,
             shadows: shadows,
+            height: 1.3,
           ),
         ),
       ),

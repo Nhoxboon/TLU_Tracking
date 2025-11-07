@@ -227,14 +227,20 @@ class ApiService {
   // Get student by ID
   Future<ApiResponse<StudentModel>> getStudent(String studentId) async {
     try {
+      final url = '$baseUrl/users/students/$studentId';
+      print('DEBUG - Getting student from URL: $url');
+      
       final response = await _client.get(
-        Uri.parse('$baseUrl/users/students/$studentId'),
+        Uri.parse(url),
         headers: _headers,
       );
 
+      print('DEBUG - Student API response status: ${response.statusCode}');
+      print('DEBUG - Student API response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        final student = StudentModel.fromJson(responseData['data']);
+        final student = StudentModel.fromJson(responseData);
         return ApiResponse.success(student);
       } else {
         final error = jsonDecode(response.body);
@@ -244,6 +250,7 @@ class ApiService {
         );
       }
     } catch (e) {
+      print('DEBUG - Student API error: $e');
       return ApiResponse.error('Failed to fetch student: ${e.toString()}');
     }
   }
