@@ -1,9 +1,11 @@
 import 'dart:convert';
-import 'dart:html' as html;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import '../models/api_models.dart';
 import 'mock_api_service.dart';
 import 'user_session.dart';
+import '../utils/file_download_helper.dart';
 
 class ApiService {
   // static const String baseUrl = 'http://192.168.10.2:8000/api/v1';
@@ -1242,20 +1244,17 @@ class ApiService {
           .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        // For web, we'll create a download link
-        final bytes = response.bodyBytes;
-        final blob = html.Blob([bytes]);
-        final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.AnchorElement()
-          ..href = url
-          ..style.display = 'none'
-          ..download = 'teacher_sample.xlsx';
-        html.document.body!.children.add(anchor);
-        anchor.click();
-        html.document.body!.children.remove(anchor);
-        html.Url.revokeObjectUrl(url);
-
-        return ApiResponse.success(null);
+        if (kIsWeb) {
+          await triggerFileDownload(
+            response.bodyBytes,
+            fileName: 'teacher_sample.xlsx',
+          );
+          return ApiResponse.success(null);
+        }
+        return ApiResponse.error(
+          'Tính năng tải file mẫu hiện chỉ khả dụng trên phiên bản web.',
+          statusCode: response.statusCode,
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -1272,29 +1271,21 @@ class ApiService {
 
   // Bulk import teachers from Excel file
   Future<ApiResponse<Map<String, dynamic>>> bulkImportTeachers(
-    html.File file,
+    List<int> fileBytes,
+    String fileName,
   ) async {
     try {
-      final reader = html.FileReader();
-      reader.readAsArrayBuffer(file);
-      await reader.onLoad.first;
-
-      final bytes = reader.result as List<int>;
-
-      // Create multipart request
       final uri = Uri.parse('$baseUrl/users/teachers/bulk-import');
       final request = http.MultipartRequest('POST', uri);
 
-      // Add headers
       final token = UserSession().accessToken;
       final type = UserSession().tokenType ?? 'Bearer';
       if (token != null && token.isNotEmpty) {
         request.headers['Authorization'] = '$type $token';
       }
 
-      // Add file
       request.files.add(
-        http.MultipartFile.fromBytes('file', bytes, filename: file.name),
+        http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
       );
 
       final streamedResponse = await request.send().timeout(
@@ -1387,20 +1378,17 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        // Create download link
-        final bytes = response.bodyBytes;
-        final blob = html.Blob([bytes]);
-        final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.document.createElement('a') as html.AnchorElement
-          ..href = url
-          ..style.display = 'none'
-          ..download = 'student_sample.xlsx';
-        html.document.body?.children.add(anchor);
-        anchor.click();
-        html.document.body?.children.remove(anchor);
-        html.Url.revokeObjectUrl(url);
-
-        return ApiResponse.success(null, message: 'Tải file mẫu thành công');
+        if (kIsWeb) {
+          await triggerFileDownload(
+            response.bodyBytes,
+            fileName: 'student_sample.xlsx',
+          );
+          return ApiResponse.success(null, message: 'Tải file mẫu thành công');
+        }
+        return ApiResponse.error(
+          'Tính năng tải file mẫu hiện chỉ khả dụng trên phiên bản web.',
+          statusCode: response.statusCode,
+        );
       } else {
         final error = jsonDecode(response.body);
         return ApiResponse.error(
@@ -1417,29 +1405,21 @@ class ApiService {
 
   // Bulk import students from Excel file
   Future<ApiResponse<Map<String, dynamic>>> bulkImportStudents(
-    html.File file,
+    List<int> fileBytes,
+    String fileName,
   ) async {
     try {
-      final reader = html.FileReader();
-      reader.readAsArrayBuffer(file);
-      await reader.onLoad.first;
-
-      final bytes = reader.result as List<int>;
-
-      // Create multipart request
       final uri = Uri.parse('$baseUrl/users/students/bulk-import');
       final request = http.MultipartRequest('POST', uri);
 
-      // Add headers
       final token = UserSession().accessToken;
       final type = UserSession().tokenType ?? 'Bearer';
       if (token != null && token.isNotEmpty) {
         request.headers['Authorization'] = '$type $token';
       }
 
-      // Add file
       request.files.add(
-        http.MultipartFile.fromBytes('file', bytes, filename: file.name),
+        http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
       );
 
       final response = await request.send();
